@@ -19,7 +19,7 @@ jobs:
       - name: Validate update metadata
         run: |
           python3 - <<'PY'
-          import json, pathlib, re, sys
+          import json, pathlib, re
           gradle = pathlib.Path("android-bootstrap/app/build.gradle.kts").read_text()
           metadata = json.loads(pathlib.Path("updates/latest.json").read_text())
           name_match = re.search(r'versionName\s*=\s*"([^"]+)"', gradle)
@@ -38,6 +38,36 @@ jobs:
           if not url.startswith("https://github.com/IcyKokane/AIDaoPublic/"):
               raise SystemExit("downloadUrl must stay inside the official AIDaoPublic GitHub repository")
           print(f"Validated AIDao {version_name} ({version_code}) update metadata")
+          PY
+
+      - name: Validate Android usability safeguards
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          source = pathlib.Path("android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivity.java").read_text()
+          theme = pathlib.Path("android-bootstrap/app/src/main/res/values/styles.xml").read_text()
+          required_source = {
+              "edge-to-edge window fitting": "setDecorFitsSystemWindows(false)",
+              "system bar insets": "WindowInsets.Type.systemBars()",
+              "display cutout insets": "WindowInsets.Type.displayCutout()",
+              "IME insets": "WindowInsets.Type.ime()",
+              "legacy IME fallback": "installLegacyImeDetector()",
+              "bottom navigation IME protection": "bottomNav.setVisibility(imeVisible ? View.GONE : View.VISIBLE)",
+              "official update source": "https://raw.githubusercontent.com/IcyKokane/AIDaoPublic/main/updates/latest.json",
+              "trusted update repository": "/IcyKokane/AIDaoPublic/",
+              "user-controlled update action": "Open verified build page",
+              "functional sans-serif text": "Typeface.create(\"sans\"",
+          }
+          missing = [name for name, marker in required_source.items() if marker not in source]
+          required_theme = {
+              "dark status bar": "android:windowLightStatusBar\">false",
+              "dark navigation bar": "android:windowLightNavigationBar\">false",
+              "display cutout support": "android:windowLayoutInDisplayCutoutMode\">shortEdges",
+          }
+          missing += [name for name, marker in required_theme.items() if marker not in theme]
+          if missing:
+              raise SystemExit("Android usability regression: " + ", ".join(missing))
+          print("Validated Android edge-to-edge, IME, navigation, typography, and update safeguards")
           PY
 
       - name: Set up JDK 17
