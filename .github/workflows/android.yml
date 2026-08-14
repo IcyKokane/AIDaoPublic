@@ -16,11 +16,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify and unpack AIDao source
+      - name: Diagnose source transport
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          parts = sorted(Path('source/b64').glob('part*.txt'))
+          data = []
+          for p in parts:
+              s = ''.join(p.read_text().split())
+              data.append((p.name, s))
+              print(f'{p.name}: {len(s)} chars')
+          print('total chars:', sum(len(s) for _, s in data))
+          for i in range(len(data)-1):
+              a_name, a = data[i]
+              b_name, b = data[i+1]
+              best = 0
+              limit = min(len(a), len(b), 12000)
+              for n in range(1, limit+1):
+                  if a[-n:] == b[:n]:
+                      best = n
+              print(f'overlap {a_name}->{b_name}: {best}')
+          PY
+
+      - name: Reconstruct source transport
         run: |
           mkdir -p .work
-          unzip -t source/AIDao-android-v0.11.0.zip
-          unzip -q source/AIDao-android-v0.11.0.zip -d .work
+          cat source/b64/part*.txt | tr -d '[:space:]' | base64 --decode > .work/AIDao-android-v0.11.0.zip
+          unzip -t .work/AIDao-android-v0.11.0.zip || true
+          zip -FF .work/AIDao-android-v0.11.0.zip --out .work/AIDao-repaired.zip || true
+          unzip -t .work/AIDao-repaired.zip || true
+          unzip -q .work/AIDao-repaired.zip -d .work || true
+          test -f .work/AIDao-android-v0.11.0/settings.gradle.kts
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
