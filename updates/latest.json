@@ -1,7 +1,7 @@
 {
-  "version": "0.16.0-alpha",
-  "versionCode": 16,
+  "version": "0.17.0-alpha",
+  "versionCode": 17,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "Android-native fit refinement: responsive safe-area padding now includes side system bars and display cutouts, the header sits lower with additional top breathing room, bottom navigation remains protected in three-button and gesture modes, IME interactions dismiss cleanly after sending/creating, workspace tabs and tappable rows use stronger touch targets, and update checks now prevent duplicate requests, bypass caches, display release notes, and only open HTTPS links inside the official AIDaoPublic repository."
+  "notes": "Android-native fit pass: AIDao now launches through a dedicated edge-to-edge workspace activity with safe status-bar, navigation-bar, display-cutout, and side inset handling; the top header has more breathing room; bottom navigation remains above gesture and three-button navigation and hides while the keyboard is active on modern and legacy Android; wide-screen padding scales responsively; functional copy uses clean sans-serif typography; and Check for Updates remains visible across Projects, Activity, and Settings with a verified, user-controlled GitHub update path."
 }
