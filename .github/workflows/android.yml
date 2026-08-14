@@ -40,10 +40,10 @@ jobs:
         run: |
           python3 - <<'PY'
           import pathlib
+          base = pathlib.Path("android-bootstrap/app/src/main/java/dev/thefoolish/aidao")
           manifest = pathlib.Path("android-bootstrap/app/src/main/AndroidManifest.xml").read_text()
           active = "AIDaoActivityV2.java" if "AIDaoActivityV2" in manifest else "AIDaoActivity.java"
-          source = pathlib.Path("android-bootstrap/app/src/main/java/dev/thefoolish/aidao") / active
-          source = source.read_text()
+          source = (base / active).read_text()
           theme = pathlib.Path("android-bootstrap/app/src/main/res/values/styles.xml").read_text()
           required = {
               "edge-to-edge": "setDecorFitsSystemWindows(false)",
@@ -64,6 +64,31 @@ jobs:
               if v not in theme: missing.append(k)
           if missing: raise SystemExit("Android usability regression: " + ", ".join(missing))
           print("Validated active Android workspace, persistence, insets, typography, and update safeguards")
+          PY
+
+      - name: Validate AI provider safety boundary
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          base = pathlib.Path("android-bootstrap/app/src/main/java/dev/thefoolish/aidao")
+          provider = (base / "ModelProvider.java").read_text()
+          local = (base / "LocalPlanningProvider.java").read_text()
+          registry = (base / "ProviderRegistry.java").read_text()
+          planner = (base / "ProjectPlanner.java").read_text()
+          required = {
+              "provider request boundary": "final class Request",
+              "provider result boundary": "final class Result",
+              "offline default": "AIDao Local Planner",
+              "remote flag": "boolean isRemote()",
+              "safe action boundary": "never install APKs, publish code, spend money, or perform destructive actions",
+              "local planner use": "ProjectPlanner.build",
+              "registry local default": "new LocalPlanningProvider()",
+              "editable planning assumption": "should remain editable before implementation",
+          }
+          joined = "\n".join([provider, local, registry, planner])
+          missing = [name for name, marker in required.items() if marker not in joined]
+          if missing: raise SystemExit("AI provider safety regression: " + ", ".join(missing))
+          print("Validated local-first model provider abstraction and safe planning boundary")
           PY
 
       - name: Set up JDK 17
