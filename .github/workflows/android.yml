@@ -16,6 +16,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate update metadata
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re, sys
+          gradle = pathlib.Path("android-bootstrap/app/build.gradle.kts").read_text()
+          metadata = json.loads(pathlib.Path("updates/latest.json").read_text())
+          name_match = re.search(r'versionName\s*=\s*"([^"]+)"', gradle)
+          code_match = re.search(r'versionCode\s*=\s*(\d+)', gradle)
+          if not name_match or not code_match:
+              raise SystemExit("Unable to read Android version from build.gradle.kts")
+          version_name = name_match.group(1)
+          version_code = int(code_match.group(1))
+          if metadata.get("version") != version_name:
+              raise SystemExit(f"Update metadata version {metadata.get('version')} does not match {version_name}")
+          if metadata.get("versionCode") != version_code:
+              raise SystemExit(f"Update metadata versionCode {metadata.get('versionCode')} does not match {version_code}")
+          if metadata.get("channel") != "alpha":
+              raise SystemExit("Update metadata channel must remain alpha for this workflow")
+          url = metadata.get("downloadUrl", "")
+          if not url.startswith("https://github.com/IcyKokane/AIDaoPublic/"):
+              raise SystemExit("downloadUrl must stay inside the official AIDaoPublic GitHub repository")
+          print(f"Validated AIDao {version_name} ({version_code}) update metadata")
+          PY
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:

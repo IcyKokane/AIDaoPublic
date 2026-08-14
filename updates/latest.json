@@ -1,7 +1,7 @@
 {
-  "version": "0.17.0-alpha",
-  "versionCode": 17,
+  "version": "0.18.0-alpha",
+  "versionCode": 18,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "Android-native fit pass: AIDao now launches through a dedicated edge-to-edge workspace activity with safe status-bar, navigation-bar, display-cutout, and side inset handling; the top header has more breathing room; bottom navigation remains above gesture and three-button navigation and hides while the keyboard is active on modern and legacy Android; wide-screen padding scales responsively; functional copy uses clean sans-serif typography; and Check for Updates remains visible across Projects, Activity, and Settings with a verified, user-controlled GitHub update path."
+  "notes": "Android shell hardening: the app now uses a dedicated dark AIDao system theme for consistent status/navigation bar appearance, explicit dark system-bar icons, display-cutout support, no launch-preview flash, and keyboard behavior that starts hidden while retaining resize/inset handling. The release pipeline also validates that update metadata matches the Android version before building, reducing the chance of a broken Check for Updates result."
 }
