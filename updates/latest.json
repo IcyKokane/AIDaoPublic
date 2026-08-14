@@ -1,7 +1,7 @@
 {
-  "version": "0.22.0-alpha",
-  "versionCode": 22,
+  "version": "0.23.0-alpha",
+  "versionCode": 23,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "Structured-planning milestone: adds a local deterministic ProjectPlanner that converts ordinary-language briefs and accumulated project context into explicit requirements, implementation tasks, and safety assumptions. It recognizes common Android needs including GitHub/repository integration, files, media/providers, local persistence, notifications, location, authentication, and AI workflows. This creates the planning boundary that the model-backed generator will use next while preserving the existing workspace, Android-native inset behavior, and user-controlled update path."
+  "notes": "Interactive AI-workflow milestone: AIDao now connects its safe provider abstraction to the on-device workspace. Projects can generate structured plans from the saved brief and conversation, edit generated requirements, track implementation tasks, preserve task progress, regenerate plans from new context, share a project specification, and see truthful build-readiness states. The default provider remains the offline AIDao Local Planner, and source generation or APK claims are not shown as complete until they are actually connected and verified. Android-native insets, Discord-inspired workspace styling, readable functional typography, and the user-controlled update path remain preserved."
 }
