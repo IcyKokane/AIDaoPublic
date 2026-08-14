@@ -1,7 +1,7 @@
 {
-  "version": "0.21.0-alpha",
-  "versionCode": 21,
+  "version": "0.22.0-alpha",
+  "versionCode": 22,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "Persistent project-context milestone: messages entered in a project workspace are now stored locally per project and return when the workspace is reopened. Saved project briefs are surfaced in the Plan tab, chat entries are rendered as user messages instead of disappearing after Send, and Settings can clear all local workspace data. Existing workspace tabs, Android-native inset handling, typography split, GitHub access, and user-controlled update flow remain preserved."
+  "notes": "Structured-planning milestone: adds a local deterministic ProjectPlanner that converts ordinary-language briefs and accumulated project context into explicit requirements, implementation tasks, and safety assumptions. It recognizes common Android needs including GitHub/repository integration, files, media/providers, local persistence, notifications, location, authentication, and AI workflows. This creates the planning boundary that the model-backed generator will use next while preserving the existing workspace, Android-native inset behavior, and user-controlled update path."
 }
