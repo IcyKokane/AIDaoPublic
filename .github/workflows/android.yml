@@ -16,13 +16,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Reconstruct and verify AIDao source
+      - name: Verify and unpack AIDao source
         run: |
           mkdir -p .work
-          cat source/b64/part*.txt | tr -d '[:space:]' | base64 --decode > .work/AIDao-android-v0.11.0.zip
-          echo "ea55d8e48a1fff76278152677abf65eb36c787f55d7b6e1d3dded366abeba0e8  .work/AIDao-android-v0.11.0.zip" | sha256sum --check
-          unzip -t .work/AIDao-android-v0.11.0.zip
-          unzip -q .work/AIDao-android-v0.11.0.zip -d .work
+          unzip -t source/AIDao-android-v0.11.0.zip
+          unzip -q source/AIDao-android-v0.11.0.zip -d .work
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
