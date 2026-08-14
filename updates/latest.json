@@ -1,7 +1,7 @@
 {
-  "version": "0.14.0-alpha",
-  "versionCode": 14,
+  "version": "0.15.0-alpha",
+  "versionCode": 15,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "Android-native fit pass: safe status/navigation/IME insets, improved responsive workspace spacing, accessible update checking, and reduced decorative font usage for functional UI."
+  "notes": "Android-native interaction pass: corrected IME handling, added full bottom-nav destinations with active-state feedback, increased safe top spacing, improved accessibility labels, disabled stale update caching, and restricted update links to the official AIDaoPublic GitHub repository."
 }
