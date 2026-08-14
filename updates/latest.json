@@ -1,7 +1,7 @@
 {
-  "version": "0.15.0-alpha",
-  "versionCode": 15,
+  "version": "0.16.0-alpha",
+  "versionCode": 16,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "Android-native interaction pass: corrected IME handling, added full bottom-nav destinations with active-state feedback, increased safe top spacing, improved accessibility labels, disabled stale update caching, and restricted update links to the official AIDaoPublic GitHub repository."
+  "notes": "Android-native fit refinement: responsive safe-area padding now includes side system bars and display cutouts, the header sits lower with additional top breathing room, bottom navigation remains protected in three-button and gesture modes, IME interactions dismiss cleanly after sending/creating, workspace tabs and tappable rows use stronger touch targets, and update checks now prevent duplicate requests, bypass caches, display release notes, and only open HTTPS links inside the official AIDaoPublic repository."
 }
