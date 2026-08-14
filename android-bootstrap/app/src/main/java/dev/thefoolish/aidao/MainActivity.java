@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
@@ -46,7 +47,9 @@ public class MainActivity extends Activity {
     private LinearLayout bottomNav;
     private ScrollView contentScroll;
     private int baseContentBottom;
+    private int contentHorizontal;
     private int activeNavIndex = 0;
+    private boolean updateCheckInProgress = false;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -59,6 +62,8 @@ public class MainActivity extends Activity {
     }
 
     private void buildShell(String title, String subtitle) {
+        contentHorizontal = getResources().getConfiguration().smallestScreenWidthDp >= 600 ? dp(28) : dp(18);
+
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BG);
@@ -66,7 +71,7 @@ public class MainActivity extends Activity {
         header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(18), dp(22), dp(18), dp(14));
+        header.setPadding(contentHorizontal, dp(24), contentHorizontal, dp(14));
         header.setBackgroundColor(HEADER);
 
         TextView logo = label("A", 20, Color.WHITE, true);
@@ -90,9 +95,10 @@ public class MainActivity extends Activity {
 
         contentScroll = new ScrollView(this);
         contentScroll.setFillViewport(true);
+        contentScroll.setClipToPadding(false);
         content = column();
         baseContentBottom = dp(26);
-        content.setPadding(dp(18), dp(18), dp(18), baseContentBottom);
+        content.setPadding(contentHorizontal, dp(18), contentHorizontal, baseContentBottom);
         contentScroll.addView(content, new ScrollView.LayoutParams(-1, -2));
         root.addView(contentScroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
@@ -107,30 +113,39 @@ public class MainActivity extends Activity {
             root.setOnApplyWindowInsetsListener((v, insets) -> {
                 int statusTop;
                 int navBottom;
+                int safeLeft;
+                int safeRight;
                 int imeBottom = 0;
                 boolean imeVisible = false;
 
                 if (Build.VERSION.SDK_INT >= 30) {
-                    android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                    android.graphics.Insets safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
                     android.graphics.Insets ime = insets.getInsets(WindowInsets.Type.ime());
-                    statusTop = bars.top;
-                    navBottom = bars.bottom;
+                    statusTop = safe.top;
+                    navBottom = safe.bottom;
+                    safeLeft = safe.left;
+                    safeRight = safe.right;
                     imeBottom = ime.bottom;
                     imeVisible = insets.isVisible(WindowInsets.Type.ime());
                 } else {
                     statusTop = insets.getSystemWindowInsetTop();
                     navBottom = insets.getSystemWindowInsetBottom();
+                    safeLeft = insets.getSystemWindowInsetLeft();
+                    safeRight = insets.getSystemWindowInsetRight();
                 }
 
-                header.setPadding(dp(18), statusTop + dp(22), dp(18), dp(14));
+                int left = Math.max(contentHorizontal, safeLeft + dp(12));
+                int right = Math.max(contentHorizontal, safeRight + dp(12));
+                header.setPadding(left, statusTop + dp(24), right, dp(14));
                 int bottomSafe = Math.max(navBottom, dp(6));
-                bottomNav.setPadding(dp(8), dp(7), dp(8), bottomSafe + dp(8));
+                bottomNav.setPadding(Math.max(dp(8), safeLeft + dp(6)), dp(7), Math.max(dp(8), safeRight + dp(6)), bottomSafe + dp(8));
 
                 if (Build.VERSION.SDK_INT >= 30) {
                     int keyboardInset = imeVisible ? Math.max(0, imeBottom - navBottom) : 0;
                     bottomNav.setVisibility(imeVisible ? View.GONE : View.VISIBLE);
-                    bottomNav.setTranslationY(0f);
-                    content.setPadding(dp(18), dp(18), dp(18), baseContentBottom + keyboardInset + (imeVisible ? dp(12) : 0));
+                    content.setPadding(left, dp(18), right, baseContentBottom + keyboardInset + (imeVisible ? dp(12) : 0));
+                } else {
+                    content.setPadding(left, dp(18), right, baseContentBottom);
                 }
                 return insets;
             });
@@ -198,12 +213,14 @@ public class MainActivity extends Activity {
         buildShell(projectName, "Project workspace · " + state);
         HorizontalScrollView tabsScroll = new HorizontalScrollView(this);
         tabsScroll.setHorizontalScrollBarEnabled(false);
+        tabsScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
         LinearLayout tabs = row();
         String[] items = {"Chat", "Plan", "Files", "Builds", "GitHub"};
         for (int i = 0; i < items.length; i++) {
             TextView chip = label(items[i], 12, i == 0 ? Color.WHITE : MUTED, i == 0);
             chip.setGravity(Gravity.CENTER);
-            chip.setPadding(dp(13), dp(9), dp(13), dp(9));
+            chip.setPadding(dp(13), dp(10), dp(13), dp(10));
+            chip.setMinHeight(dp(42));
             chip.setBackground(round(i == 0 ? Color.rgb(71, 78, 104) : PANEL, 12));
             tabs.addView(chip, lp(-2, -2, 0, 0, 7, 0));
         }
@@ -228,11 +245,12 @@ public class MainActivity extends Activity {
         Button send = primaryButton("Send to AIDao");
         send.setOnClickListener(v -> {
             if (!prompt.getText().toString().trim().isEmpty()) {
+                hideKeyboard(prompt);
                 Toast.makeText(this, "Added to project conversation", Toast.LENGTH_SHORT).show();
                 prompt.setText("");
             }
         });
-        composer.addView(send, lp(-1, dp(46), 0, 8, 0, 0));
+        composer.addView(send, lp(-1, dp(48), 0, 8, 0, 0));
         content.addView(composer, lp(-1, -2, 0, 18, 0, 0));
     }
 
@@ -276,6 +294,11 @@ public class MainActivity extends Activity {
     }
 
     private void checkForUpdates() {
+        if (updateCheckInProgress) {
+            Toast.makeText(this, "Update check already in progress", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        updateCheckInProgress = true;
         Toast.makeText(this, "Checking AIDaoPublic…", Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             HttpURLConnection c = null;
@@ -284,7 +307,9 @@ public class MainActivity extends Activity {
                 c.setConnectTimeout(8000);
                 c.setReadTimeout(8000);
                 c.setUseCaches(false);
-                c.setRequestProperty("Cache-Control", "no-cache");
+                c.setInstanceFollowRedirects(true);
+                c.setRequestProperty("Cache-Control", "no-cache, no-store");
+                c.setRequestProperty("Pragma", "no-cache");
                 c.setRequestProperty("User-Agent", "AIDao-Android/" + BuildConfig.VERSION_NAME);
                 if (c.getResponseCode() != 200) throw new IllegalStateException("HTTP " + c.getResponseCode());
                 BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
@@ -294,14 +319,21 @@ public class MainActivity extends Activity {
                 r.close();
                 String latest = jsonValue(body.toString(), "version");
                 String download = jsonValue(body.toString(), "downloadUrl");
-                if (latest == null) throw new IllegalStateException("version missing");
-                runOnUiThread(() -> showUpdateResult(latest, download));
+                String notes = jsonValue(body.toString(), "notes");
+                if (latest == null || latest.trim().isEmpty()) throw new IllegalStateException("version missing");
+                runOnUiThread(() -> {
+                    updateCheckInProgress = false;
+                    showUpdateResult(latest, download, notes);
+                });
             } catch (Exception e) {
-                runOnUiThread(() -> new AlertDialog.Builder(this)
-                        .setTitle("Unable to check for updates")
-                        .setMessage("AIDao could not reach its update source. Check your connection and try again.")
-                        .setPositiveButton("OK", null)
-                        .show());
+                runOnUiThread(() -> {
+                    updateCheckInProgress = false;
+                    new AlertDialog.Builder(this)
+                            .setTitle("Unable to check for updates")
+                            .setMessage("AIDao could not reach its official AIDaoPublic update source. Check your connection and try again.")
+                            .setPositiveButton("OK", null)
+                            .show();
+                });
             } finally {
                 if (c != null) c.disconnect();
             }
@@ -310,14 +342,19 @@ public class MainActivity extends Activity {
 
     private String jsonValue(String json, String key) {
         Matcher m = Pattern.compile("\\\"" + Pattern.quote(key) + "\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"").matcher(json);
-        return m.find() ? m.group(1).replace("\\/", "/") : null;
+        return m.find() ? m.group(1).replace("\\/", "/").replace("\\n", "\n") : null;
     }
 
-    private void showUpdateResult(String latest, String download) {
+    private void showUpdateResult(String latest, String download, String notes) {
         boolean newer = compareVersions(latest, BuildConfig.VERSION_NAME) > 0;
+        StringBuilder message = new StringBuilder()
+                .append("Installed: ").append(BuildConfig.VERSION_NAME)
+                .append("\nAvailable: ").append(latest);
+        if (notes != null && !notes.trim().isEmpty()) message.append("\n\nWhat changed\n").append(notes.trim());
+
         AlertDialog.Builder b = new AlertDialog.Builder(this)
                 .setTitle(newer ? "Update available" : "AIDao is current")
-                .setMessage("Installed: " + BuildConfig.VERSION_NAME + "\nAvailable: " + latest);
+                .setMessage(message.toString());
         if (newer) {
             b.setPositiveButton("Open verified build page", (d, which) -> {
                 String target = verifiedDownloadTarget(download);
@@ -336,9 +373,10 @@ public class MainActivity extends Activity {
             Uri uri = Uri.parse(download.trim());
             String host = uri.getHost();
             String path = uri.getPath();
+            boolean secure = "https".equalsIgnoreCase(uri.getScheme());
             boolean trustedHost = "github.com".equalsIgnoreCase(host);
-            boolean trustedRepo = path != null && path.startsWith("/IcyKokane/AIDaoPublic/");
-            return trustedHost && trustedRepo ? uri.toString() : FALLBACK_DOWNLOAD_PAGE;
+            boolean trustedRepo = path != null && (path.equals("/IcyKokane/AIDaoPublic") || path.startsWith("/IcyKokane/AIDaoPublic/"));
+            return secure && trustedHost && trustedRepo ? uri.toString() : FALLBACK_DOWNLOAD_PAGE;
         } catch (Exception ignored) {
             return FALLBACK_DOWNLOAD_PAGE;
         }
@@ -369,7 +407,10 @@ public class MainActivity extends Activity {
                 .setPositiveButton("Create Project Brief", (d, which) -> {
                     String raw = request.getText().toString().trim();
                     if (raw.isEmpty()) Toast.makeText(this, "Describe what you want to build", Toast.LENGTH_SHORT).show();
-                    else showGeneratedBrief(raw);
+                    else {
+                        hideKeyboard(request);
+                        showGeneratedBrief(raw);
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -388,6 +429,14 @@ public class MainActivity extends Activity {
         Button open = primaryButton("Open Project Workspace");
         open.setOnClickListener(v -> showWorkspace("New project", "PLANNING"));
         content.addView(open, lp(-1, dp(50), 0, 18, 0, 0));
+    }
+
+    private void hideKeyboard(View view) {
+        try {
+            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+            view.clearFocus();
+        } catch (Exception ignored) { }
     }
 
     private View message(String avatar, String author, String body, int accent) {
@@ -424,6 +473,7 @@ public class MainActivity extends Activity {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(14), dp(12), dp(14), dp(12));
+        row.setMinimumHeight(dp(58));
         TextView icon = label(mark, 15, color, true);
         icon.setGravity(Gravity.CENTER);
         row.addView(icon, box(dp(36), dp(36), 0, 0, dp(10), 0));
@@ -449,7 +499,7 @@ public class MainActivity extends Activity {
             item.setMinimumHeight(dp(58));
             item.setClickable(true);
             item.setFocusable(true);
-            item.setContentDescription(names[i]);
+            item.setContentDescription(names[i] + (active ? ", selected" : ""));
             item.addView(label(icons[i], 17, active ? BLUE : MUTED, true));
             item.addView(label(names[i], 10, active ? Color.WHITE : MUTED, active));
             item.setOnClickListener(v -> {
@@ -471,7 +521,7 @@ public class MainActivity extends Activity {
     }
     private LinearLayout row() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.HORIZONTAL); v.setGravity(Gravity.CENTER_VERTICAL); return v; }
     private LinearLayout column() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
-    private Button primaryButton(String text) { Button b = new Button(this); b.setText(text); b.setTextColor(Color.WHITE); b.setTextSize(13); b.setTypeface(Typeface.DEFAULT, Typeface.BOLD); b.setAllCaps(false); b.setBackground(round(BLUE, 12)); return b; }
+    private Button primaryButton(String text) { Button b = new Button(this); b.setText(text); b.setTextColor(Color.WHITE); b.setTextSize(13); b.setTypeface(Typeface.create("sans-serif", Typeface.BOLD)); b.setAllCaps(false); b.setMinHeight(dp(48)); b.setBackground(round(BLUE, 12)); return b; }
     private TextView label(String text, int sp, int color, boolean bold) { TextView v = new TextView(this); v.setText(text); v.setTextColor(color); v.setTextSize(sp); v.setTypeface(Typeface.create("sans-serif", bold ? Typeface.BOLD : Typeface.NORMAL)); v.setIncludeFontPadding(false); return v; }
     private GradientDrawable round(int color, int radiusDp) { GradientDrawable d = new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(radiusDp)); return d; }
     private GradientDrawable stroke(int color, int strokeColor, int radiusDp) { GradientDrawable d = round(color, radiusDp); d.setStroke(dp(1), strokeColor); return d; }
