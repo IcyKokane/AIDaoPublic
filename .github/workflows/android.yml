@@ -39,11 +39,14 @@ jobs:
       - name: Validate Android usability safeguards
         run: |
           python3 - <<'PY'
-          import pathlib
+          import pathlib, re
           base = pathlib.Path("android-bootstrap/app/src/main/java/dev/thefoolish/aidao")
           manifest = pathlib.Path("android-bootstrap/app/src/main/AndroidManifest.xml").read_text()
-          active = "AIDaoActivityV2.java" if "AIDaoActivityV2" in manifest else "AIDaoActivity.java"
-          source = (base / active).read_text()
+          match = re.search(r'android:name="\.([A-Za-z0-9_]+)"', manifest)
+          if not match:
+              raise SystemExit("Unable to determine launcher activity")
+          active = base / (match.group(1) + ".java")
+          source = active.read_text()
           theme = pathlib.Path("android-bootstrap/app/src/main/res/values/styles.xml").read_text()
           required = {
               "edge-to-edge": "setDecorFitsSystemWindows(false)",
@@ -56,14 +59,17 @@ jobs:
               "trusted repository": "/IcyKokane/AIDaoPublic/",
               "user-controlled update": "Open verified build page",
               "sans-serif UI": "Typeface.create(\"sans-serif\"",
-              "persistent workspace": "projectKey(\"chat\")",
-              "saved project brief": "project_brief",
+              "persistent workspace": "project_brief",
+              "provider-backed plan generation": "providers.selected()",
+              "editable requirement": "editListItem(\"Requirement\"",
+              "task progress": "task_done_",
+              "truthful source state": "Source generation\",\"Not connected",
           }
           missing = [k for k,v in required.items() if v not in source]
           for k,v in {"dark status bar":"android:windowLightStatusBar\">false","dark nav bar":"android:windowLightNavigationBar\">false","cutout support":"android:windowLayoutInDisplayCutoutMode\">shortEdges"}.items():
               if v not in theme: missing.append(k)
-          if missing: raise SystemExit("Android usability regression: " + ", ".join(missing))
-          print("Validated active Android workspace, persistence, insets, typography, and update safeguards")
+          if missing: raise SystemExit("Android usability/workflow regression: " + ", ".join(missing))
+          print("Validated active Android workspace, interactive planning, insets, typography, and update safeguards")
           PY
 
       - name: Validate AI provider safety boundary
