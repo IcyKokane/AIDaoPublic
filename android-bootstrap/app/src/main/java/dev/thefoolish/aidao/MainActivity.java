@@ -46,6 +46,7 @@ public class MainActivity extends Activity {
     private LinearLayout bottomNav;
     private ScrollView contentScroll;
     private int baseContentBottom;
+    private int activeNavIndex = 0;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -65,7 +66,7 @@ public class MainActivity extends Activity {
         header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(18), dp(20), dp(18), dp(14));
+        header.setPadding(dp(18), dp(22), dp(18), dp(14));
         header.setBackgroundColor(HEADER);
 
         TextView logo = label("A", 20, Color.WHITE, true);
@@ -83,7 +84,7 @@ public class MainActivity extends Activity {
 
         TextView status = label("●", 17, GREEN, true);
         status.setGravity(Gravity.CENTER);
-        status.setContentDescription("Connected");
+        status.setContentDescription("AIDao ready");
         header.addView(status, new LinearLayout.LayoutParams(dp(40), dp(40)));
         root.addView(header);
 
@@ -107,25 +108,29 @@ public class MainActivity extends Activity {
                 int statusTop;
                 int navBottom;
                 int imeBottom = 0;
+                boolean imeVisible = false;
+
                 if (Build.VERSION.SDK_INT >= 30) {
                     android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
                     android.graphics.Insets ime = insets.getInsets(WindowInsets.Type.ime());
                     statusTop = bars.top;
                     navBottom = bars.bottom;
                     imeBottom = ime.bottom;
+                    imeVisible = insets.isVisible(WindowInsets.Type.ime());
                 } else {
                     statusTop = insets.getSystemWindowInsetTop();
                     navBottom = insets.getSystemWindowInsetBottom();
                 }
 
-                header.setPadding(dp(18), statusTop + dp(20), dp(18), dp(14));
+                header.setPadding(dp(18), statusTop + dp(22), dp(18), dp(14));
                 int bottomSafe = Math.max(navBottom, dp(6));
                 bottomNav.setPadding(dp(8), dp(7), dp(8), bottomSafe + dp(8));
 
                 if (Build.VERSION.SDK_INT >= 30) {
-                    int keyboardLift = Math.max(0, imeBottom - navBottom);
-                    bottomNav.setTranslationY(keyboardLift > 0 ? keyboardLift : 0);
-                    content.setPadding(dp(18), dp(18), dp(18), baseContentBottom + keyboardLift);
+                    int keyboardInset = imeVisible ? Math.max(0, imeBottom - navBottom) : 0;
+                    bottomNav.setVisibility(imeVisible ? View.GONE : View.VISIBLE);
+                    bottomNav.setTranslationY(0f);
+                    content.setPadding(dp(18), dp(18), dp(18), baseContentBottom + keyboardInset + (imeVisible ? dp(12) : 0));
                 }
                 return insets;
             });
@@ -134,6 +139,7 @@ public class MainActivity extends Activity {
     }
 
     private void showProjects() {
+        activeNavIndex = 0;
         buildShell("AIDao", "Developer workspace");
         LinearLayout welcome = panel(PANEL);
         welcome.addView(label("BUILD WITH AIDAO", 11, BLUE, true));
@@ -158,6 +164,7 @@ public class MainActivity extends Activity {
         updates.setOnClickListener(v -> checkForUpdates());
         updates.setClickable(true);
         updates.setFocusable(true);
+        updates.setContentDescription("Check for AIDao updates. Installed version " + BuildConfig.VERSION_NAME);
         content.addView(updates, lp(-1, -2, 0, 8, 0, 0));
     }
 
@@ -187,6 +194,7 @@ public class MainActivity extends Activity {
     }
 
     private void showWorkspace(String projectName, String state) {
+        activeNavIndex = 1;
         buildShell(projectName, "Project workspace · " + state);
         HorizontalScrollView tabsScroll = new HorizontalScrollView(this);
         tabsScroll.setHorizontalScrollBarEnabled(false);
@@ -228,7 +236,33 @@ public class MainActivity extends Activity {
         content.addView(composer, lp(-1, -2, 0, 18, 0, 0));
     }
 
+    private void showAIDao() {
+        activeNavIndex = 1;
+        buildShell("AIDao", "AI build console");
+        content.addView(label("Assistant", 21, Color.WHITE, true));
+        content.addView(label("A focused command surface for active project work. Open a project to keep plans, source changes, builds, and approvals in context.", 14, MUTED, false), lp(-1, -2, 0, 8, 0, 16));
+        content.addView(message("A", "AIDao", "I’m ready to continue the active Android project. Choose a recent project or create a new one from Projects.", BLUE));
+        Button projects = primaryButton("Open Projects");
+        projects.setOnClickListener(v -> showProjects());
+        content.addView(projects, lp(-1, dp(48), 0, 16, 0, 0));
+    }
+
+    private void showActivity() {
+        activeNavIndex = 2;
+        buildShell("Activity", "Build and update status");
+        content.addView(label("System activity", 21, Color.WHITE, true));
+        content.addView(activityRow("✓", GREEN, "Android build pipeline", "CI and APK artifact delivery are configured"), lp(-1, -2, 0, 12, 0, 0));
+        content.addView(activityRow("↗", BLUE, "Repository", "IcyKokane / AIDaoPublic"), lp(-1, -2, 0, 8, 0, 0));
+        View update = activityRow("↓", PURPLE, "Check for Updates", "Current install: " + BuildConfig.VERSION_NAME);
+        update.setOnClickListener(v -> checkForUpdates());
+        update.setClickable(true);
+        update.setFocusable(true);
+        update.setContentDescription("Check for AIDao updates. Installed version " + BuildConfig.VERSION_NAME);
+        content.addView(update, lp(-1, -2, 0, 8, 0, 0));
+    }
+
     private void showSettings() {
+        activeNavIndex = 3;
         buildShell("Settings", "AIDao preferences and updates");
         content.addView(label("App", 18, Color.WHITE, true));
         LinearLayout version = panel(PANEL);
@@ -236,6 +270,7 @@ public class MainActivity extends Activity {
         version.addView(label("AIDao checks its published update metadata on AIDaoPublic. Updates are always user-controlled; the app never silently installs an APK.", 13, MUTED, false), lp(-1, -2, 0, 7, 0, 0));
         Button check = primaryButton("Check for Updates");
         check.setOnClickListener(v -> checkForUpdates());
+        check.setContentDescription("Check for AIDao updates");
         version.addView(check, lp(-1, dp(48), 0, 14, 0, 0));
         content.addView(version, lp(-1, -2, 0, 10, 0, 0));
     }
@@ -243,10 +278,13 @@ public class MainActivity extends Activity {
     private void checkForUpdates() {
         Toast.makeText(this, "Checking AIDaoPublic…", Toast.LENGTH_SHORT).show();
         new Thread(() -> {
+            HttpURLConnection c = null;
             try {
-                HttpURLConnection c = (HttpURLConnection) new URL(UPDATE_SOURCE).openConnection();
+                c = (HttpURLConnection) new URL(UPDATE_SOURCE).openConnection();
                 c.setConnectTimeout(8000);
                 c.setReadTimeout(8000);
+                c.setUseCaches(false);
+                c.setRequestProperty("Cache-Control", "no-cache");
                 c.setRequestProperty("User-Agent", "AIDao-Android/" + BuildConfig.VERSION_NAME);
                 if (c.getResponseCode() != 200) throw new IllegalStateException("HTTP " + c.getResponseCode());
                 BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
@@ -264,6 +302,8 @@ public class MainActivity extends Activity {
                         .setMessage("AIDao could not reach its update source. Check your connection and try again.")
                         .setPositiveButton("OK", null)
                         .show());
+            } finally {
+                if (c != null) c.disconnect();
             }
         }).start();
     }
@@ -280,7 +320,7 @@ public class MainActivity extends Activity {
                 .setMessage("Installed: " + BuildConfig.VERSION_NAME + "\nAvailable: " + latest);
         if (newer) {
             b.setPositiveButton("Open verified build page", (d, which) -> {
-                String target = (download == null || download.trim().isEmpty()) ? FALLBACK_DOWNLOAD_PAGE : download;
+                String target = verifiedDownloadTarget(download);
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(target)));
             });
             b.setNegativeButton("Not now", null);
@@ -288,6 +328,20 @@ public class MainActivity extends Activity {
             b.setPositiveButton("Done", null);
         }
         b.show();
+    }
+
+    private String verifiedDownloadTarget(String download) {
+        if (download == null || download.trim().isEmpty()) return FALLBACK_DOWNLOAD_PAGE;
+        try {
+            Uri uri = Uri.parse(download.trim());
+            String host = uri.getHost();
+            String path = uri.getPath();
+            boolean trustedHost = "github.com".equalsIgnoreCase(host);
+            boolean trustedRepo = path != null && path.startsWith("/IcyKokane/AIDaoPublic/");
+            return trustedHost && trustedRepo ? uri.toString() : FALLBACK_DOWNLOAD_PAGE;
+        } catch (Exception ignored) {
+            return FALLBACK_DOWNLOAD_PAGE;
+        }
     }
 
     private int compareVersions(String a, String b) {
@@ -322,6 +376,7 @@ public class MainActivity extends Activity {
     }
 
     private void showGeneratedBrief(String raw) {
+        activeNavIndex = 1;
         buildShell("New project", "AIDao project brief");
         content.addView(label("Project brief", 22, Color.WHITE, true));
         content.addView(label(raw, 15, Color.rgb(224, 226, 234), false), lp(-1, -2, 0, 8, 0, 16));
@@ -388,15 +443,20 @@ public class MainActivity extends Activity {
         String[] icons = {"▦", "◇", "≋", "⚙"};
         for (int i = 0; i < names.length; i++) {
             final int index = i;
+            boolean active = i == activeNavIndex;
             LinearLayout item = column();
             item.setGravity(Gravity.CENTER);
             item.setMinimumHeight(dp(58));
-            item.addView(label(icons[i], 17, i == 0 ? BLUE : MUTED, true));
-            item.addView(label(names[i], 10, i == 0 ? Color.WHITE : MUTED, i == 0));
+            item.setClickable(true);
+            item.setFocusable(true);
+            item.setContentDescription(names[i]);
+            item.addView(label(icons[i], 17, active ? BLUE : MUTED, true));
+            item.addView(label(names[i], 10, active ? Color.WHITE : MUTED, active));
             item.setOnClickListener(v -> {
                 if (index == 0) showProjects();
-                else if (index == 3) showSettings();
-                else Toast.makeText(this, names[index] + " workspace is being integrated", Toast.LENGTH_SHORT).show();
+                else if (index == 1) showAIDao();
+                else if (index == 2) showActivity();
+                else showSettings();
             });
             nav.addView(item, new LinearLayout.LayoutParams(0, dp(58), 1));
         }
