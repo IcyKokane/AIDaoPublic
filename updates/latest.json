@@ -1,7 +1,7 @@
 {
-  "version": "0.20.0-alpha",
-  "versionCode": 20,
+  "version": "0.21.0-alpha",
+  "versionCode": 21,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "Typography and workspace milestone: functional UI text now uses explicit Android sans-serif families while AIDao branding and major headings retain the stylized display treatment. Project workspaces now have working Chat, Plan, Files, Builds, and GitHub tabs, newly created project briefs are saved locally and return to Recent projects, and the Android-native inset/update behavior remains preserved."
+  "notes": "Persistent project-context milestone: messages entered in a project workspace are now stored locally per project and return when the workspace is reopened. Saved project briefs are surfaced in the Plan tab, chat entries are rendered as user messages instead of disappearing after Send, and Settings can clear all local workspace data. Existing workspace tabs, Android-native inset handling, typography split, GitHub access, and user-controlled update flow remain preserved."
 }
