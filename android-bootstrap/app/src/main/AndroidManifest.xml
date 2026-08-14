@@ -9,7 +9,7 @@
         android:allowBackup="true"
         android:supportsRtl="true">
         <activity
-            android:name=".MainActivity"
+            android:name=".AIDaoActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
