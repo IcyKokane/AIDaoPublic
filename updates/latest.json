@@ -1,7 +1,7 @@
 {
-  "version": "0.19.0-alpha",
-  "versionCode": 19,
+  "version": "0.20.0-alpha",
+  "versionCode": 20,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "Android launcher branding pass: AIDao now uses an adaptive launcher icon built from the approved blue-purple A/chat motif, including a dedicated Android 13+ monochrome variant for themed icons. The existing Discord-inspired workspace, Android system-bar/IME inset handling, responsive spacing, and user-controlled Check for Updates flow remain unchanged."
+  "notes": "Typography and workspace milestone: functional UI text now uses explicit Android sans-serif families while AIDao branding and major headings retain the stylized display treatment. Project workspaces now have working Chat, Plan, Files, Builds, and GitHub tabs, newly created project briefs are saved locally and return to Recent projects, and the Android-native inset/update behavior remains preserved."
 }

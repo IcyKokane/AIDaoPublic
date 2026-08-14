@@ -9,7 +9,7 @@
         android:allowBackup="true"
         android:supportsRtl="true">
         <activity
-            android:name=".AIDaoActivity"
+            android:name=".AIDaoActivityV2"
             android:exported="true"
             android:screenOrientation="unspecified"
             android:windowSoftInputMode="adjustResize|stateAlwaysHidden">
