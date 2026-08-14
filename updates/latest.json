@@ -1,7 +1,7 @@
 {
-  "version": "0.18.0-alpha",
-  "versionCode": 18,
+  "version": "0.19.0-alpha",
+  "versionCode": 19,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "Android shell hardening: the app now uses a dedicated dark AIDao system theme for consistent status/navigation bar appearance, explicit dark system-bar icons, display-cutout support, no launch-preview flash, and keyboard behavior that starts hidden while retaining resize/inset handling. The release pipeline also validates that update metadata matches the Android version before building, reducing the chance of a broken Check for Updates result."
+  "notes": "Android launcher branding pass: AIDao now uses an adaptive launcher icon built from the approved blue-purple A/chat motif, including a dedicated Android 13+ monochrome variant for themed icons. The existing Discord-inspired workspace, Android system-bar/IME inset handling, responsive spacing, and user-controlled Check for Updates flow remain unchanged."
 }
