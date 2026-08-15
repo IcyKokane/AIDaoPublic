@@ -7,9 +7,9 @@ import java.util.Locale;
 /**
  * Deterministic, local-only Android source generator.
  *
- * This stage deliberately creates source text only. It never installs APKs,
- * publishes repositories, uses credentials, spends money, or performs
- * destructive actions. Those actions remain explicit user-controlled gates.
+ * Source creation is deliberately side-effect free: no installation,
+ * publication, credential use, provider acquisition, spending, or execution of
+ * user-supplied material occurs here. External actions remain explicit gates.
  */
 final class LocalSourceGenerator {
     GeneratedProject generate(String projectName, String brief, List<String> requirements, List<String> tasks) {
@@ -17,28 +17,29 @@ final class LocalSourceGenerator {
         String slug = slug(projectName);
         String packageName = "dev.thefoolish.generated." + slug;
         String packagePath = packageName.replace('.', '/');
-        boolean media = isMediaProject(brief, requirements);
+        ProjectIntent intent = ProjectIntent.from(brief, requirements);
 
         List<GeneratedProject.FileEntry> files = new ArrayList<>();
         files.add(file("settings.gradle.kts", settings(safeName), "Create Android project shell"));
         files.add(file("build.gradle.kts", rootGradle(), "Create Android project shell"));
         files.add(file("app/build.gradle.kts", appGradle(packageName), "Create Android project shell"));
-        files.add(file("app/src/main/AndroidManifest.xml", manifest(safeName), "Create Android project shell"));
-        files.add(file("app/src/main/res/values/styles.xml", styles(), "Create Android project shell"));
+        files.add(file("app/src/main/AndroidManifest.xml", manifest(safeName, intent), "Generate manifest declarations"));
+        files.add(file("app/src/main/res/values/styles.xml", styles(), "Generate accessible application theme"));
+        files.add(file("app/src/main/res/values/colors.xml", colors(), "Generate reusable color resources"));
+        files.add(file("app/src/main/res/values/strings.xml", strings(safeName), "Generate application string resources"));
 
-        if (media) {
-            files.add(file("app/src/main/java/" + packagePath + "/AnimeItem.java", animeItem(packageName), "Define anime and watch-progress models"));
-            files.add(file("app/src/main/java/" + packagePath + "/MediaProvider.java", mediaProvider(packageName), "Implement provider contracts"));
-            files.add(file("app/src/main/java/" + packagePath + "/LocalLibraryStore.java", localLibraryStore(packageName), "Persist favorites and watch progress"));
-            files.add(file("app/src/main/java/" + packagePath + "/MainActivity.java", mediaActivity(packageName, safeName, brief), "Build catalog, library, history, and provider user flows"));
-        } else {
-            files.add(file("app/src/main/java/" + packagePath + "/MainActivity.java", genericActivity(packageName, safeName, brief, requirements), "Build primary user flow"));
-        }
+        files.add(file("app/src/main/java/" + packagePath + "/ProjectContract.java", projectContract(packageName, safeName, brief, intent), "Represent interpreted project intent"));
+        files.add(file("app/src/main/java/" + packagePath + "/AppRecord.java", appRecord(packageName), "Define reusable local data model"));
+        files.add(file("app/src/main/java/" + packagePath + "/AppStateStore.java", appStateStore(packageName), "Persist generated app state"));
+        files.add(file("app/src/main/java/" + packagePath + "/AppRepository.java", appRepository(packageName, intent), "Implement local project data repository"));
+        if (intent.providers) files.add(file("app/src/main/java/" + packagePath + "/ProviderContract.java", providerContract(packageName), "Define safe replaceable provider boundary"));
+        if (intent.media) files.add(file("app/src/main/java/" + packagePath + "/MediaProgressStore.java", mediaProgressStore(packageName), "Persist media favorites and progress"));
+        files.add(file("app/src/main/java/" + packagePath + "/MainActivity.java", mainActivity(packageName, safeName, brief, intent), "Build intent-specific multi-screen user flow"));
 
-        files.add(file("README.md", readme(safeName, brief, requirements, tasks, media), "Document generated project"));
+        files.add(file("README.md", readme(safeName, brief, requirements, tasks, intent), "Document generated architecture"));
         files.add(file(".github/workflows/android.yml", workflow(), "Run Android CI"));
 
-        List<String> verification = verify(packageName, files, media);
+        List<String> verification = verify(packageName, files, intent);
         return new GeneratedProject(safeName, packageName, files, verification);
     }
 
@@ -46,33 +47,26 @@ final class LocalSourceGenerator {
         return new GeneratedProject.FileEntry(path, content, taskHint);
     }
 
-    private boolean isMediaProject(String brief, List<String> requirements) {
-        StringBuilder all = new StringBuilder(brief == null ? "" : brief.toLowerCase(Locale.US));
-        if (requirements != null) for (String item : requirements) all.append(' ').append(item == null ? "" : item.toLowerCase(Locale.US));
-        String s = all.toString();
-        return s.contains("anime") || s.contains("episode") || s.contains("stream") || s.contains("video") || s.contains("media provider");
-    }
-
-    private List<String> verify(String packageName, List<GeneratedProject.FileEntry> files, boolean media) {
+    private List<String> verify(String packageName, List<GeneratedProject.FileEntry> files, ProjectIntent intent) {
         List<String> notes = new ArrayList<>();
         String[] required = {
                 "settings.gradle.kts", "build.gradle.kts", "app/build.gradle.kts",
                 "app/src/main/AndroidManifest.xml", "app/src/main/res/values/styles.xml",
+                "app/src/main/res/values/colors.xml", "app/src/main/res/values/strings.xml",
                 ".github/workflows/android.yml"
         };
         for (String path : required) notes.add((has(files, path) ? "PASS " : "FAIL ") + path);
-        String sourceRoot = "app/src/main/java/" + packageName.replace('.', '/') + "/";
-        notes.add((has(files, sourceRoot + "MainActivity.java") ? "PASS " : "FAIL ") + "launcher source");
-        if (media) {
-            notes.add((has(files, sourceRoot + "AnimeItem.java") ? "PASS " : "FAIL ") + "media model");
-            notes.add((has(files, sourceRoot + "MediaProvider.java") ? "PASS " : "FAIL ") + "provider contract");
-            notes.add((has(files, sourceRoot + "LocalLibraryStore.java") ? "PASS " : "FAIL ") + "local library persistence");
-        }
+        String root = "app/src/main/java/" + packageName.replace('.', '/') + "/";
+        String[] core = {"MainActivity.java", "ProjectContract.java", "AppRecord.java", "AppStateStore.java", "AppRepository.java"};
+        for (String source : core) notes.add((has(files, root + source) ? "PASS " : "FAIL ") + source);
+        if (intent.providers) notes.add((has(files, root + "ProviderContract.java") ? "PASS " : "FAIL ") + "provider boundary");
+        if (intent.media) notes.add((has(files, root + "MediaProgressStore.java") ? "PASS " : "FAIL ") + "media progress store");
+        notes.add(intent.screens.size() >= 3 ? "PASS multi-screen navigation plan: " + intent.screens.size() + " screens" : "FAIL insufficient navigation surfaces");
         return notes;
     }
 
     private boolean has(List<GeneratedProject.FileEntry> files, String path) {
-        for (GeneratedProject.FileEntry file : files) if (path.equals(file.path)) return true;
+        for (GeneratedProject.FileEntry f : files) if (path.equals(f.path)) return true;
         return false;
     }
 
@@ -83,135 +77,128 @@ final class LocalSourceGenerator {
     }
 
     private String rootGradle() {
-        return "plugins {\n    id(\"com.android.application\") version \"8.7.3\" apply false\n}\n";
+        return "plugins { id(\"com.android.application\") version \"8.7.3\" apply false }\n";
     }
 
     private String appGradle(String packageName) {
-        return "plugins { id(\"com.android.application\") }\n\n" +
-                "android {\n" +
-                "    namespace = \"" + packageName + "\"\n" +
-                "    compileSdk = 35\n" +
-                "    defaultConfig { applicationId = \"" + packageName + "\"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = \"0.1.0\" }\n" +
-                "    compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }\n" +
-                "}\n";
+        return "plugins { id(\"com.android.application\") }\n\nandroid {\n" +
+                "  namespace = \"" + packageName + "\"\n  compileSdk = 35\n" +
+                "  defaultConfig { applicationId = \"" + packageName + "\"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = \"0.5-generated\" }\n" +
+                "  compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }\n}\n";
     }
 
-    private String manifest(String name) {
-        return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-                "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n" +
-                "  <application android:theme=\"@style/AppTheme\" android:label=\"" + xml(name) + "\" android:allowBackup=\"true\" android:supportsRtl=\"true\">\n" +
-                "    <activity android:name=\".MainActivity\" android:exported=\"true\">\n" +
-                "      <intent-filter><action android:name=\"android.intent.action.MAIN\"/><category android:name=\"android.intent.category.LAUNCHER\"/></intent-filter>\n" +
-                "    </activity>\n" +
-                "  </application>\n" +
-                "</manifest>\n";
+    private String manifest(String name, ProjectIntent intent) {
+        StringBuilder out = new StringBuilder("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n");
+        if (intent.providers || intent.media) out.append("  <uses-permission android:name=\"android.permission.INTERNET\"/>\n");
+        if (intent.notifications) out.append("  <uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"/>\n");
+        if (intent.location) out.append("  <uses-permission android:name=\"android.permission.ACCESS_FINE_LOCATION\"/>\n");
+        out.append("  <application android:theme=\"@style/AppTheme\" android:label=\"@string/app_name\" android:allowBackup=\"true\" android:supportsRtl=\"true\">\n")
+           .append("    <activity android:name=\".MainActivity\" android:exported=\"true\" android:windowSoftInputMode=\"adjustResize\">\n")
+           .append("      <intent-filter><action android:name=\"android.intent.action.MAIN\"/><category android:name=\"android.intent.category.LAUNCHER\"/></intent-filter>\n")
+           .append("    </activity>\n  </application>\n</manifest>\n");
+        return out.toString();
     }
 
     private String styles() {
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n" +
                 "  <style name=\"AppTheme\" parent=\"@android:style/Theme.Material.NoActionBar\">\n" +
-                "    <item name=\"android:fontFamily\">sans-serif-condensed</item>\n" +
-                "    <item name=\"android:windowActionModeOverlay\">true</item>\n" +
-                "    <item name=\"android:colorAccent\">#5094FF</item>\n" +
-                "    <item name=\"android:navigationBarColor\">#0C0D11</item>\n" +
-                "    <item name=\"android:statusBarColor\">#121318</item>\n" +
-                "    <item name=\"android:windowLightStatusBar\">false</item>\n" +
-                "    <item name=\"android:windowLightNavigationBar\">false</item>\n" +
+                "    <item name=\"android:fontFamily\">sans</item><item name=\"android:colorAccent\">@color/accent</item>\n" +
+                "    <item name=\"android:statusBarColor\">@color/background</item><item name=\"android:navigationBarColor\">@color/navigation</item>\n" +
+                "    <item name=\"android:windowLightStatusBar\">false</item><item name=\"android:windowLightNavigationBar\">false</item>\n" +
                 "  </style>\n</resources>\n";
     }
 
-    private String animeItem(String packageName) {
-        return "package " + packageName + ";\n\n" +
-                "public final class AnimeItem {\n" +
-                "  public final String id,title,provider; public final int episodeCount;\n" +
-                "  public AnimeItem(String id,String title,String provider,int episodeCount){this.id=id;this.title=title;this.provider=provider;this.episodeCount=episodeCount;}\n" +
-                "}\n";
+    private String colors() {
+        return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n" +
+                "  <color name=\"background\">#121318</color><color name=\"navigation\">#0C0D11</color>\n" +
+                "  <color name=\"panel\">#1D1F27</color><color name=\"accent\">#5094FF</color>\n" +
+                "  <color name=\"text_primary\">#FFFFFF</color><color name=\"text_secondary\">#A3A8B8</color>\n</resources>\n";
     }
 
-    private String mediaProvider(String packageName) {
-        return "package " + packageName + ";\n\nimport java.util.List;\n\n" +
-                "/** Replaceable source boundary. Generated code does not assume an unverified content source. */\n" +
-                "public interface MediaProvider {\n" +
-                "  String id(); String displayName(); boolean isEnabled(); String health();\n" +
-                "  List<AnimeItem> search(String query) throws Exception;\n" +
-                "}\n";
+    private String strings(String name) {
+        return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources><string name=\"app_name\">" + xml(name) + "</string></resources>\n";
     }
 
-    private String localLibraryStore(String packageName) {
-        return "package " + packageName + ";\n\nimport android.content.Context;\nimport android.content.SharedPreferences;\n\n" +
-                "public final class LocalLibraryStore {\n" +
-                "  private final SharedPreferences prefs; public LocalLibraryStore(Context c){prefs=c.getSharedPreferences(\"library\",Context.MODE_PRIVATE);}\n" +
-                "  public boolean isFavorite(String id){return prefs.getBoolean(\"fav_\"+id,false);}\n" +
-                "  public void setFavorite(String id,boolean value){prefs.edit().putBoolean(\"fav_\"+id,value).apply();}\n" +
-                "  public int progressSeconds(String episodeId){return prefs.getInt(\"progress_\"+episodeId,0);}\n" +
-                "  public void saveProgress(String episodeId,int seconds){prefs.edit().putInt(\"progress_\"+episodeId,Math.max(0,seconds)).apply();}\n" +
-                "}\n";
+    private String projectContract(String pkg, String name, String brief, ProjectIntent intent) {
+        StringBuilder screens = new StringBuilder();
+        for (int i = 0; i < intent.screens.size(); i++) { if (i > 0) screens.append(","); screens.append("\"").append(java(intent.screens.get(i))).append("\""); }
+        return "package " + pkg + ";\n\npublic final class ProjectContract {\n" +
+                "  public static final String NAME=\"" + java(name) + "\";\n" +
+                "  public static final String BRIEF=\"" + java(brief) + "\";\n" +
+                "  public static final String[] SCREENS={" + screens + "};\n" +
+                "  public static final boolean MEDIA=" + intent.media + ", SEARCH=" + intent.search + ", FORMS=" + intent.forms + ", PROVIDERS=" + intent.providers + ";\n" +
+                "  private ProjectContract(){}\n}\n";
     }
 
-    private String mediaActivity(String packageName, String name, String brief) {
-        return "package " + packageName + ";\n\n" +
-                "import android.app.Activity;\nimport android.graphics.Color;\nimport android.os.Bundle;\nimport android.view.Gravity;\nimport android.view.View;\nimport android.widget.Button;\nimport android.widget.LinearLayout;\nimport android.widget.ScrollView;\nimport android.widget.TextView;\n\n" +
+    private String appRecord(String pkg) {
+        return "package " + pkg + ";\n\npublic final class AppRecord {\n" +
+                "  public final String id,title,detail; public AppRecord(String id,String title,String detail){this.id=id;this.title=title;this.detail=detail;}\n}\n";
+    }
+
+    private String appStateStore(String pkg) {
+        return "package " + pkg + ";\n\nimport android.content.Context; import android.content.SharedPreferences;\n" +
+                "public final class AppStateStore {\n" +
+                "  private final SharedPreferences p; public AppStateStore(Context c){p=c.getSharedPreferences(\"app_state\",Context.MODE_PRIVATE);}\n" +
+                "  public String lastScreen(){return p.getString(\"last_screen\",\"Home\");} public void lastScreen(String v){p.edit().putString(\"last_screen\",v).apply();}\n" +
+                "  public boolean saved(String id){return p.getBoolean(\"saved_\"+id,false);} public void saved(String id,boolean v){p.edit().putBoolean(\"saved_\"+id,v).apply();}\n" +
+                "  public String text(String key,String fallback){return p.getString(key,fallback);} public void text(String key,String value){p.edit().putString(key,value).apply();}\n}\n";
+    }
+
+    private String appRepository(String pkg, ProjectIntent intent) {
+        String noun = intent.media ? "Anime" : (intent.listData ? "Item" : "Project item");
+        return "package " + pkg + ";\n\nimport java.util.*;\n" +
+                "public final class AppRepository {\n" +
+                "  private final List<AppRecord> records=new ArrayList<>(); public AppRepository(){records.add(new AppRecord(\"one\",\"" + java(noun) + " One\",\"Generated from the project intent boundary.\"));records.add(new AppRecord(\"two\",\"" + java(noun) + " Two\",\"Replace demo records through the repository without rewriting screens.\"));}\n" +
+                "  public List<AppRecord> all(){return Collections.unmodifiableList(records);} public List<AppRecord> search(String q){if(q==null||q.trim().isEmpty())return all();List<AppRecord> out=new ArrayList<>();String n=q.toLowerCase(Locale.US);for(AppRecord r:records)if(r.title.toLowerCase(Locale.US).contains(n)||r.detail.toLowerCase(Locale.US).contains(n))out.add(r);return out;}\n}\n";
+    }
+
+    private String providerContract(String pkg) {
+        return "package " + pkg + ";\n\nimport java.util.List;\n/** Stable boundary only; generated code never downloads or executes provider code automatically. */\n" +
+                "public interface ProviderContract { String id(); String name(); boolean enabled(); String health(); List<AppRecord> search(String query) throws Exception; }\n";
+    }
+
+    private String mediaProgressStore(String pkg) {
+        return "package " + pkg + ";\n\nimport android.content.Context; import android.content.SharedPreferences;\n" +
+                "public final class MediaProgressStore { private final SharedPreferences p; public MediaProgressStore(Context c){p=c.getSharedPreferences(\"media_progress\",Context.MODE_PRIVATE);} public int seconds(String id){return p.getInt(\"progress_\"+id,0);} public void seconds(String id,int v){p.edit().putInt(\"progress_\"+id,Math.max(0,v)).apply();} }\n";
+    }
+
+    private String mainActivity(String pkg, String name, String brief, ProjectIntent intent) {
+        StringBuilder screenArray = new StringBuilder();
+        for (int i = 0; i < intent.screens.size(); i++) { if (i > 0) screenArray.append(','); screenArray.append("\"").append(java(intent.screens.get(i))).append("\""); }
+        return "package " + pkg + ";\n\n" +
+                "import android.app.*; import android.graphics.Color; import android.os.Bundle; import android.text.InputType; import android.view.*; import android.widget.*; import java.util.*;\n\n" +
                 "public class MainActivity extends Activity {\n" +
-                "  private LinearLayout body; private LocalLibraryStore store;\n" +
-                "  @Override public void onCreate(Bundle state){super.onCreate(state);store=new LocalLibraryStore(this);render(\"Catalog\");}\n" +
-                "  private void render(String section){LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(32,48,32,32);root.setBackgroundColor(Color.rgb(18,19,24));root.addView(text(\"" + java(name) + "\",26,true));root.addView(text(\"" + java(brief) + "\",14,false));LinearLayout nav=new LinearLayout(this);String[] tabs={\"Catalog\",\"Library\",\"History\",\"Providers\"};for(String tab:tabs){Button b=new Button(this);b.setText(tab);b.setAllCaps(false);b.setOnClickListener(v->render(tab));nav.addView(b,new LinearLayout.LayoutParams(0,-2,1));}root.addView(nav);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);showSection(section);root.addView(body);ScrollView scroll=new ScrollView(this);scroll.addView(root);setContentView(scroll);}\n" +
-                "  private void showSection(String section){body.removeAllViews();body.addView(text(section,21,true));if(section.equals(\"Catalog\")){body.addView(text(\"Search and browse results will be supplied through enabled MediaProvider implementations.\",15,false));sampleCard(\"Example Anime\",\"provider-demo\");}else if(section.equals(\"Library\")){body.addView(text(\"Favorites are persisted locally on-device.\",15,false));sampleCard(\"Example Anime\",\"provider-demo\");}else if(section.equals(\"History\")){body.addView(text(\"Episode resume positions are stored locally and can be restored after restart.\",15,false));}else{body.addView(text(\"Providers are isolated behind MediaProvider so one failing source cannot break healthy sources.\",15,false));}}\n" +
-                "  private void sampleCard(String title,String id){LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(24,20,24,20);card.setBackgroundColor(Color.rgb(29,31,39));card.addView(text(title,18,true));Button fav=new Button(this);fav.setAllCaps(false);fav.setText(store.isFavorite(id)?\"Remove favorite\":\"Add favorite\");fav.setOnClickListener(v->{store.setFavorite(id,!store.isFavorite(id));fav.setText(store.isFavorite(id)?\"Remove favorite\":\"Add favorite\");});card.addView(fav);body.addView(card);}\n" +
-                "  private TextView text(String value,int size,boolean bold){TextView t=new TextView(this);t.setText(value);t.setTextColor(Color.WHITE);t.setTextSize(size);t.setPadding(0,10,0,10);t.setGravity(Gravity.START);t.setTypeface(android.graphics.Typeface.create(\"sans-serif-condensed\",bold?1:0));return t;}\n" +
+                "  private final int BG=Color.rgb(18,19,24),PANEL=Color.rgb(29,31,39),MUTED=Color.rgb(163,168,184),ACCENT=Color.rgb(80,148,255); private LinearLayout body; private AppStateStore state; private AppRepository repo;\n" +
+                "  @Override public void onCreate(Bundle b){super.onCreate(b);state=new AppStateStore(this);repo=new AppRepository();render(valid(state.lastScreen())?state.lastScreen():\"Home\");}\n" +
+                "  private boolean valid(String s){for(String x:ProjectContract.SCREENS)if(x.equals(s))return true;return false;}\n" +
+                "  private void render(String screen){state.lastScreen(screen);LinearLayout root=col();root.setPadding(28,32,28,24);root.setBackgroundColor(BG);root.addView(text(ProjectContract.NAME,25,true));root.addView(text(screen,18,true));HorizontalScrollView hs=new HorizontalScrollView(this);LinearLayout nav=new LinearLayout(this);for(String s:ProjectContract.SCREENS){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setContentDescription(\"Open \"+s);b.setOnClickListener(v->render(s));nav.addView(b);}hs.addView(nav);root.addView(hs);body=col();body.setPadding(0,18,0,24);show(screen);root.addView(body);ScrollView sv=new ScrollView(this);sv.addView(root);setContentView(sv);}\n" +
+                "  private void show(String screen){body.removeAllViews();if(screen.equals(\"Home\")){body.addView(text(ProjectContract.BRIEF,14,false));records(repo.all());return;}if(screen.equals(\"Search\")){EditText q=new EditText(this);q.setHint(\"Search\");q.setSingleLine(true);Button go=new Button(this);go.setText(\"Search\");go.setOnClickListener(v->{body.removeViews(2,Math.max(0,body.getChildCount()-2));records(repo.search(q.getText().toString()));});body.addView(q);body.addView(go);records(repo.all());return;}if(screen.equals(\"Details\")){detail(repo.all().get(0));return;}if(screen.equals(\"Library\")||screen.equals(\"Saved\")){body.addView(text(\"Saved state is persisted locally across restarts.\",14,false));records(repo.all());return;}if(screen.equals(\"History\")){body.addView(text(\"Recent/progress state is stored locally through explicit app state boundaries.\",14,false));return;}if(screen.equals(\"Providers\")){body.addView(text(\"Provider execution is disabled by default. Providers must implement ProviderContract and surface enabled/health state.\",14,false));return;}if(screen.equals(\"Account\")){body.addView(text(\"Account credentials are not embedded or stored as plain project preferences.\",14,false));return;}if(screen.equals(\"Map\")){body.addView(text(\"Location access requires explicit Android permission before a location service is invoked.\",14,false));return;}if(screen.equals(\"Items\")){records(repo.all());if(ProjectContract.FORMS)addForm();return;}settings();}\n" +
+                "  private void records(List<AppRecord> list){for(AppRecord r:list){LinearLayout c=col();c.setPadding(18,16,18,16);c.setBackgroundColor(PANEL);c.addView(text(r.title,17,true));c.addView(text(r.detail,13,false));Button d=new Button(this);d.setText(\"View details\");d.setAllCaps(false);d.setOnClickListener(v->detail(r));c.addView(d);body.addView(c,new LinearLayout.LayoutParams(-1,-2));}}\n" +
+                "  private void detail(AppRecord r){body.removeAllViews();body.addView(text(r.title,22,true));body.addView(text(r.detail,15,false));Button save=new Button(this);save.setAllCaps(false);save.setText(state.saved(r.id)?\"Remove saved\":\"Save\");save.setOnClickListener(v->{state.saved(r.id,!state.saved(r.id));save.setText(state.saved(r.id)?\"Remove saved\":\"Save\");});body.addView(save);}\n" +
+                "  private void addForm(){EditText title=new EditText(this);title.setHint(\"New item title\");Button save=new Button(this);save.setText(\"Save draft locally\");save.setOnClickListener(v->{String x=title.getText().toString().trim();if(!x.isEmpty()){state.text(\"draft_title\",x);Toast.makeText(this,\"Draft saved\",Toast.LENGTH_SHORT).show();}});body.addView(title);body.addView(save);}\n" +
+                "  private void settings(){body.addView(text(\"Settings\",20,true));body.addView(text(\"Generated safeguards: local persistence, explicit permissions, no embedded credentials, and no automatic execution of untrusted provider material.\",14,false));}\n" +
+                "  private LinearLayout col(){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);return l;} private TextView text(String v,int size,boolean bold){TextView t=new TextView(this);t.setText(v);t.setTextColor(Color.WHITE);t.setTextSize(size);t.setPadding(0,9,0,9);t.setTypeface(android.graphics.Typeface.create(\"sans\",bold?1:0));return t;}\n" +
                 "}\n";
     }
 
-    private String genericActivity(String packageName, String name, String brief, List<String> requirements) {
-        StringBuilder body = new StringBuilder();
-        body.append("package ").append(packageName).append(";\n\n")
-            .append("import android.app.Activity;\nimport android.graphics.Color;\nimport android.os.Bundle;\nimport android.view.Gravity;\nimport android.widget.LinearLayout;\nimport android.widget.ScrollView;\nimport android.widget.TextView;\n\n")
-            .append("public class MainActivity extends Activity {\n")
-            .append("  @Override public void onCreate(Bundle state) { super.onCreate(state);\n")
-            .append("    LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(36,56,36,36); root.setBackgroundColor(Color.rgb(18,19,24));\n")
-            .append("    root.addView(text(\"").append(java(name)).append("\", 26, true));\n")
-            .append("    root.addView(text(\"").append(java(brief)).append("\", 16, false));\n");
-        int count = Math.min(requirements == null ? 0 : requirements.size(), 10);
-        for (int i = 0; i < count; i++) body.append("    root.addView(text(\"• ").append(java(requirements.get(i))).append("\", 14, false));\n");
-        body.append("    ScrollView scroll = new ScrollView(this); scroll.addView(root); setContentView(scroll); }\n")
-            .append("  private TextView text(String value,int size,boolean bold){TextView t=new TextView(this);t.setText(value);t.setTextColor(Color.WHITE);t.setTextSize(size);t.setPadding(0,10,0,10);t.setGravity(Gravity.START);t.setTypeface(android.graphics.Typeface.create(\"sans-serif-condensed\",bold?1:0));return t;}\n")
-            .append("}\n");
-        return body.toString();
-    }
-
-    private String readme(String name, String brief, List<String> requirements, List<String> tasks, boolean media) {
-        StringBuilder out = new StringBuilder("# ").append(name).append("\n\n").append(brief == null ? "" : brief).append("\n\n## Requirements\n");
-        if (requirements != null) for (String item : requirements) out.append("- ").append(item).append('\n');
-        out.append("\n## Implementation tasks\n");
-        if (tasks != null) for (String item : tasks) out.append("- [ ] ").append(item).append('\n');
-        if (media) out.append("\n## Generated architecture\n- MediaProvider boundary for replaceable/failing sources\n- LocalLibraryStore for favorites and episode progress\n- Catalog, Library, History, and Providers navigation surfaces\n");
-        out.append("\nGenerated locally by AIDao. Installation, publication, credential use, spending, and destructive actions require explicit user control.\n");
+    private String readme(String name, String brief, List<String> requirements, List<String> tasks, ProjectIntent intent) {
+        StringBuilder out = new StringBuilder("# ").append(name).append("\n\n").append(brief == null ? "" : brief).append("\n\n## Interpreted screens\n");
+        for (String screen : intent.screens) out.append("- ").append(screen).append('\n');
+        out.append("\n## Requirements\n"); if (requirements != null) for (String r : requirements) out.append("- ").append(r).append('\n');
+        out.append("\n## Implementation tasks\n"); if (tasks != null) for (String t : tasks) out.append("- [ ] ").append(t).append('\n');
+        out.append("\n## Generated architecture\n- ProjectContract captures interpreted intent\n- AppRepository isolates project data\n- AppStateStore persists navigation and saved/draft state\n- MainActivity renders intent-specific multi-screen navigation\n");
+        if (intent.providers) out.append("- ProviderContract is a non-executing provider boundary; untrusted provider code is never silently acquired or run\n");
+        out.append("\nGenerated locally by AIDao. Installation, publication, credential use, spending, destructive actions, and external provider acquisition remain explicit user-controlled actions.\n");
         return out.toString();
     }
 
     private String workflow() {
-        return "name: Generated Android CI\n" +
-                "on: [push, pull_request, workflow_dispatch]\n" +
-                "jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n" +
-                "      - uses: actions/checkout@v4\n" +
-                "      - uses: actions/setup-java@v4\n        with: { distribution: temurin, java-version: '17' }\n" +
-                "      - uses: gradle/actions/setup-gradle@v4\n        with: { gradle-version: '8.10.2' }\n" +
-                "      - run: gradle :app:assembleDebug --stacktrace\n" +
-                "      - uses: actions/upload-artifact@v4\n        with: { name: generated-debug-apk, path: app/build/outputs/apk/debug/app-debug.apk }\n";
+        return "name: Generated Android CI\non: [push, pull_request, workflow_dispatch]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-java@v4\n        with: { distribution: temurin, java-version: '17' }\n      - uses: gradle/actions/setup-gradle@v4\n        with: { gradle-version: '8.10.2' }\n      - run: gradle :app:assembleDebug --stacktrace\n      - uses: actions/upload-artifact@v4\n        with: { name: generated-debug-apk, path: app/build/outputs/apk/debug/app-debug.apk }\n";
     }
 
-    private String cleanDisplayName(String value) {
-        String v = value == null ? "Generated Android App" : value.trim();
-        return v.isEmpty() ? "Generated Android App" : v.substring(0, Math.min(v.length(), 80));
-    }
-
-    private String slug(String value) {
-        String s = value == null ? "app" : value.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "");
-        if (s.isEmpty()) s = "app";
-        if (Character.isDigit(s.charAt(0))) s = "app" + s;
-        return s.substring(0, Math.min(s.length(), 32));
-    }
-
-    private String escape(String s) { return s.replace("\\", "\\\\").replace("\"", "\\\""); }
-    private String java(String s) { return escape((s == null ? "" : s).replace("\n", " ").replace("\r", " ")); }
-    private String xml(String s) { return s.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;"); }
+    private String cleanDisplayName(String value) { String v=value==null?"Generated Android App":value.trim();return v.isEmpty()?"Generated Android App":v.substring(0,Math.min(v.length(),80)); }
+    private String slug(String value) { String s=value==null?"app":value.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+","");if(s.isEmpty())s="app";if(Character.isDigit(s.charAt(0)))s="app"+s;return s.substring(0,Math.min(s.length(),32)); }
+    private String escape(String s){return (s==null?"":s).replace("\\","\\\\").replace("\"","\\\"");}
+    private String java(String s){return escape((s==null?"":s).replace("\n"," ").replace("\r"," "));}
+    private String xml(String s){return (s==null?"":s).replace("&","&amp;").replace("\"","&quot;").replace("<","&lt;").replace(">","&gt;");}
 }
