@@ -10,7 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -65,6 +66,7 @@ jobs:
           missing += ['generated '+x for x in ['settings.gradle.kts','app/build.gradle.kts','AndroidManifest.xml','styles.xml','.github/workflows/android.yml'] if x not in generator]
           missing += ['GitHub '+x for x in required_gh if x not in gh]
           missing += ['trusted '+x for x in required_trusted if x not in trusted]
+          missing += ['CI trusted dispatch acceptance gate' for x in ['repository_dispatch acceptance','generated-project.yml/runs','aidao-generated-onpath-apk'] if x not in pathlib.Path('.github/workflows/android.yml').read_text()]
           missing += ['repair '+x for x in required_repair if x not in repair]
           for x in ['android:windowLightStatusBar">false','android:windowLightNavigationBar">false','android:windowLayoutInDisplayCutoutMode">shortEdges']:
               if x not in theme: missing.append('theme '+x)
@@ -116,6 +118,70 @@ jobs:
         with:
           name: aidao-generated-acceptance-apk
           path: generated-acceptance/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Exercise repository_dispatch acceptance path
+        id: onpath
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="aidao-generated-acceptance-${GITHUB_RUN_ID}"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+          rm -rf /tmp/aidao-generated-onpath
+          cp -a generated-acceptance /tmp/aidao-generated-onpath
+          rm -rf /tmp/aidao-generated-onpath/.github
+          cd /tmp/aidao-generated-onpath
+          git init -q
+          git config user.name "AIDao CI"
+          git config user.email "aidao-ci@users.noreply.github.com"
+          git checkout -q -b "$branch"
+          git add .
+          git commit -q -m "AIDao repository_dispatch acceptance project"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push -q origin "HEAD:refs/heads/$branch"
+
+          payload=$(printf '{"event_type":"aidao-generated-build","client_payload":{"target_branch":"%s","project_name":"AIDao Dispatch Acceptance"}}' "$branch")
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/dispatches" --input - <<< "$payload"
+
+          echo "repository_dispatch acceptance: waiting for Generated Project CI run for $branch"
+          run_id=""
+          for attempt in $(seq 1 60); do
+            runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/generated-project.yml/runs?event=repository_dispatch&per_page=30")
+            run_id=$(jq -r --arg b "$branch" '.workflow_runs[] | select(.display_title | contains($b)) | .id' <<< "$runs" | head -n1)
+            if [[ -n "$run_id" && "$run_id" != "null" ]]; then break; fi
+            sleep 5
+          done
+          if [[ -z "$run_id" || "$run_id" == "null" ]]; then
+            echo "No generated-project.yml repository_dispatch run appeared for $branch"
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+          conclusion=""
+          for attempt in $(seq 1 120); do
+            run=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")
+            status=$(jq -r '.status' <<< "$run")
+            conclusion=$(jq -r '.conclusion // ""' <<< "$run")
+            echo "Generated Project CI run ${run_id}: ${status}${conclusion:+ / ${conclusion}}"
+            [[ "$status" == "completed" ]] && break
+            sleep 5
+          done
+          [[ "$conclusion" == "success" ]] || { echo "Trusted generated project build failed with conclusion: ${conclusion:-unknown}"; exit 1; }
+
+          artifacts=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=20")
+          artifact_name=$(jq -r '.artifacts[0].name // ""' <<< "$artifacts")
+          [[ "$artifact_name" == aidao-generated-apk-* ]] || { echo "Expected generated APK artifact was not uploaded"; exit 1; }
+          echo "aidao-generated-onpath-apk=$artifact_name"
+
+      - name: Remove repository_dispatch acceptance branch
+        if: always() && steps.onpath.outputs.branch != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.onpath.outputs.branch }}
+        run: |
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}" || true
 
       - name: Build alpha APK
         working-directory: android-bootstrap
