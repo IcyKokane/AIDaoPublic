@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Safe local planning layer. It turns ordinary-language briefs plus accumulated
@@ -42,7 +43,7 @@ public final class ProjectPlanner {
         boolean media=anime||enabled(source,refinement,new String[]{"video","media","stream","player","playback","music","podcast"});
         boolean providers=enabled(source,refinement,new String[]{"plugin","extension","provider","repository","repo","source"});
         boolean social=enabled(source,refinement,new String[]{"chat","message","friend","profile","social","community","dating"});
-        boolean tracker=enabled(source,refinement,new String[]{"track","tracker","history","report","analytics","usage","activity","habit"});
+        boolean tracker=enabled(source,refinement,new String[]{"track","tracker","tracking","report","reports","analytics","usage","activity","habit"});
         boolean finance=enabled(source,refinement,new String[]{"expense","budget","purchase","transaction","finance","money","spending"});
         boolean commerce=enabled(source,refinement,new String[]{"shop","store","cart","product","checkout","marketplace","order"});
         boolean content=enabled(source,refinement,new String[]{"note","document","article","post","journal","editor","write","content"});
@@ -193,11 +194,15 @@ public final class ProjectPlanner {
     private static boolean enabled(String source,String refinement,String[] terms){
         for(String term:terms){
             String t=term.toLowerCase(Locale.US);
-            if(!source.contains(t)) continue;
+            if(!containsTerm(source,t)) continue;
             if(isNegated(refinement,t)) continue;
             return true;
         }
         return false;
+    }
+    private static boolean containsTerm(String source,String term){
+        if(source==null||source.isEmpty()||term==null||term.isEmpty())return false;
+        return Pattern.compile("(?<![a-z0-9])"+Pattern.quote(term)+"(?![a-z0-9])").matcher(source).find();
     }
     private static boolean negatedAny(String refinement,String[]terms){for(String term:terms)if(isNegated(refinement,term.toLowerCase(Locale.US)))return true;return false;}
     private static boolean isNegated(String refinement,String term){
@@ -210,6 +215,6 @@ public final class ProjectPlanner {
     private static void requirement(Set<String>s,String v){s.add(v);}
     private static void task(Set<String>s,String v){s.add(v);}
     private static void feature(String source,String refinement,Set<String>requirements,Set<String>tasks,String[]terms,String requirement,String task){if(enabled(source,refinement,terms)){requirements.add(requirement);tasks.add(task);}}
-    private static void addExplicitPreference(String source,String refinement,Set<String>requirements,String term,String requirement){if(source.contains(term)&&!isNegated(refinement,term))requirements.add(requirement);}
+    private static void addExplicitPreference(String source,String refinement,Set<String>requirements,String term,String requirement){if(containsTerm(source,term)&&!isNegated(refinement,term))requirements.add(requirement);}
     private static String normalize(String value){return value==null?"":value.toLowerCase(Locale.US).replaceAll("\\s+"," ").trim();}
 }
