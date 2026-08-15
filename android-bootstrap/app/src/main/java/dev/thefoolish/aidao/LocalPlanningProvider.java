@@ -1,6 +1,9 @@
 package dev.thefoolish.aidao;
 
-/** Default offline provider. It is deterministic, requires no API key, and performs no writes. */
+/**
+ * Default offline provider. It is deterministic, requires no API key, and performs no writes.
+ * It never installs APKs, executes imported content, publishes code, spends money, or performs destructive actions.
+ */
 public final class LocalPlanningProvider implements ModelProvider {
     @Override public String id() { return "local-planner"; }
     @Override public String displayName() { return "AIDao Local Planner"; }
