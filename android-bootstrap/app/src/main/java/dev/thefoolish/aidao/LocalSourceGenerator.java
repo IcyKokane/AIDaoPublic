@@ -23,6 +23,7 @@ final class LocalSourceGenerator {
         files.add(file("build.gradle.kts", rootGradle(), "Create Android project shell"));
         files.add(file("app/build.gradle.kts", appGradle(packageName), "Create Android project shell"));
         files.add(file("app/src/main/AndroidManifest.xml", manifest(packageName, safeName), "Create Android project shell"));
+        files.add(file("app/src/main/res/values/styles.xml", styles(), "Create Android project shell"));
         files.add(file("app/src/main/java/" + packagePath + "/MainActivity.java",
                 activity(packageName, safeName, brief, requirements), "Build primary user flow"));
         files.add(file("README.md", readme(safeName, brief, requirements, tasks), "Document generated project"));
@@ -38,7 +39,14 @@ final class LocalSourceGenerator {
 
     private List<String> verify(String packageName, List<GeneratedProject.FileEntry> files) {
         List<String> notes = new ArrayList<>();
-        String[] required = {"settings.gradle.kts", "build.gradle.kts", "app/build.gradle.kts", "app/src/main/AndroidManifest.xml", ".github/workflows/android.yml"};
+        String[] required = {
+                "settings.gradle.kts",
+                "build.gradle.kts",
+                "app/build.gradle.kts",
+                "app/src/main/AndroidManifest.xml",
+                "app/src/main/res/values/styles.xml",
+                ".github/workflows/android.yml"
+        };
         for (String path : required) {
             boolean found = false;
             for (GeneratedProject.FileEntry file : files) if (path.equals(file.path)) { found = true; break; }
@@ -69,13 +77,14 @@ final class LocalSourceGenerator {
                 "    namespace = \"" + packageName + "\"\n" +
                 "    compileSdk = 35\n" +
                 "    defaultConfig { applicationId = \"" + packageName + "\"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = \"0.1.0\" }\n" +
+                "    compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }\n" +
                 "}\n";
     }
 
     private String manifest(String packageName, String name) {
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
                 "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n" +
-                "  <application android:theme=\"@style/AppTheme\" android:label=\"" + xml(name) + "\">\n" +
+                "  <application android:theme=\"@style/AppTheme\" android:label=\"" + xml(name) + "\" android:allowBackup=\"true\" android:supportsRtl=\"true\">\n" +
                 "    <activity android:name=\".MainActivity\" android:exported=\"true\">\n" +
                 "      <intent-filter><action android:name=\"android.intent.action.MAIN\"/><category android:name=\"android.intent.category.LAUNCHER\"/></intent-filter>\n" +
                 "    </activity>\n" +
@@ -83,10 +92,25 @@ final class LocalSourceGenerator {
                 "</manifest>\n";
     }
 
+    private String styles() {
+        return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<resources>\n" +
+                "  <style name=\"AppTheme\" parent=\"@android:style/Theme.Material.NoActionBar\">\n" +
+                "    <item name=\"android:fontFamily\">sans</item>\n" +
+                "    <item name=\"android:windowActionModeOverlay\">true</item>\n" +
+                "    <item name=\"android:colorAccent\">#5094FF</item>\n" +
+                "    <item name=\"android:navigationBarColor\">#0C0D11</item>\n" +
+                "    <item name=\"android:statusBarColor\">#121318</item>\n" +
+                "    <item name=\"android:windowLightStatusBar\">false</item>\n" +
+                "    <item name=\"android:windowLightNavigationBar\">false</item>\n" +
+                "  </style>\n" +
+                "</resources>\n";
+    }
+
     private String activity(String packageName, String name, String brief, List<String> requirements) {
         StringBuilder body = new StringBuilder();
         body.append("package ").append(packageName).append(";\n\n")
-            .append("import android.app.Activity;\nimport android.graphics.Color;\nimport android.os.Bundle;\nimport android.view.Gravity;\nimport android.widget.LinearLayout;\nimport android.widget.TextView;\n\n")
+            .append("import android.app.Activity;\nimport android.graphics.Color;\nimport android.os.Bundle;\nimport android.view.Gravity;\nimport android.widget.LinearLayout;\nimport android.widget.ScrollView;\nimport android.widget.TextView;\n\n")
             .append("public class MainActivity extends Activity {\n")
             .append("  @Override public void onCreate(Bundle state) { super.onCreate(state);\n")
             .append("    LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(36,56,36,36); root.setBackgroundColor(Color.rgb(18,19,24));\n")
@@ -94,7 +118,7 @@ final class LocalSourceGenerator {
             .append("    TextView brief = text(\"").append(java(brief)).append("\", 16, false); root.addView(brief);\n");
         int count = Math.min(requirements == null ? 0 : requirements.size(), 8);
         for (int i = 0; i < count; i++) body.append("    root.addView(text(\"• ").append(java(requirements.get(i))).append("\", 14, false));\n");
-        body.append("    setContentView(root); }\n")
+        body.append("    ScrollView scroll = new ScrollView(this); scroll.addView(root); setContentView(scroll); }\n")
             .append("  private TextView text(String value,int size,boolean bold){ TextView t=new TextView(this); t.setText(value); t.setTextColor(Color.WHITE); t.setTextSize(size); t.setPadding(0,10,0,10); t.setGravity(Gravity.START); if(bold)t.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); return t; }\n")
             .append("}\n");
         return body.toString();
