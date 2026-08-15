@@ -8,6 +8,7 @@ public final class PlannerBehaviorAcceptance {
         verifyAnimeProject();
         verifyCapabilityProject();
         verifyRefinementNegation();
+        verifyAnimeOptionalFeatureRemoval();
         verifySafetyBoundaries();
         System.out.println("Planner behavior acceptance passed");
     }
@@ -19,8 +20,8 @@ public final class PlannerBehaviorAcceptance {
         );
         requireContains(p.requirements, "anime catalog");
         requireContains(p.requirements, "provider interfaces");
-        requireContains(p.tasks, "Catalog, Anime Detail, Library, History, Player, and Provider Management");
-        requireContains(p.tasks, "Persist favorites, watch history");
+        requireContains(p.tasks, "Catalog and Anime Detail");
+        requireContains(p.tasks, "Persist favorites, watch history, and episode progress");
     }
 
     private static void verifyCapabilityProject() {
@@ -51,6 +52,24 @@ public final class PlannerBehaviorAcceptance {
         requireContains(p.requirements, "remote/network data access");
         requireNotContains(p.requirements, "Use location only");
         requireNotContains(p.requirements, "Android notifications");
+    }
+
+    private static void verifyAnimeOptionalFeatureRemoval() {
+        ProjectPlanner.Plan p = ProjectPlanner.build(
+                "Create an anime app with provider repositories, search, favorites, watch history, playback, and resume progress.",
+                "Remove favorites. Remove history. Remove search. Keep episode playback and provider management."
+        );
+        requireContains(p.requirements, "anime catalog with details and episode lists");
+        requireContains(p.requirements, "provider interfaces");
+        requireNotContains(p.requirements, "search/browse");
+        requireNotContains(p.requirements, "favorites/library");
+        requireNotContains(p.requirements, "watch history");
+        requireNotContains(p.requirements, "visible search/filter interaction");
+        requireNotContains(p.requirements, "Persist user favorites/bookmarks");
+        requireNotContains(p.requirements, "history/recent activity surface");
+        requireNotContains(p.tasks, "Persist favorites");
+        requireNotContains(p.tasks, "Library, History");
+        requireContains(p.tasks, "Player");
     }
 
     private static void verifySafetyBoundaries() {
