@@ -36,7 +36,7 @@ jobs:
           print(f"Validated AIDao {version_name} ({version_code})")
           PY
 
-      - name: Validate Android usability safeguards
+      - name: Validate Android usability and generation safeguards
         run: |
           python3 - <<'PY'
           import pathlib, re
@@ -45,39 +45,46 @@ jobs:
           match = re.search(r'android:name="\.([A-Za-z0-9_]+)"', manifest)
           if not match:
               raise SystemExit("Unable to determine launcher activity")
-          active = base / (match.group(1) + ".java")
-          source = active.read_text()
+          source = (base / (match.group(1) + ".java")).read_text()
           theme = pathlib.Path("android-bootstrap/app/src/main/res/values/styles.xml").read_text()
           task_state = (base / "TaskExecutionState.java").read_text()
-          planner = (base / "ProjectPlanner.java").read_text()
-          required = {
+          planner = (base / "ProjectPlanner.java").read_text().lower()
+          generator = (base / "LocalSourceGenerator.java").read_text()
+          github_client = (base / "GitHubGeneratedBuildClient.java").read_text()
+          repairer = (base / "GeneratedProjectRepairer.java").read_text()
+          required_source = {
               "edge-to-edge": "setDecorFitsSystemWindows(false)",
               "system bars": "WindowInsets.Type.systemBars()",
               "display cutout": "WindowInsets.Type.displayCutout()",
               "IME": "WindowInsets.Type.ime()",
-              "legacy IME": "installLegacyImeDetector()",
-              "bottom navigation IME protection": "bottomNav.setVisibility(imeVisible?View.GONE:View.VISIBLE)",
-              "official update source": "https://raw.githubusercontent.com/IcyKokane/AIDaoPublic/main/updates/latest.json",
-              "trusted repository": "/IcyKokane/AIDaoPublic/",
-              "user-controlled update": "Open verified build page",
-              "explicit sans fallback": "Typeface.create(\"sans-serif\"",
-              "readable functional family": "sans-serif-condensed",
-              "persistent workspace": "project_brief",
-              "provider-backed plan generation": "providers.selected()",
-              "editable requirement": "editListItem(\"Requirement\"",
-              "execution-owned task state": "task_state_",
-              "no manual completion interaction": "Tap-free status prevents manual checkmarks",
-              "truthful source state": "Source generation\",\"Not connected",
+              "IME navigation protection": "bottom.setVisibility(ime?View.GONE:View.VISIBLE)",
+              "readable sans UI": "Typeface.create(\"sans-serif\"",
+              "persistent workspace": "aidao_workspace_v4",
+              "natural-language project creation": "Describe what you want in ordinary language.",
+              "real source generation": "Generate Real Android Source",
+              "generated file workspace": "Generated project files",
+              "user-controlled GitHub send": "Send Generated Source & Build",
+              "session-only credential": "sessionToken=\"\"",
+              "CI state": "ci_state",
+              "APK-ready state": "APK READY",
+              "execution-owned task explanation": "They are not manual checkboxes",
           }
-          missing = [k for k,v in required.items() if v not in source]
+          missing = [k for k,v in required_source.items() if v not in source]
           state_markers = ["PLANNED", "IN_PROGRESS", "VERIFYING", "COMPLETE", "BLOCKED"]
           missing += ["task state " + s for s in state_markers if s not in task_state]
           domain_markers = ["anime catalog", "episode discovery", "watch history", "provider failure isolation"]
-          missing += ["domain planning " + s for s in domain_markers if s not in planner.lower()]
+          missing += ["domain planning " + s for s in domain_markers if s not in planner]
+          generated_markers = ["settings.gradle.kts", "app/build.gradle.kts", "AndroidManifest.xml", "styles.xml", ".github/workflows/android.yml"]
+          missing += ["generated file " + s for s in generated_markers if s not in generator]
+          transport_markers = ["isolated branch", "sendBuildAndWait", "actions/runs", "artifacts", "default branch is never modified"]
+          missing += ["GitHub transport " + s for s in transport_markers if s not in github_client]
+          repair_markers = ["Repair Android theme/resource linkage only", "Repair generated Gradle plugin/toolchain compatibility only"]
+          missing += ["bounded repair " + s for s in repair_markers if s not in repairer]
           for k,v in {"dark status bar":"android:windowLightStatusBar\">false","dark nav bar":"android:windowLightNavigationBar\">false","cutout support":"android:windowLayoutInDisplayCutoutMode\">shortEdges"}.items():
               if v not in theme: missing.append(k)
-          if missing: raise SystemExit("Android usability/workflow regression: " + ", ".join(missing))
-          print("Validated active Android workspace, domain planning, execution-owned tasks, insets, typography, and update safeguards")
+          if missing:
+              raise SystemExit("Android generation/workflow regression: " + ", ".join(missing))
+          print("Validated end-to-end generation workspace, execution-owned tasks, Android insets, user-controlled GitHub boundary, and bounded repair path")
           PY
 
       - name: Validate AI provider safety boundary
@@ -90,6 +97,8 @@ jobs:
           registry = (base / "ProviderRegistry.java").read_text()
           planner = (base / "ProjectPlanner.java").read_text()
           generator = (base / "LocalSourceGenerator.java").read_text()
+          github_client = (base / "GitHubGeneratedBuildClient.java").read_text()
+          joined = "\n".join([provider, local, registry, planner, generator, github_client])
           required = {
               "provider request boundary": "final class Request",
               "provider result boundary": "final class Result",
@@ -98,13 +107,13 @@ jobs:
               "safe action boundary": "never install APKs, publish code, spend money, or perform destructive actions",
               "local planner use": "ProjectPlanner.build",
               "registry local default": "new LocalPlanningProvider()",
-              "editable planning assumption": "should remain editable before implementation",
               "local source safety": "never installs APKs",
+              "token not persisted": "Tokens are never\n * persisted by this class",
+              "isolated generated branch": "default branch is never modified or deleted",
           }
-          joined = "\n".join([provider, local, registry, planner, generator])
           missing = [name for name, marker in required.items() if marker not in joined]
-          if missing: raise SystemExit("AI provider safety regression: " + ", ".join(missing))
-          print("Validated local-first model provider abstraction and safe planning/source boundary")
+          if missing: raise SystemExit("AI/provider safety regression: " + ", ".join(missing))
+          print("Validated local-first model boundary, local source safety, and explicit GitHub credential boundary")
           PY
 
       - name: Set up JDK 17
