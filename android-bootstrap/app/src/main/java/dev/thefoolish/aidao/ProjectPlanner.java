@@ -53,21 +53,44 @@ public final class ProjectPlanner {
         boolean background=enabled(source,refinement,new String[]{"background","periodic","scheduled","sync every","daily sync","worker"});
         boolean bluetooth=enabled(source,refinement,new String[]{"bluetooth","ble","nearby device","wearable"});
 
+        boolean searchAllowed=!negatedAny(refinement,new String[]{"search","filter","browse"});
+        boolean favoritesAllowed=!negatedAny(refinement,new String[]{"favorite","favorites","bookmark","bookmarks","library"});
+        boolean historyAllowed=!negatedAny(refinement,new String[]{"history","watch history","recent activity"});
+        boolean resumeAllowed=!negatedAny(refinement,new String[]{"resume","resume progress","watch progress","progress"});
+        boolean playbackAllowed=!negatedAny(refinement,new String[]{"playback","player","watch","stream"});
+
         if(anime){
-            requirement(requirements,"Provide an anime catalog with search/browse, details, episode lists, favorites/library, watch history, and resume progress.");
+            requirement(requirements,"Provide an anime catalog with details and episode lists using multiple Android screens.");
+            if(searchAllowed) requirement(requirements,"Provide anime catalog search/browse with visible loading, empty, and error states.");
+            if(favoritesAllowed) requirement(requirements,"Provide a persistent favorites/library surface for anime selected by the user.");
+            if(historyAllowed) requirement(requirements,"Persist watch history and expose it through a user-visible history surface.");
+            if(resumeAllowed) requirement(requirements,"Persist per-episode watch progress so playback can resume where the user stopped.");
             requirement(requirements,"Keep anime metadata and episode discovery behind replaceable provider interfaces so one failing source cannot break healthy providers.");
             requirement(requirements,"Expose provider availability, loading, empty, disabled, and failure states instead of silently hiding source errors.");
-            task(tasks,"Define anime, episode, provider, library, history, and watch-progress domain models.");
+            task(tasks,"Define anime, episode, provider, library, history, and watch-progress domain models while omitting any explicitly removed optional surfaces.");
             task(tasks,"Implement provider contracts for catalog search, anime details, episode discovery, and stream resolution.");
-            task(tasks,"Build separate Catalog, Anime Detail, Library, History, Player, and Provider Management screens with navigation between them.");
-            task(tasks,"Implement playback state, explicit stream selection, resume position, fullscreen/orientation handling, and visible playback errors.");
-            task(tasks,"Persist favorites, watch history, episode progress, and recent activity locally on-device.");
+            StringBuilder screens=new StringBuilder("Build separate Catalog and Anime Detail screens");
+            if(favoritesAllowed)screens.append(", Library");
+            if(historyAllowed)screens.append(", History");
+            if(playbackAllowed)screens.append(", Player");
+            screens.append(", and Provider Management screens with navigation between enabled surfaces.");
+            task(tasks,screens.toString());
+            if(playbackAllowed) task(tasks,"Implement playback state, explicit stream selection, fullscreen/orientation handling, and visible playback errors"+(resumeAllowed?", including resume position.":"."));
+            if(favoritesAllowed||historyAllowed||resumeAllowed){
+                List<String> state=new ArrayList<>();
+                if(favoritesAllowed)state.add("favorites");
+                if(historyAllowed)state.add("watch history");
+                if(resumeAllowed)state.add("episode progress");
+                task(tasks,"Persist "+joinNatural(state)+" locally on-device.");
+            }
             task(tasks,"Add provider failure isolation and allow enable/disable/provider switching without affecting unrelated sources.");
         } else if(media){
-            requirement(requirements,"Provide media browse/search, detail, playback, favorites/history, and visible provider/error states.");
-            task(tasks,"Define media catalog, detail, playback, favorites/history, and provider models.");
-            task(tasks,"Build separate Browse, Detail, Library/History, and Player screens connected through explicit navigation.");
-            task(tasks,"Implement playback/resume state and provider-isolated failure handling.");
+            requirement(requirements,"Provide media detail and visible provider/error states across multiple Android screens.");
+            if(searchAllowed) requirement(requirements,"Provide media browse/search appropriate to the primary catalog.");
+            if(favoritesAllowed||historyAllowed) requirement(requirements,"Provide locally persistent "+(favoritesAllowed?"favorites":"")+(favoritesAllowed&&historyAllowed?" and ":"")+(historyAllowed?"history":"")+" state.");
+            task(tasks,"Define media catalog, detail, playback, favorites/history, and provider models while honoring explicitly removed optional features.");
+            task(tasks,"Build connected media Browse/Detail screens plus only the enabled Library, History, and Player surfaces.");
+            if(playbackAllowed) task(tasks,"Implement playback state and provider-isolated failure handling"+(resumeAllowed?" with resume progress.":"."));
         }
 
         if(finance){
@@ -147,11 +170,11 @@ public final class ProjectPlanner {
             task(tasks,"Add a permission-gated Bluetooth abstraction with scan/connect state, timeout handling, and no silent pairing actions.");
         }
 
-        addExplicitPreference(source,requirements,"dark","Use a dark-first visual theme while preserving contrast and accessibility.");
-        addExplicitPreference(source,requirements,"light theme","Support a light theme option without removing accessible contrast.");
-        addExplicitPreference(source,requirements,"search","Provide a visible search/filter interaction appropriate to the primary data model.");
-        addExplicitPreference(source,requirements,"favorite","Persist user favorites/bookmarks locally unless the project explicitly requires account sync.");
-        addExplicitPreference(source,requirements,"history","Expose a user-visible history/recent activity surface where the domain supports it.");
+        addExplicitPreference(source,refinement,requirements,"dark","Use a dark-first visual theme while preserving contrast and accessibility.");
+        addExplicitPreference(source,refinement,requirements,"light theme","Support a light theme option without removing accessible contrast.");
+        addExplicitPreference(source,refinement,requirements,"search","Provide a visible search/filter interaction appropriate to the primary data model.");
+        addExplicitPreference(source,refinement,requirements,"favorite","Persist user favorites/bookmarks locally unless the project explicitly requires account sync.");
+        addExplicitPreference(source,refinement,requirements,"history","Expose a user-visible history/recent activity surface where the domain supports it.");
 
         task(tasks,"Generate resources, manifest declarations, multiple Android screens, navigation wiring, and reusable UI/data architecture that reflect the inferred feature set.");
         task(tasks,"Add deterministic verification for required files, manifest/navigation consistency, persistence wiring, declared permissions, and the primary user flow.");
@@ -176,15 +199,17 @@ public final class ProjectPlanner {
         }
         return false;
     }
+    private static boolean negatedAny(String refinement,String[]terms){for(String term:terms)if(isNegated(refinement,term.toLowerCase(Locale.US)))return true;return false;}
     private static boolean isNegated(String refinement,String term){
         if(refinement==null||refinement.isEmpty())return false;
         String[] prefixes={"remove ","remove the ","without ","no ","do not include ","don't include ","disable ","replace "+term+" with ","instead of "};
-        for(String p:prefixes)if(refinement.contains(p+term)||("replace "+term+" with ").equals(p)&&refinement.contains(p))return true;
+        for(String p:prefixes)if(refinement.contains(p+term)||(("replace "+term+" with ").equals(p)&&refinement.contains(p)))return true;
         return false;
     }
+    private static String joinNatural(List<String>values){if(values.isEmpty())return "state";if(values.size()==1)return values.get(0);if(values.size()==2)return values.get(0)+" and "+values.get(1);StringBuilder b=new StringBuilder();for(int i=0;i<values.size();i++){if(i>0)b.append(i==values.size()-1?", and ":", ");b.append(values.get(i));}return b.toString();}
     private static void requirement(Set<String>s,String v){s.add(v);}
     private static void task(Set<String>s,String v){s.add(v);}
     private static void feature(String source,String refinement,Set<String>requirements,Set<String>tasks,String[]terms,String requirement,String task){if(enabled(source,refinement,terms)){requirements.add(requirement);tasks.add(task);}}
-    private static void addExplicitPreference(String source,Set<String>requirements,String term,String requirement){if(source.contains(term))requirements.add(requirement);}
+    private static void addExplicitPreference(String source,String refinement,Set<String>requirements,String term,String requirement){if(source.contains(term)&&!isNegated(refinement,term))requirements.add(requirement);}
     private static String normalize(String value){return value==null?"":value.toLowerCase(Locale.US).replaceAll("\\s+"," ").trim();}
 }
