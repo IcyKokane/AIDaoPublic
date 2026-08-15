@@ -46,6 +46,12 @@ public final class ProjectPlanner {
         boolean finance=enabled(source,refinement,new String[]{"expense","budget","purchase","transaction","finance","money","spending"});
         boolean commerce=enabled(source,refinement,new String[]{"shop","store","cart","product","checkout","marketplace","order"});
         boolean content=enabled(source,refinement,new String[]{"note","document","article","post","journal","editor","write","content"});
+        boolean remoteData=enabled(source,refinement,new String[]{"api","server","backend","cloud","remote","web service","network","feed","sync"});
+        boolean camera=enabled(source,refinement,new String[]{"camera","photo","picture","scan","qr code","barcode"});
+        boolean notifications=enabled(source,refinement,new String[]{"notification","notify","alert","reminder"});
+        boolean location=enabled(source,refinement,new String[]{"location","route","map","gps","geofence"});
+        boolean background=enabled(source,refinement,new String[]{"background","periodic","scheduled","sync every","daily sync","worker"});
+        boolean bluetooth=enabled(source,refinement,new String[]{"bluetooth","ble","nearby device","wearable"});
 
         if(anime){
             requirement(requirements,"Provide an anime catalog with search/browse, details, episode lists, favorites/library, watch history, and resume progress.");
@@ -111,15 +117,35 @@ public final class ProjectPlanner {
         feature(source,refinement,requirements,tasks,new String[]{"offline","local","device"},
                 "Keep useful app data available locally on-device with explicit ownership/clearing controls.",
                 "Add durable local persistence and recovery after process/app restart.");
-        feature(source,refinement,requirements,tasks,new String[]{"notification","notify","alert"},
-                "Use user-visible Android notifications only after permission and settings are explicitly enabled.",
-                "Add notification channels, permission handling, and per-feature notification controls.");
-        feature(source,refinement,requirements,tasks,new String[]{"location","route","map","gps"},
-                "Use location only with explicit Android permission, visible indication, and user control.",
-                "Implement permission-gated location access and an isolated route/location service.");
         feature(source,refinement,requirements,tasks,new String[]{"ai","model","assistant","generate"},
                 "Expose AI-assisted behavior through a visible provider boundary with request state, errors, and approval points.",
                 "Define a model-provider interface with a safe local/default implementation and explicit external-provider configuration.");
+
+        if(remoteData){
+            requirement(requirements,"Keep remote/network data access behind an app-owned gateway with explicit request, loading, retry, timeout, and failure states.");
+            task(tasks,"Add an isolated network/data gateway, connectivity-aware request state, bounded retries, and a deterministic offline fallback or empty state.");
+            assumptions.add("Remote endpoints, API keys, accounts, and credentials are not invented by AIDao; they require explicit project configuration or user-provided values.");
+        }
+        if(camera){
+            requirement(requirements,"Request camera/media access only at the moment the related feature is used and provide a functional denied-permission state.");
+            task(tasks,"Add permission-gated camera/media capture or picker flow with validation and a non-camera fallback where practical.");
+        }
+        if(notifications){
+            requirement(requirements,"Use user-visible Android notifications only after permission and settings are explicitly enabled.");
+            task(tasks,"Add notification channels, Android 13+ permission handling, per-feature notification controls, and a visible disabled state.");
+        }
+        if(location){
+            requirement(requirements,"Use location only with explicit Android permission, visible indication, and user control.");
+            task(tasks,"Implement permission-gated location access and an isolated route/location service with unavailable/denied states.");
+        }
+        if(background){
+            requirement(requirements,"Run scheduled/background work through Android-supported constrained jobs without hidden indefinite background execution.");
+            task(tasks,"Add WorkManager-style scheduling boundaries, network/battery constraints where applicable, retry limits, and a user-visible enable/disable control.");
+        }
+        if(bluetooth){
+            requirement(requirements,"Use Bluetooth/Nearby Devices only after explicit runtime permission and expose connection/disconnection state.");
+            task(tasks,"Add a permission-gated Bluetooth abstraction with scan/connect state, timeout handling, and no silent pairing actions.");
+        }
 
         addExplicitPreference(source,requirements,"dark","Use a dark-first visual theme while preserving contrast and accessibility.");
         addExplicitPreference(source,requirements,"light theme","Support a light theme option without removing accessible contrast.");
@@ -128,13 +154,14 @@ public final class ProjectPlanner {
         addExplicitPreference(source,requirements,"history","Expose a user-visible history/recent activity surface where the domain supports it.");
 
         task(tasks,"Generate resources, manifest declarations, multiple Android screens, navigation wiring, and reusable UI/data architecture that reflect the inferred feature set.");
-        task(tasks,"Add deterministic verification for required files, manifest/navigation consistency, persistence wiring, and the primary user flow.");
+        task(tasks,"Add deterministic verification for required files, manifest/navigation consistency, persistence wiring, declared permissions, and the primary user flow.");
         task(tasks,"Run Android CI, diagnose failures, apply bounded source/build repairs, and produce an installable debug APK only after verification succeeds.");
 
         if(source.isEmpty()) assumptions.add("The project brief is incomplete; planning remains a safe Android baseline until more context is supplied.");
         else assumptions.add("Requirements are inferred from ordinary-language project context and remain editable before implementation/build actions.");
         if(!refinement.isEmpty()) assumptions.add("Later refinement context is treated as higher priority than the original brief when it explicitly removes or replaces a feature.");
         if(anime||providers) assumptions.add("Provider architecture is a technical boundary; AIDao does not assume an unverified content source or repository is safe or available.");
+        assumptions.add("Runtime permissions are requested only for features the project actually requires; permission denial must leave the app in an understandable non-crashing state.");
         assumptions.add("Imported/shared material is treated as data/knowledge unless the user explicitly authorizes a separate safe execution action.");
         assumptions.add("Installation, external publishing, spending, credential use, and destructive actions remain user-controlled.");
         return new Plan(new ArrayList<>(requirements),new ArrayList<>(tasks),assumptions);
