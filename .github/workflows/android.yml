@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
   workflow_dispatch:
 
@@ -11,127 +11,76 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate update metadata
+      - name: Validate release metadata and product safeguards
         run: |
           python3 - <<'PY'
           import json, pathlib, re
-          gradle = pathlib.Path("android-bootstrap/app/build.gradle.kts").read_text()
-          metadata = json.loads(pathlib.Path("updates/latest.json").read_text())
-          name_match = re.search(r'versionName\s*=\s*"([^"]+)"', gradle)
-          code_match = re.search(r'versionCode\s*=\s*(\d+)', gradle)
-          if not name_match or not code_match:
-              raise SystemExit("Unable to read Android version")
-          version_name, version_code = name_match.group(1), int(code_match.group(1))
-          if metadata.get("version") != version_name or metadata.get("versionCode") != version_code:
-              raise SystemExit("Update metadata does not match Android version")
-          if metadata.get("channel") != "alpha":
-              raise SystemExit("Update metadata channel must remain alpha")
-          if not metadata.get("downloadUrl", "").startswith("https://github.com/IcyKokane/AIDaoPublic/"):
-              raise SystemExit("downloadUrl must stay inside AIDaoPublic")
-          print(f"Validated AIDao {version_name} ({version_code})")
-          PY
+          gradle = pathlib.Path('android-bootstrap/app/build.gradle.kts').read_text()
+          metadata = json.loads(pathlib.Path('updates/latest.json').read_text())
+          name = re.search(r'versionName\s*=\s*"([^"]+)"', gradle)
+          code = re.search(r'versionCode\s*=\s*(\d+)', gradle)
+          if not name or not code: raise SystemExit('Unable to read Android version')
+          if metadata.get('version') != name.group(1) or metadata.get('versionCode') != int(code.group(1)):
+              raise SystemExit('Update metadata does not match Android version')
+          if metadata.get('channel') != 'alpha': raise SystemExit('Update metadata channel must remain alpha')
+          if not metadata.get('downloadUrl','').startswith('https://github.com/IcyKokane/AIDaoPublic/'):
+              raise SystemExit('downloadUrl must stay inside AIDaoPublic')
 
-      - name: Validate Android usability and generation safeguards
-        run: |
-          python3 - <<'PY'
-          import pathlib, re
-          base = pathlib.Path("android-bootstrap/app/src/main/java/dev/thefoolish/aidao")
-          manifest = pathlib.Path("android-bootstrap/app/src/main/AndroidManifest.xml").read_text()
-          match = re.search(r'android:name="\.([A-Za-z0-9_]+)"', manifest)
-          if not match:
-              raise SystemExit("Unable to determine launcher activity")
-          source = (base / (match.group(1) + ".java")).read_text()
-          theme = pathlib.Path("android-bootstrap/app/src/main/res/values/styles.xml").read_text()
-          task_state = (base / "TaskExecutionState.java").read_text()
-          planner = (base / "ProjectPlanner.java").read_text().lower()
-          generator = (base / "LocalSourceGenerator.java").read_text()
-          github_client = (base / "GitHubGeneratedBuildClient.java").read_text()
-          repairer = (base / "GeneratedProjectRepairer.java").read_text()
-          generated_workflow = pathlib.Path(".github/workflows/generated-project.yml").read_text()
-          required_source = {
-              "edge-to-edge": "setDecorFitsSystemWindows(false)",
-              "system bars": "WindowInsets.Type.systemBars()",
-              "display cutout": "WindowInsets.Type.displayCutout()",
-              "IME": "WindowInsets.Type.ime()",
-              "IME navigation protection": "bottom.setVisibility(ime?View.GONE:View.VISIBLE)",
-              "readable sans UI": "Typeface.create(\"sans-serif\"",
-              "persistent workspace": "aidao_workspace_v4",
-              "natural-language project creation": "Describe what you want in ordinary language.",
-              "real source generation": "Generate Real Android Source",
-              "generated file workspace": "Generated project files",
-              "user-controlled GitHub send": "Send Generated Source & Build",
-              "session-only credential": "sessionToken=\"\"",
-              "CI state": "ci_state",
-              "APK-ready state": "APK READY",
-              "execution-owned task explanation": "They are not manual checkboxes",
-          }
-          missing = [k for k,v in required_source.items() if v not in source]
-          state_markers = ["PLANNED", "IN_PROGRESS", "VERIFYING", "COMPLETE", "BLOCKED"]
-          missing += ["task state " + s for s in state_markers if s not in task_state]
-          domain_markers = ["anime catalog", "episode discovery", "watch history", "provider failure isolation"]
-          missing += ["domain planning " + s for s in domain_markers if s not in planner]
-          generated_markers = ["settings.gradle.kts", "app/build.gradle.kts", "AndroidManifest.xml", "styles.xml", ".github/workflows/android.yml"]
-          missing += ["generated file " + s for s in generated_markers if s not in generator]
-          transport_markers = [
-              "isolated generated branch",
-              "sendBuildAndWait",
-              "repository_dispatch",
-              "/dispatches",
-              "generated-project.yml",
-              "artifacts",
-              "build workflow remains on the repository default branch",
-              "Contents: read/write + Actions: read",
-              "GitHub preflight",
-              "AUTH 401",
-              "PERMISSION 403",
-              "WORKFLOW 404",
-              "BRANCH 404",
-              "findRunForBranch",
+          base = pathlib.Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao')
+          manifest = pathlib.Path('android-bootstrap/app/src/main/AndroidManifest.xml').read_text()
+          launcher = re.search(r'android:name="\.([A-Za-z0-9_]+)"', manifest)
+          if not launcher: raise SystemExit('Unable to determine launcher activity')
+          source = (base / (launcher.group(1)+'.java')).read_text()
+          task = (base/'TaskExecutionState.java').read_text()
+          planner = (base/'ProjectPlanner.java').read_text().lower()
+          generator = (base/'LocalSourceGenerator.java').read_text()
+          gh = (base/'GitHubGeneratedBuildClient.java').read_text()
+          repair = (base/'GeneratedProjectRepairer.java').read_text()
+          trusted = pathlib.Path('.github/workflows/generated-project.yml').read_text()
+          theme = pathlib.Path('android-bootstrap/app/src/main/res/values/styles.xml').read_text()
+
+          required_source = [
+            'setDecorFitsSystemWindows(false)','WindowInsets.Type.systemBars()','WindowInsets.Type.displayCutout()',
+            'WindowInsets.Type.ime()','bottom.setVisibility(ime?View.GONE:View.VISIBLE)','Typeface.create("sans-serif"',
+            'aidao_workspace_v4','Describe what you want in ordinary language.','Generate Real Android Source',
+            'Generated project files','Send Generated Source & Build','sessionToken=""','ci_state','APK READY',
+            'They are not manual checkboxes'
           ]
-          missing += ["GitHub transport " + s for s in transport_markers if s not in github_client]
-          workflow_markers = ["repository_dispatch:", "aidao-generated-build", "target_branch", "Build generated debug APK", "Upload generated APK"]
-          missing += ["trusted generated workflow " + s for s in workflow_markers if s not in generated_workflow]
-          repair_markers = ["Repair Android theme/resource linkage only", "Repair generated Gradle plugin/toolchain compatibility only"]
-          missing += ["bounded repair " + s for s in repair_markers if s not in repairer]
-          for k,v in {"dark status bar":"android:windowLightStatusBar\">false","dark nav bar":"android:windowLightNavigationBar\">false","cutout support":"android:windowLayoutInDisplayCutoutMode\">shortEdges"}.items():
-              if v not in theme: missing.append(k)
-          if missing:
-              raise SystemExit("Android generation/workflow regression: " + ", ".join(missing))
-          print("Validated end-to-end generation workspace, trusted repository-dispatch CI, explicit GitHub permission preflight/errors, execution-owned tasks, Android insets, user-controlled GitHub boundary, and bounded repair path")
+          required_gh = [
+            'isolated generated branch','sendBuildAndWait','repository_dispatch','/dispatches','generated-project.yml',
+            'artifacts','build workflow remains on the repository default branch','Contents: read/write + Actions: read',
+            'GitHub preflight','AUTH 401','PERMISSION 403','WORKFLOW 404','BRANCH 404','findRunForBranch',
+            'Fine-grained token minimum for the full on-device path'
+          ]
+          required_trusted = ['repository_dispatch:','aidao-generated-build','target_branch','Build generated debug APK','Upload generated APK']
+          required_repair = ['Repair Android theme/resource linkage only','Repair generated Gradle plugin/toolchain compatibility only']
+          missing=[]
+          missing += ['UI '+x for x in required_source if x not in source]
+          missing += ['task '+x for x in ['PLANNED','IN_PROGRESS','VERIFYING','COMPLETE','BLOCKED'] if x not in task]
+          missing += ['domain '+x for x in ['anime catalog','episode discovery','watch history','provider failure isolation'] if x not in planner]
+          missing += ['generated '+x for x in ['settings.gradle.kts','app/build.gradle.kts','AndroidManifest.xml','styles.xml','.github/workflows/android.yml'] if x not in generator]
+          missing += ['GitHub '+x for x in required_gh if x not in gh]
+          missing += ['trusted '+x for x in required_trusted if x not in trusted]
+          missing += ['repair '+x for x in required_repair if x not in repair]
+          for x in ['android:windowLightStatusBar">false','android:windowLightNavigationBar">false','android:windowLayoutInDisplayCutoutMode">shortEdges']:
+              if x not in theme: missing.append('theme '+x)
+          if missing: raise SystemExit('Product regression: '+', '.join(missing))
+          print(f'Validated AIDao {name.group(1)} ({code.group(1)}), generation, trusted dispatch, exact GitHub errors, safety boundaries, and Android usability')
           PY
 
-      - name: Validate AI provider safety boundary
+      - name: Validate local-first AI safety boundary
         run: |
           python3 - <<'PY'
           import pathlib
-          base = pathlib.Path("android-bootstrap/app/src/main/java/dev/thefoolish/aidao")
-          provider = (base / "ModelProvider.java").read_text()
-          local = (base / "LocalPlanningProvider.java").read_text()
-          registry = (base / "ProviderRegistry.java").read_text()
-          planner = (base / "ProjectPlanner.java").read_text()
-          generator = (base / "LocalSourceGenerator.java").read_text()
-          github_client = (base / "GitHubGeneratedBuildClient.java").read_text()
-          joined = "\n".join([provider, local, registry, planner, generator, github_client])
-          required = {
-              "provider request boundary": "final class Request",
-              "provider result boundary": "final class Result",
-              "offline default": "AIDao Local Planner",
-              "remote flag": "boolean isRemote()",
-              "safe action boundary": "never install APKs, publish code, spend money, or perform destructive actions",
-              "local planner use": "ProjectPlanner.build",
-              "registry local default": "new LocalPlanningProvider()",
-              "local source safety": "never installs APKs",
-              "token not persisted": "token for each send/build action",
-              "isolated generated branch": "isolated generated branch",
-          }
-          missing = [name for name, marker in required.items() if marker not in joined]
-          if missing: raise SystemExit("AI/provider safety regression: " + ", ".join(missing))
-          print("Validated local-first model boundary, local source safety, and explicit GitHub credential boundary")
+          base=pathlib.Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao')
+          joined='\n'.join((base/f).read_text() for f in ['ModelProvider.java','LocalPlanningProvider.java','ProviderRegistry.java','ProjectPlanner.java','LocalSourceGenerator.java','GitHubGeneratedBuildClient.java'])
+          markers=['final class Request','final class Result','AIDao Local Planner','boolean isRemote()','never install APKs, publish code, spend money, or perform destructive actions','ProjectPlanner.build','new LocalPlanningProvider()','never installs APKs','Fine-grained token minimum for the full on-device path','isolated generated branch']
+          missing=[m for m in markers if m not in joined]
+          if missing: raise SystemExit('AI/provider safety regression: '+', '.join(missing))
           PY
 
       - name: Set up JDK 17
