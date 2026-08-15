@@ -4,109 +4,100 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
-/**
- * Local, deterministic planning layer used before a model-backed planner is connected.
- * It converts the user's brief and accumulated project context into explicit requirements
- * and implementation tasks without performing network calls or modifying source code.
- */
+/** Local deterministic planner with a reusable structured intent model. */
 public final class ProjectPlanner {
     public static final class Plan {
         public final List<String> requirements;
         public final List<String> tasks;
         public final List<String> assumptions;
-
-        Plan(List<String> requirements, List<String> tasks, List<String> assumptions) {
-            this.requirements = Collections.unmodifiableList(requirements);
-            this.tasks = Collections.unmodifiableList(tasks);
-            this.assumptions = Collections.unmodifiableList(assumptions);
+        Plan(List<String> requirements,List<String> tasks,List<String> assumptions){
+            this.requirements=Collections.unmodifiableList(requirements);
+            this.tasks=Collections.unmodifiableList(tasks);
+            this.assumptions=Collections.unmodifiableList(assumptions);
         }
     }
 
     private ProjectPlanner() {}
 
-    public static Plan build(String brief, String context) {
-        String source = normalize((brief == null ? "" : brief) + " " + (context == null ? "" : context));
-        Set<String> requirements = new LinkedHashSet<>();
-        Set<String> tasks = new LinkedHashSet<>();
-        List<String> assumptions = new ArrayList<>();
+    public static Plan build(String brief,String context){
+        ProjectIntent intent=ProjectIntent.parse(brief,context);
+        Set<String> requirements=new LinkedHashSet<>();
+        Set<String> tasks=new LinkedHashSet<>();
+        List<String> assumptions=new ArrayList<>();
 
-        requirements.add("Provide an Android-native application with a clear primary user flow and persistent project state.");
-        tasks.add("Create the Android application shell, navigation, theme, and project-level state model.");
+        requirements.add("Provide an Android-native application whose screens and data model directly reflect the project brief.");
+        requirements.add("Preserve project state locally and recover safely after app restarts or interrupted work.");
+        requirements.add("Use explicit navigation between generated screens: "+join(intent.screens)+".");
+        tasks.add("Create the Android application shell, reusable theme, navigation host, and persistent project-level state model.");
+        tasks.add("Define generated domain models for: "+join(intent.entities)+".");
 
-        boolean anime = containsAny(source, "anime", "episode", "watch anime", "stream anime");
-        boolean media = anime || containsAny(source, "video", "media", "stream", "player", "playback");
-        boolean providers = containsAny(source, "plugin", "extension", "provider", "repository", "repo", "source");
-
-        if (anime) {
-            requirements.add("Provide an anime catalog with search, browsing, anime details, episode lists, watch progress, and library/favorites state.");
-            requirements.add("Keep anime metadata and streaming-source discovery behind provider interfaces so individual sources can fail or change without breaking the whole app.");
-            requirements.add("Provide clear provider availability, loading, empty, and failure states rather than silently hiding source errors.");
-            requirements.add("Persist watch history and episode progress locally so users can resume where they stopped.");
-
-            tasks.add("Define anime, episode, provider, watch-progress, and library data models.");
-            tasks.add("Implement provider contracts for catalog search, anime details, episode discovery, and stream resolution.");
-            tasks.add("Build the catalog/home screen with search, browse results, loading states, and provider attribution.");
-            tasks.add("Build anime detail screens with metadata, episode lists, library/favorite controls, and provider switching where available.");
-            tasks.add("Implement video playback with explicit stream selection, playback errors, resume position, and orientation/fullscreen handling.");
-            tasks.add("Persist watch history, episode progress, favorites, and recent activity locally on-device.");
-            tasks.add("Add provider failure isolation so a broken source does not break browsing through healthy providers.");
-            tasks.add("Add an extensions/providers management surface showing installed, enabled, disabled, and failing providers.");
-        } else if (media) {
-            requirements.add("Provide media catalog/detail browsing with playback and visible provider/error states.");
-            tasks.add("Define media catalog, detail, playback, and provider data models.");
-            tasks.add("Build media browse/detail surfaces and connect them through a provider boundary.");
-            tasks.add("Implement playback, resume state, and visible playback failure handling.");
-        } else {
-            tasks.add("Implement the primary feature flow described by the project brief using explicit screen and data-state boundaries.");
+        if(intent.has("search")){
+            requirements.add("Provide search with visible empty/loading/error states and results appropriate to the generated domain.");
+            tasks.add("Implement search input, filtering/query state, results rendering, and empty/error states.");
+        }
+        if(intent.has("detail")){
+            requirements.add("Provide a detail screen that exposes domain-specific metadata and available actions.");
+            tasks.add("Build a detail screen and navigation contract from list/search results.");
+        }
+        if(intent.has("forms")){
+            requirements.add("Provide validated data-entry forms with clear save/cancel behavior.");
+            tasks.add("Build validated create/edit forms and persist accepted values locally.");
+        }
+        if(intent.has("favorites")){
+            requirements.add("Allow users to add/remove domain items from a persistent favorites or library collection.");
+            tasks.add("Implement local favorites/library persistence and surface it in navigation.");
+        }
+        if(intent.has("history")){
+            requirements.add("Persist recent/history state so users can resume previous activity after restart.");
+            tasks.add("Implement local history/recent-state persistence and recovery.");
+        }
+        if(intent.has("playback")){
+            requirements.add("Provide explicit media playback state, resume position, errors, orientation/fullscreen behavior, and source attribution.");
+            tasks.add("Implement the player surface, resume position storage, and visible playback failure handling.");
+        }
+        if(intent.has("providers")){
+            requirements.add("Keep external repositories/providers behind replaceable interfaces so one failing source cannot break healthy sources.");
+            requirements.add("Show installed/enabled/disabled/failing provider state and never silently execute untrusted provider content.");
+            tasks.add("Define provider contracts, health/error isolation, and a provider-management screen.");
+        }
+        if(intent.has("files")){
+            requirements.add("Allow user-controlled import/export through Android document APIs without silently executing imported content.");
+            tasks.add("Implement scoped-storage-safe document picking, inspection, and explicit import/export actions.");
+        }
+        if(intent.has("notifications")){
+            requirements.add("Use notifications only with visible permission handling and user-controlled settings.");
+            tasks.add("Add notification channels, permission flow, and user-visible controls.");
+        }
+        if(intent.has("location")){
+            requirements.add("Use location only after explicit Android permission with visible current-state controls.");
+            tasks.add("Implement permission-gated location access behind a separable service boundary.");
+        }
+        if(intent.has("authentication")){
+            requirements.add("Support account/session state without embedding credentials in generated source.");
+            tasks.add("Build authentication/session surfaces and secure credential-boundary placeholders.");
+        }
+        if(intent.has("model-provider")){
+            requirements.add("Expose AI/model behavior through a provider abstraction with a safe local/default path and explicit approval before consequential actions.");
+            tasks.add("Define model-provider interfaces, request/error state, and approval boundaries.");
         }
 
-        feature(source, requirements, tasks, new String[]{"login", "account", "sign in", "oauth"},
-                "Support user authentication and account state.", "Implement authentication screens, session state, and secure credential handling.");
-        feature(source, requirements, tasks, new String[]{"github"},
-                "Integrate with a user-controlled GitHub repository.", "Add repository connection, project synchronization, and visible GitHub status.");
-        feature(source, requirements, tasks, new String[]{"download", "file", "upload", "import", "export"},
-                "Allow user-controlled file import or export where required.", "Implement Android document-picker based file access with scoped-storage-safe handling.");
-        if (providers && !anime) feature(source, requirements, tasks, new String[]{"plugin", "extension", "provider", "repository", "repo", "source"},
-                "Support replaceable provider or plugin-style data sources.", "Define a provider interface and repository-driven provider discovery boundary.");
-        feature(source, requirements, tasks, new String[]{"offline", "local", "device"},
-                "Preserve useful project data locally on the device.", "Add local persistence with explicit ownership and clearing controls.");
-        feature(source, requirements, tasks, new String[]{"notification", "notify", "alert"},
-                "Surface relevant user-visible notifications without hidden background behavior.", "Add notification permission handling, channels, and user-controlled notification settings.");
-        feature(source, requirements, tasks, new String[]{"location", "route", "map", "gps"},
-                "Use location only with explicit Android permission and visible user control.", "Implement permission-gated location access and a separable route/location service.");
-        feature(source, requirements, tasks, new String[]{"ai", "model", "assistant", "generate"},
-                "Expose AI-assisted behavior through a visible, user-controlled workflow.", "Define a model-provider boundary, request state, errors, and approval points before destructive actions.");
+        for(String screen:intent.screens) tasks.add("Build the "+screen+" screen using reusable generated UI/data components.");
+        tasks.add("Generate Android resources, manifest declarations, and navigation/data wiring required by the inferred capabilities.");
+        tasks.add("Add deterministic local verification for required files, navigation targets, persistence hooks, and the primary user flow.");
+        tasks.add("Run Android CI; diagnose and apply only bounded repairs; produce an installable debug APK only after verification succeeds.");
 
-        tasks.add("Add automated verification for project-state persistence and the primary user flow.");
-        tasks.add("Run Android CI, repair build/test failures, and produce an installable debug APK only after verification succeeds.");
-
-        if (source.isEmpty()) assumptions.add("The project brief is incomplete; planning remains a safe Android baseline until more context is supplied.");
-        else assumptions.add("Requirements are inferred from ordinary-language project context and should remain editable before implementation begins.");
-        if (anime) assumptions.add("Provider architecture is treated as a technical boundary; AIDao does not assume a particular unverified content source or repository is available.");
-        assumptions.add("Installation, external publishing, spending, credential use, and destructive actions remain user-controlled.");
-
-        return new Plan(new ArrayList<>(requirements), new ArrayList<>(tasks), assumptions);
+        assumptions.add("Requirements are inferred from ordinary-language project context and remain editable before implementation.");
+        assumptions.add("Imported knowledge or provider material is treated as data for inspection; it is not silently executed.");
+        assumptions.add("Installation, external publishing, spending, credential use, provider acquisition, and destructive actions remain user-controlled.");
+        if(intent.source.isEmpty()) assumptions.add("The brief is incomplete, so AIDao generated a safe multi-screen Android baseline only.");
+        return new Plan(new ArrayList<>(requirements),new ArrayList<>(tasks),assumptions);
     }
 
-    private static boolean containsAny(String source, String... terms) {
-        for (String term : terms) if (source.contains(term)) return true;
-        return false;
-    }
-
-    private static void feature(String source, Set<String> requirements, Set<String> tasks, String[] terms, String requirement, String task) {
-        for (String term : terms) {
-            if (source.contains(term)) {
-                requirements.add(requirement);
-                tasks.add(task);
-                return;
-            }
-        }
-    }
-
-    private static String normalize(String value) {
-        return value.toLowerCase(Locale.US).replaceAll("\\s+", " ").trim();
+    private static String join(List<String> values){
+        StringBuilder b=new StringBuilder();
+        for(int i=0;i<values.size();i++){if(i>0)b.append(i==values.size()-1?" and ":", ");b.append(values.get(i));}
+        return b.toString();
     }
 }
