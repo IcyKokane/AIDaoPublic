@@ -65,14 +65,14 @@ jobs:
             'isolated generated branch','sendBuildAndWait','repository_dispatch','/dispatches','generated-project.yml',
             'artifacts','build workflow remains on the repository default branch','Contents: read/write + Actions: read',
             'GitHub preflight','AUTH 401','PERMISSION 403','WORKFLOW 404','BRANCH 404','findRunForBranch',
-            'Fine-grained token minimum for the full on-device path'
+            'Fine-grained token minimum for the full on-device path','GENERATED_PROJECT_ROOT','/contents/'
           ]
-          required_trusted = ['repository_dispatch:','aidao-generated-build','target_branch','Build generated debug APK','Upload generated APK']
+          required_trusted = ['repository_dispatch:','aidao-generated-build','target_branch','project_root','Build generated debug APK','Upload generated APK']
           required_repair = ['Repair Android theme/resource linkage only','Repair generated Gradle plugin/toolchain compatibility only']
           missing=[]
           missing += ['UI '+x for x in required_source if x not in source]
           missing += ['task '+x for x in ['PLANNED','IN_PROGRESS','VERIFYING','COMPLETE','BLOCKED'] if x not in task]
-          missing += ['planner '+x for x in ['anime catalog','episode discovery','watch history','provider failure isolation','higher priority','multiple android screens'] if x not in planner]
+          missing += ['planner '+x for x in ['anime catalog','episode discovery','watch history','provider failure isolation','higher priority','multiple android screens','remote/network data access','runtime permission'] if x not in planner]
           missing += ['generated '+x for x in required_generator if x not in generator]
           missing += ['knowledge '+x for x in ['non-executable','executableLike','boundedPlanningExcerpt','200_000'] if x not in knowledge]
           missing += ['GitHub '+x for x in required_gh if x not in gh]
@@ -81,7 +81,7 @@ jobs:
           for x in ['android:windowLightStatusBar">false','android:windowLightNavigationBar">false','android:windowLayoutInDisplayCutoutMode">shortEdges']:
               if x not in theme: missing.append('theme '+x)
           if missing: raise SystemExit('v0.5 product regression: '+', '.join(missing))
-          print(f'Validated integrated AIDao {name.group(1)} ({code.group(1)}) v0.5 feature/safety surface')
+          print(f'Validated integrated AIDao {name.group(1)} ({code.group(1)}) v0.5 feature/safety surface plus v1 transport invariants')
           PY
 
       - name: Validate local-first AI and execution boundaries
@@ -142,7 +142,7 @@ jobs:
           name: aidao-v05-generated-acceptance-apk
           path: generated-acceptance/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Exercise trusted repository_dispatch generated-app path
+      - name: Exercise exact Contents API -> repository_dispatch generated-app path
         id: onpath
         env:
           GH_TOKEN: ${{ github.token }}
@@ -150,22 +150,37 @@ jobs:
         run: |
           set -euo pipefail
           branch="aidao-generated-v05-acceptance-${GITHUB_RUN_ID}"
+          project_root=".aidao-generated-project"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
 
-          rm -rf /tmp/aidao-generated-onpath
-          cp -a generated-acceptance /tmp/aidao-generated-onpath
-          rm -rf /tmp/aidao-generated-onpath/.github
-          cd /tmp/aidao-generated-onpath
-          git init -q
-          git config user.name "AIDao CI"
-          git config user.email "aidao-ci@users.noreply.github.com"
-          git checkout -q -b "$branch"
-          git add .
-          git commit -q -m "AIDao v0.5 repository_dispatch acceptance project"
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push -q origin "HEAD:refs/heads/$branch"
+          default_branch=$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.default_branch')
+          parent_sha=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${default_branch}" --jq '.object.sha')
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/heads/${branch}" -f sha="${parent_sha}" >/dev/null
 
-          payload=$(printf '{"event_type":"aidao-generated-build","client_payload":{"target_branch":"%s","project_name":"AIDao V0.5 Dispatch Acceptance"}}' "$branch")
+          uploaded=0
+          while IFS= read -r -d '' file; do
+            rel="${file#generated-acceptance/}"
+            case "$rel" in
+              .github/workflows/*) continue ;;
+            esac
+            encoded=$(base64 -w0 "$file")
+            api_path="repos/${GITHUB_REPOSITORY}/contents/${project_root}/${rel}"
+            jq -n --arg message "AIDao acceptance generated: ${rel}" \
+                  --arg content "$encoded" --arg branch "$branch" \
+                  '{message:$message,content:$content,branch:$branch}' \
+              | gh api --method PUT "$api_path" --input - >/dev/null
+            uploaded=$((uploaded+1))
+          done < <(find generated-acceptance -type f -not -path '*/build/*' -print0)
+          [[ "$uploaded" -ge 12 ]] || { echo "Expected a nontrivial Contents API upload, got $uploaded files"; exit 1; }
+
+          gh api "repos/${GITHUB_REPOSITORY}/contents/${project_root}/settings.gradle.kts?ref=${branch}" --jq '.sha' >/dev/null
+          if gh api "repos/${GITHUB_REPOSITORY}/contents/${project_root}/.github/workflows/android.yml?ref=${branch}" >/dev/null 2>&1; then
+            echo "Generated workflows must not be uploaded by the client transport"
+            exit 1
+          fi
+
+          payload=$(printf '{"event_type":"aidao-generated-build","client_payload":{"target_branch":"%s","project_name":"AIDao V1 Contents API Acceptance","project_root":"%s"}}' "$branch" "$project_root")
           gh api --method POST "repos/${GITHUB_REPOSITORY}/dispatches" --input - <<< "$payload"
 
           echo "repository_dispatch acceptance: waiting for Generated Project CI run for $branch"
