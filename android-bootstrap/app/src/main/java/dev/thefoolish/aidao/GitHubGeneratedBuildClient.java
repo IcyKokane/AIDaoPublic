@@ -5,8 +5,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,6 +21,12 @@ import java.util.regex.Pattern;
  * repository_dispatch, avoiding a requirement to write workflow files from the
  * Android client.
  *
+ * v1 transport note: generated files are uploaded with GitHub's repository
+ * Contents API under a dedicated project root on the isolated branch. This
+ * deliberately avoids the low-level create-blob/create-tree path that returned
+ * "Resource not accessible by personal access token" for a valid fine-grained
+ * token during the v0.5 on-device test.
+ *
  * Fine-grained token minimum for the full on-device path:
  * - repository Contents: read/write (branch/source upload + repository_dispatch)
  * - repository Actions: read (workflow/run/job/artifact observation)
@@ -26,6 +34,7 @@ import java.util.regex.Pattern;
  */
 final class GitHubGeneratedBuildClient {
     static final String TOKEN_PERMISSION_SUMMARY = "Contents: read/write + Actions: read";
+    static final String GENERATED_PROJECT_ROOT = ".aidao-generated-project";
 
     static final class BuildReceipt {
         final String branch;
@@ -81,44 +90,33 @@ final class GitHubGeneratedBuildClient {
         List<GeneratedProject.FileEntry> sourceFiles=new ArrayList<>();
         for(GeneratedProject.FileEntry f:project.files){
             if(f.path.startsWith(".github/workflows/")) continue;
+            if(f.path.startsWith("/")||f.path.contains("../")||f.path.equals("..")) {
+                throw new IllegalStateException("SOURCE ERROR: Refusing unsafe generated path: "+f.path);
+            }
             sourceFiles.add(f);
         }
         if(sourceFiles.isEmpty()) throw new IllegalStateException("SOURCE ERROR: Generated project contains no source files to upload.");
 
-        progress.onProgress("Uploading generated source",sourceFiles.size()+" files to a new isolated generated branch.");
-        List<String> blobShas=new ArrayList<>();
-        for(GeneratedProject.FileEntry f:sourceFiles){
-            String body="{\"content\":\""+json(f.content)+"\",\"encoding\":\"utf-8\"}";
-            String r=request("POST","https://api.github.com/repos/"+owner+"/"+repo+"/git/blobs",token,body,false,"source blob "+f.path);
-            String sha=value(r,"sha");
-            if(sha==null) throw new IllegalStateException("GITHUB SOURCE ERROR: GitHub did not return a blob SHA for "+f.path+".");
-            blobShas.add(sha);
-        }
-
-        StringBuilder tree=new StringBuilder("{\"tree\":[");
-        for(int i=0;i<sourceFiles.size();i++){
-            if(i>0) tree.append(',');
-            tree.append("{\"path\":\"")
-                .append(json(sourceFiles.get(i).path))
-                .append("\",\"mode\":\"100644\",\"type\":\"blob\",\"sha\":\"")
-                .append(blobShas.get(i)).append("\"}");
-        }
-        tree.append("]}");
-
-        String treeJson=request("POST","https://api.github.com/repos/"+owner+"/"+repo+"/git/trees",token,tree.toString(),false,"generated source tree");
-        String treeSha=value(treeJson,"sha");
-        if(treeSha==null) throw new IllegalStateException("GITHUB SOURCE ERROR: GitHub did not create the generated source tree.");
-
-        String commitBody="{\"message\":\"AIDao generated Android project: "+json(project.projectName)+"\",\"tree\":\""+treeSha+"\",\"parents\":[\""+preflight.parentSha+"\"]}";
-        String commitJson=request("POST","https://api.github.com/repos/"+owner+"/"+repo+"/git/commits",token,commitBody,false,"generated project commit");
-        String commitSha=value(commitJson,"sha");
-        if(commitSha==null) throw new IllegalStateException("GITHUB SOURCE ERROR: GitHub did not create the generated project commit.");
-
         String branch="aidao-generated-"+slug(project.projectName)+"-"+(System.currentTimeMillis()/1000L);
-        request("POST","https://api.github.com/repos/"+owner+"/"+repo+"/git/refs",token,"{\"ref\":\"refs/heads/"+branch+"\",\"sha\":\""+commitSha+"\"}",false,"generated branch "+branch);
+        progress.onProgress("Creating generated branch","Creating isolated branch "+branch+" from "+preflight.defaultBranch+".");
+        request("POST","https://api.github.com/repos/"+owner+"/"+repo+"/git/refs",token,
+            "{\"ref\":\"refs/heads/"+json(branch)+"\",\"sha\":\""+json(preflight.parentSha)+"\"}",false,"generated branch "+branch);
 
-        progress.onProgress("Starting Android CI","Generated branch created. Triggering trusted workflow from "+preflight.defaultBranch+".");
-        String dispatch="{\"event_type\":\"aidao-generated-build\",\"client_payload\":{\"target_branch\":\""+json(branch)+"\",\"project_name\":\""+json(project.projectName)+"\"}}";
+        progress.onProgress("Uploading generated source",sourceFiles.size()+" files via GitHub Contents API to "+GENERATED_PROJECT_ROOT+" on the isolated branch.");
+        int uploaded=0;
+        for(GeneratedProject.FileEntry f:sourceFiles){
+            String destination=GENERATED_PROJECT_ROOT+"/"+f.path;
+            String encoded=Base64.getEncoder().encodeToString(f.content.getBytes(StandardCharsets.UTF_8));
+            String body="{\"message\":\"AIDao generated: "+json(f.path)+"\",\"content\":\""+encoded+"\",\"branch\":\""+json(branch)+"\"}";
+            request("PUT","https://api.github.com/repos/"+owner+"/"+repo+"/contents/"+contentPath(destination),token,body,false,"generated file "+f.path);
+            uploaded++;
+            if(uploaded==sourceFiles.size()||uploaded%5==0){
+                progress.onProgress("Uploading generated source",uploaded+" / "+sourceFiles.size()+" files uploaded.");
+            }
+        }
+
+        progress.onProgress("Starting Android CI","Generated source uploaded. Triggering trusted workflow from "+preflight.defaultBranch+".");
+        String dispatch="{\"event_type\":\"aidao-generated-build\",\"client_payload\":{\"target_branch\":\""+json(branch)+"\",\"project_name\":\""+json(project.projectName)+"\",\"project_root\":\""+GENERATED_PROJECT_ROOT+"\"}}";
         request("POST","https://api.github.com/repos/"+owner+"/"+repo+"/dispatches",token,dispatch,true,"repository_dispatch");
 
         long runId=0;
@@ -167,9 +165,6 @@ final class GitHubGeneratedBuildClient {
         String workflowName=value(workflowJson,"name");
         if(workflowState!=null&&!"active".equalsIgnoreCase(workflowState)) throw new IllegalStateException("WORKFLOW ERROR: generated-project.yml exists but is not active (state: "+workflowState+").");
 
-        // This GET is deliberate: private repositories require Actions: read for the
-        // observation path. A 403 here becomes a permission-specific preflight error
-        // before AIDao uploads any generated source.
         request("GET","https://api.github.com/repos/"+owner+"/"+repo+"/actions/workflows/generated-project.yml/runs?per_page=1",token,null,false,"Actions read preflight");
 
         progress.onProgress("GitHub preflight","Passed. Default branch: "+defaultBranch+" · trusted workflow: "+(workflowName==null?"generated-project.yml":workflowName)+" · token minimum: "+TOKEN_PERMISSION_SUMMARY+".");
@@ -199,22 +194,10 @@ final class GitHubGeneratedBuildClient {
     }
 
     private RunMatch findRunForBranch(String json,String branch){
-        Pattern p=Pattern.compile("\\{[^{}]*\\\"id\\\"\\s*:\\s*(\\d+)[^{}]*\\\"display_title\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"[^{}]*\\\"status\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"[^{}]*?(?:\\\"conclusion\\\"\\s*:\\s*(?:\\\"([^\\\"]*)\\\"|null))?[^{}]*?\\\"html_url\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"[^{}]*\\}");
-        Matcher m=p.matcher(json);
-        while(m.find()){
-            if(!m.group(2).contains(branch)) continue;
-            RunMatch r=new RunMatch();
-            r.id=Long.parseLong(m.group(1));
-            r.status=m.group(3);
-            r.conclusion=m.group(4);
-            r.url=m.group(5);
-            return r;
-        }
-        // GitHub may reorder object properties. Fall back to a bounded object slice
-        // around the target branch and parse fields independently.
         int at=json.indexOf(branch);
         if(at<0) return null;
-        int start=Math.max(0,json.lastIndexOf("{\"id\"",at));
+        int start=json.lastIndexOf("{\"id\"",at);
+        if(start<0) start=Math.max(0,at-3000);
         int end=json.indexOf("},{\"id\"",at);
         if(end<0) end=Math.min(json.length(),at+5000);
         String slice=json.substring(start,Math.min(json.length(),end));
@@ -234,7 +217,7 @@ final class GitHubGeneratedBuildClient {
         HttpURLConnection c=(HttpURLConnection)new URL(u).openConnection();
         c.setRequestMethod(method);
         c.setConnectTimeout(12000);
-        c.setReadTimeout(25000);
+        c.setReadTimeout(30000);
         c.setRequestProperty("Accept","application/vnd.github+json");
         c.setRequestProperty("X-GitHub-Api-Version","2022-11-28");
         c.setRequestProperty("User-Agent","AIDao-Android");
@@ -267,6 +250,8 @@ final class GitHubGeneratedBuildClient {
                 if(operation.contains("branch")) throw new IllegalStateException("BRANCH 404 during "+operation+": the requested repository branch/ref was not found. GitHub detail: "+detail);
                 throw new IllegalStateException("REPOSITORY 404 during "+operation+": repository/resource not found or token repository access is missing. GitHub detail: "+detail);
             }
+            if(code==409) throw new IllegalStateException("GITHUB CONFLICT during "+operation+": repository state changed while AIDao was uploading. Regenerate/retry to create a fresh isolated branch. GitHub detail: "+detail);
+            if(code==422) throw new IllegalStateException("GITHUB VALIDATION during "+operation+": GitHub rejected the generated branch or file payload. Retry with a fresh generated branch. GitHub detail: "+detail);
             throw new IllegalStateException("GITHUB API "+code+" during "+operation+": "+detail+acceptedText);
         }
         if(allowEmpty&&b.length()==0) return "{}";
@@ -280,5 +265,6 @@ final class GitHubGeneratedBuildClient {
     private String json(String s){if(s==null)return "";StringBuilder b=new StringBuilder();for(char ch:s.toCharArray()){switch(ch){case '\\':b.append("\\\\");break;case '"':b.append("\\\"");break;case '\n':b.append("\\n");break;case '\r':b.append("\\r");break;case '\t':b.append("\\t");break;default:if(ch<32)b.append(String.format("\\u%04x",(int)ch));else b.append(ch);}}return b.toString();}
     private String slug(String s){String v=(s==null?"app":s.toLowerCase()).replaceAll("[^a-z0-9]+","-").replaceAll("^-|-$","");return v.isEmpty()?"app":trim(v,24);}
     private String url(String s){return s.replace(" ","%20");}
+    private String contentPath(String path)throws Exception{String[] parts=path.split("/");StringBuilder b=new StringBuilder();for(String p:parts){if(p.isEmpty())continue;if(b.length()>0)b.append('/');b.append(URLEncoder.encode(p,"UTF-8").replace("+","%20"));}return b.toString();}
     private String trim(String s,int n){return s==null?"":s.substring(0,Math.min(s.length(),n));}
 }
