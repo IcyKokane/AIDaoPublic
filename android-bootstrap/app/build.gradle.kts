@@ -12,7 +12,7 @@ android {
         applicationId = "dev.thefoolish.aidao"
         minSdk = 26
         targetSdk = 37
-        versionCode = 23
-        versionName = "0.23.0-alpha"
+        versionCode = 24
+        versionName = "0.24.0-alpha"
     }
 }
