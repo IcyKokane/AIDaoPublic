@@ -1,0 +1,78 @@
+package dev.thefoolish.aidao;
+
+import java.util.List;
+
+/** CI-only behavioral acceptance for v1 local natural-language planning. */
+public final class PlannerBehaviorAcceptance {
+    public static void main(String[] args) {
+        verifyAnimeProject();
+        verifyCapabilityProject();
+        verifyRefinementNegation();
+        verifySafetyBoundaries();
+        System.out.println("Planner behavior acceptance passed");
+    }
+
+    private static void verifyAnimeProject() {
+        ProjectPlanner.Plan p = ProjectPlanner.build(
+                "Create an anime streaming app with provider repositories, search, favorites, history, episode playback and resume progress.",
+                "Make provider failures visible and keep sources replaceable."
+        );
+        requireContains(p.requirements, "anime catalog");
+        requireContains(p.requirements, "provider interfaces");
+        requireContains(p.tasks, "Catalog, Anime Detail, Library, History, Player, and Provider Management");
+        requireContains(p.tasks, "Persist favorites, watch history");
+    }
+
+    private static void verifyCapabilityProject() {
+        ProjectPlanner.Plan p = ProjectPlanner.build(
+                "Build a field inspection tracker that syncs with a remote API, scans QR codes with the camera, uses GPS routes, sends reminders, performs scheduled background sync, and connects to a BLE sensor.",
+                "Data must remain understandable when permissions or the network are unavailable."
+        );
+        requireContains(p.requirements, "remote/network data access");
+        requireContains(p.requirements, "camera/media access");
+        requireContains(p.requirements, "Android notifications");
+        requireContains(p.requirements, "Use location only");
+        requireContains(p.requirements, "scheduled/background work");
+        requireContains(p.requirements, "Bluetooth/Nearby Devices");
+        requireContains(p.tasks, "network/data gateway");
+        requireContains(p.tasks, "camera/media capture or picker flow");
+        requireContains(p.tasks, "notification channels");
+        requireContains(p.tasks, "route/location service");
+        requireContains(p.tasks, "WorkManager-style scheduling boundaries");
+        requireContains(p.tasks, "Bluetooth abstraction");
+    }
+
+    private static void verifyRefinementNegation() {
+        ProjectPlanner.Plan p = ProjectPlanner.build(
+                "Create a social app with chat, notifications, location, and cloud sync.",
+                "Remove location. Disable notification. Keep chat and cloud sync."
+        );
+        requireContains(p.requirements, "profile, conversation/list");
+        requireContains(p.requirements, "remote/network data access");
+        requireNotContains(p.requirements, "Use location only");
+        requireNotContains(p.requirements, "Android notifications");
+    }
+
+    private static void verifySafetyBoundaries() {
+        ProjectPlanner.Plan p = ProjectPlanner.build(
+                "Create an AI assistant with login, file import, cloud API access, and local offline data.",
+                ""
+        );
+        requireContains(p.requirements, "authentication/account state");
+        requireContains(p.requirements, "user-controlled file import/export");
+        requireContains(p.requirements, "AI-assisted behavior");
+        requireContains(p.assumptions, "API keys");
+        requireContains(p.assumptions, "Imported/shared material is treated as data/knowledge");
+        requireContains(p.assumptions, "Installation, external publishing, spending, credential use, and destructive actions remain user-controlled");
+    }
+
+    private static void requireContains(List<String> values, String needle) {
+        for (String value : values) if (value.contains(needle)) return;
+        throw new IllegalStateException("Expected planner output containing: " + needle + "\nActual: " + values);
+    }
+
+    private static void requireNotContains(List<String> values, String needle) {
+        for (String value : values) if (value.contains(needle))
+            throw new IllegalStateException("Planner output unexpectedly contains: " + needle + "\nActual: " + values);
+    }
+}
