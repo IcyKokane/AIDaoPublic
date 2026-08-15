@@ -44,8 +44,8 @@ public final class ProjectPlanner {
         if (anime) {
             requirements.add("Provide an anime catalog with search/browse, anime detail pages, episode lists, watch progress, history, and library/favorites state.");
             requirements.add("Keep anime metadata and stream discovery behind replaceable provider contracts so a single source can fail without breaking healthy providers.");
-            requirements.add("Expose provider installation/enabled/disabled/health state without silently executing untrusted provider content.");
-            requirements.add("Persist favorites, watched state, and per-episode resume position locally on-device.");
+            requirements.add("Provide provider failure isolation with visible provider installation, enabled/disabled, health, loading, empty, and error states without silently executing untrusted provider content.");
+            requirements.add("Persist watch history, favorites, watched state, and per-episode resume position locally on-device.");
             requirements.add("Provide explicit playback loading, source-selection, resume, fullscreen/orientation, and failure states.");
 
             tasks.add("Define anime, episode, provider, stream candidate, watch-progress, history, and library data models.");
@@ -54,7 +54,7 @@ public final class ProjectPlanner {
             tasks.add("Build anime detail and episode screens with metadata, episode lists, favorite controls, watched state, and provider switching.");
             tasks.add("Implement a playback screen with explicit stream selection, resume position, playback errors, and fullscreen/orientation handling.");
             tasks.add("Persist watch history, episode progress, favorites, and recent activity locally on-device.");
-            tasks.add("Add provider health/failure isolation so broken providers do not prevent browsing healthy providers.");
+            tasks.add("Add provider failure isolation so broken providers do not prevent browsing healthy providers.");
             tasks.add("Add a provider-management screen showing available, installed, enabled, disabled, and failing providers.");
         } else if (media) {
             requirements.add("Provide separate media browse, detail, playback, library/history, and settings surfaces where requested.");
