@@ -13,8 +13,25 @@ final class GeneratedProject {
 
         FileEntry(String path, String content, String taskHint) {
             this.path = path;
-            this.content = content;
+            this.content = normalizeGeneratedContent(path, content);
             this.taskHint = taskHint;
+        }
+
+        /**
+         * Compatibility normalization for the v0.5 deterministic generator.
+         * Java cannot overload a getter/setter solely by return type, so the
+         * generated LocalStore setter is named putText and its generated call
+         * sites are rewritten consistently before the immutable tree exists.
+         */
+        private static String normalizeGeneratedContent(String path, String source) {
+            if (source == null) return "";
+            String out = source;
+            if (path != null && path.endsWith("/LocalStore.java")) {
+                out = out.replace("public void text(String k,String v)", "public void putText(String k,String v)");
+            }
+            out = out.replace("store.text(\"last_episode\"", "store.putText(\"last_episode\"");
+            out = out.replace("store.text(\"last_surface\"", "store.putText(\"last_surface\"");
+            return out;
         }
     }
 
