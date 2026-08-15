@@ -53,7 +53,7 @@ public final class ProjectPlanner {
             task(tasks,"Build separate Catalog, Anime Detail, Library, History, Player, and Provider Management screens with navigation between them.");
             task(tasks,"Implement playback state, explicit stream selection, resume position, fullscreen/orientation handling, and visible playback errors.");
             task(tasks,"Persist favorites, watch history, episode progress, and recent activity locally on-device.");
-            task(tasks,"Isolate provider failures and allow enable/disable/provider switching without affecting unrelated sources.");
+            task(tasks,"Add provider failure isolation and allow enable/disable/provider switching without affecting unrelated sources.");
         } else if(media){
             requirement(requirements,"Provide media browse/search, detail, playback, favorites/history, and visible provider/error states.");
             task(tasks,"Define media catalog, detail, playback, favorites/history, and provider models.");
