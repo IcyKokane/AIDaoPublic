@@ -52,6 +52,7 @@ jobs:
           generator = (base / "LocalSourceGenerator.java").read_text()
           github_client = (base / "GitHubGeneratedBuildClient.java").read_text()
           repairer = (base / "GeneratedProjectRepairer.java").read_text()
+          generated_workflow = pathlib.Path(".github/workflows/generated-project.yml").read_text()
           required_source = {
               "edge-to-edge": "setDecorFitsSystemWindows(false)",
               "system bars": "WindowInsets.Type.systemBars()",
@@ -76,15 +77,25 @@ jobs:
           missing += ["domain planning " + s for s in domain_markers if s not in planner]
           generated_markers = ["settings.gradle.kts", "app/build.gradle.kts", "AndroidManifest.xml", "styles.xml", ".github/workflows/android.yml"]
           missing += ["generated file " + s for s in generated_markers if s not in generator]
-          transport_markers = ["isolated branch", "sendBuildAndWait", "actions/runs", "artifacts", "default branch is never modified"]
+          transport_markers = [
+              "isolated generated branch",
+              "sendBuildAndWait",
+              "repository_dispatch",
+              "/dispatches",
+              "generated-project.yml",
+              "artifacts",
+              "trusted build workflow remains on the repository default branch",
+          ]
           missing += ["GitHub transport " + s for s in transport_markers if s not in github_client]
+          workflow_markers = ["repository_dispatch:", "aidao-generated-build", "target_branch", "Build generated debug APK", "Upload generated APK"]
+          missing += ["trusted generated workflow " + s for s in workflow_markers if s not in generated_workflow]
           repair_markers = ["Repair Android theme/resource linkage only", "Repair generated Gradle plugin/toolchain compatibility only"]
           missing += ["bounded repair " + s for s in repair_markers if s not in repairer]
           for k,v in {"dark status bar":"android:windowLightStatusBar\">false","dark nav bar":"android:windowLightNavigationBar\">false","cutout support":"android:windowLayoutInDisplayCutoutMode\">shortEdges"}.items():
               if v not in theme: missing.append(k)
           if missing:
               raise SystemExit("Android generation/workflow regression: " + ", ".join(missing))
-          print("Validated end-to-end generation workspace, execution-owned tasks, Android insets, user-controlled GitHub boundary, and bounded repair path")
+          print("Validated end-to-end generation workspace, trusted repository-dispatch CI, execution-owned tasks, Android insets, user-controlled GitHub boundary, and bounded repair path")
           PY
 
       - name: Validate AI provider safety boundary
@@ -108,8 +119,8 @@ jobs:
               "local planner use": "ProjectPlanner.build",
               "registry local default": "new LocalPlanningProvider()",
               "local source safety": "never installs APKs",
-              "token not persisted": "Tokens are never\n * persisted by this class",
-              "isolated generated branch": "default branch is never modified or deleted",
+              "token not persisted": "token for each send/build action",
+              "isolated generated branch": "isolated generated branch",
           }
           missing = [name for name, marker in required.items() if marker not in joined]
           if missing: raise SystemExit("AI/provider safety regression: " + ", ".join(missing))
