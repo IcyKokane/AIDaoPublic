@@ -49,7 +49,7 @@ public final class PlannerBehaviorAcceptance {
     private static void verifyRefinementNegation() {
         ProjectPlanner.Plan p = ProjectPlanner.build(
                 "Create a social app with chat, notifications, location, and cloud sync.",
-                "Remove location. Disable notification. Keep chat and cloud sync."
+                "Remove location. Disable notifications. Keep chat and cloud sync."
         );
         requireContains(p.requirements, "profile, conversation/list");
         requireContains(p.requirements, "remote/network data access");
