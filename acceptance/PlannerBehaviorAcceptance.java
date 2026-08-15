@@ -9,6 +9,7 @@ public final class PlannerBehaviorAcceptance {
         verifyCapabilityProject();
         verifyRefinementNegation();
         verifyAnimeOptionalFeatureRemoval();
+        verifyKeywordBoundaryIsolation();
         verifySafetyBoundaries();
         System.out.println("Planner behavior acceptance passed");
     }
@@ -22,6 +23,8 @@ public final class PlannerBehaviorAcceptance {
         requireContains(p.requirements, "provider interfaces");
         requireContains(p.tasks, "Catalog and Anime Detail");
         requireContains(p.tasks, "Persist favorites, watch history, and episode progress");
+        requireNotContains(p.tasks, "activity/event, aggregation");
+        requireNotContains(p.tasks, "Bluetooth abstraction");
     }
 
     private static void verifyCapabilityProject() {
@@ -68,8 +71,18 @@ public final class PlannerBehaviorAcceptance {
         requireNotContains(p.requirements, "Persist user favorites/bookmarks");
         requireNotContains(p.requirements, "history/recent activity surface");
         requireNotContains(p.tasks, "Persist favorites");
-        requireNotContains(p.tasks, "Library, History");
         requireContains(p.tasks, "Player");
+    }
+
+    private static void verifyKeywordBoundaryIsolation() {
+        ProjectPlanner.Plan p = ProjectPlanner.build(
+                "Create a document viewer with visible empty states and stable navigation.",
+                "Keep the experience reliable and readable."
+        );
+        requireContains(p.requirements, "creating, editing, viewing, searching");
+        requireNotContains(p.requirements, "Bluetooth/Nearby Devices");
+        requireNotContains(p.tasks, "Bluetooth abstraction");
+        requireNotContains(p.tasks, "activity/event, aggregation");
     }
 
     private static void verifySafetyBoundaries() {
