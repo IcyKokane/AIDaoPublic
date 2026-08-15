@@ -1,7 +1,7 @@
 {
-  "version": "0.23.0-alpha",
-  "versionCode": 23,
+  "version": "0.24.0-alpha",
+  "versionCode": 24,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "Interactive AI-workflow milestone: AIDao now connects its safe provider abstraction to the on-device workspace. Projects can generate structured plans from the saved brief and conversation, edit generated requirements, track implementation tasks, preserve task progress, regenerate plans from new context, share a project specification, and see truthful build-readiness states. The default provider remains the offline AIDao Local Planner, and source generation or APK claims are not shown as complete until they are actually connected and verified. Android-native insets, Discord-inspired workspace styling, readable functional typography, and the user-controlled update path remain preserved."
+  "notes": "Execution-state and domain-planning milestone: AIDao now generates substantially richer anime/media requirements and implementation tasks, including catalog/search, detail and episode flows, playback, watch history, favorites, provider contracts, provider failure isolation, and provider management. Implementation tasks are no longer manual checkboxes; AIDao owns their state using Planned, In Progress, Verifying, Complete, or Blocked, and task status only advances from real execution/build signals. Functional UI text now uses a more explicit readable sans-serif family while script styling is limited to branding. Android-native inset/IME handling, truthful source-generation status, safe provider boundaries, and the user-controlled update path remain preserved."
 }
