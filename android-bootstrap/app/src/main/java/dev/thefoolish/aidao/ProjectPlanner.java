@@ -6,7 +6,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Local deterministic planner with a reusable structured intent model. */
+/**
+ * Local deterministic planner with a reusable structured intent model.
+ * Regression guardrails retained from v0.25: anime catalog, episode discovery,
+ * watch history, and provider failure isolation remain first-class behaviors.
+ */
 public final class ProjectPlanner {
     public static final class Plan {
         public final List<String> requirements;
