@@ -43,17 +43,23 @@ final class GeneratedProject {
     GeneratedProject(String projectName, String packageName, List<FileEntry> files, List<String> verificationNotes) {
         this.projectName = projectName;
         this.packageName = packageName;
-        this.files = Collections.unmodifiableList(new ArrayList<>(files));
-        this.verificationNotes = Collections.unmodifiableList(new ArrayList<>(verificationNotes));
+        List<FileEntry> immutableSource = new ArrayList<>(files == null ? Collections.emptyList() : files);
+        this.files = Collections.unmodifiableList(immutableSource);
+
+        List<String> notes = new ArrayList<>();
+        if (verificationNotes != null) notes.addAll(verificationNotes);
+        GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(packageName, immutableSource);
+        notes.addAll(structural.notes);
+        this.verificationNotes = Collections.unmodifiableList(notes);
     }
 
     boolean hasPath(String path) {
-        for (FileEntry file : files) if (file.path.equals(path)) return true;
+        for (FileEntry file : files) if (file != null && file.path.equals(path)) return true;
         return false;
     }
 
     FileEntry find(String path) {
-        for (FileEntry file : files) if (file.path.equals(path)) return file;
+        for (FileEntry file : files) if (file != null && file.path.equals(path)) return file;
         return null;
     }
 }
