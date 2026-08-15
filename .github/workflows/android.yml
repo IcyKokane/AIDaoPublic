@@ -119,6 +119,7 @@ jobs:
           mkdir -p build/source-generator generated-acceptance
           javac -d build/source-generator \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GenerateSampleProject.java
           java -cp build/source-generator dev.thefoolish.aidao.GenerateSampleProject "$PWD/generated-acceptance"

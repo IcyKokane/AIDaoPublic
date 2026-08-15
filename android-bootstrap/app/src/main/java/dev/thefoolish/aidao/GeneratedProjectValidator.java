@@ -20,16 +20,30 @@ final class GeneratedProjectValidator {
     }
 
     Result validate(GeneratedProject project) {
+        if (project == null) {
+            List<String> notes = new ArrayList<>();
+            notes.add("FAIL generated project is null");
+            return new Result(notes, false);
+        }
+        return validateRaw(project.packageName, project.files);
+    }
+
+    static Result validateRaw(String packageName, List<GeneratedProject.FileEntry> files) {
         List<String> notes = new ArrayList<>();
         boolean ok = true;
-        if (project == null) {
-            notes.add("FAIL generated project is null");
+        if (packageName == null || packageName.trim().isEmpty()) {
+            notes.add("FAIL generated package name is empty");
+            ok = false;
+            packageName = "invalid";
+        }
+        if (files == null) {
+            notes.add("FAIL generated file list is null");
             return new Result(notes, false);
         }
 
         Set<String> seen = new HashSet<>();
-        for (GeneratedProject.FileEntry file : project.files) {
-            if (file.path == null || file.path.trim().isEmpty()) {
+        for (GeneratedProject.FileEntry file : files) {
+            if (file == null || file.path == null || file.path.trim().isEmpty()) {
                 notes.add("FAIL generated file has an empty path");
                 ok = false;
                 continue;
@@ -57,7 +71,7 @@ final class GeneratedProjectValidator {
                 "app/src/main/res/values/styles.xml"
         };
         for (String path : required) {
-            if (!project.hasPath(path)) {
+            if (!hasPath(files, path)) {
                 notes.add("FAIL missing required Android file: " + path);
                 ok = false;
             } else {
@@ -65,15 +79,15 @@ final class GeneratedProjectValidator {
             }
         }
 
-        String packageRoot = "app/src/main/java/" + project.packageName.replace('.', '/') + "/";
-        if (!project.hasPath(packageRoot + "MainActivity.java")) {
+        String packageRoot = "app/src/main/java/" + packageName.replace('.', '/') + "/";
+        if (!hasPath(files, packageRoot + "MainActivity.java")) {
             notes.add("FAIL missing launcher source under package root");
             ok = false;
         } else {
             notes.add("PASS launcher source under package root");
         }
 
-        GeneratedProject.FileEntry manifest = project.find("app/src/main/AndroidManifest.xml");
+        GeneratedProject.FileEntry manifest = find(files, "app/src/main/AndroidManifest.xml");
         if (manifest != null) {
             String body = manifest.content == null ? "" : manifest.content;
             if (!body.contains("android.intent.action.MAIN") || !body.contains("android.intent.category.LAUNCHER")) {
@@ -88,13 +102,22 @@ final class GeneratedProjectValidator {
             }
         }
 
-        if (project.files.size() < 12) {
-            notes.add("FAIL generated tree is too small for v1 acceptance: " + project.files.size() + " files");
+        if (files.size() < 12) {
+            notes.add("FAIL generated tree is too small for v1 acceptance: " + files.size() + " files");
             ok = false;
         } else {
-            notes.add("PASS nontrivial generated tree: " + project.files.size() + " files");
+            notes.add("PASS nontrivial generated tree: " + files.size() + " files");
         }
 
         return new Result(notes, ok);
+    }
+
+    private static boolean hasPath(List<GeneratedProject.FileEntry> files, String path) {
+        return find(files, path) != null;
+    }
+
+    private static GeneratedProject.FileEntry find(List<GeneratedProject.FileEntry> files, String path) {
+        for (GeneratedProject.FileEntry file : files) if (file != null && path.equals(file.path)) return file;
+        return null;
     }
 }
