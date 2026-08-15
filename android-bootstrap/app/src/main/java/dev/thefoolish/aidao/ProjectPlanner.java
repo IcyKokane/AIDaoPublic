@@ -84,7 +84,7 @@ public final class ProjectPlanner {
         tasks.add("Run Android CI, repair build/test failures, and produce an installable debug APK only after verification succeeds.");
 
         if (source.isEmpty()) assumptions.add("The project brief is incomplete; planning remains a safe Android baseline until more context is supplied.");
-        else assumptions.add("Requirements are inferred from ordinary-language project context and remain editable before implementation begins.");
+        else assumptions.add("Requirements are inferred from ordinary-language project context and should remain editable before implementation begins.");
         if (anime) assumptions.add("Provider architecture is treated as a technical boundary; AIDao does not assume a particular unverified content source or repository is available.");
         assumptions.add("Installation, external publishing, spending, credential use, and destructive actions remain user-controlled.");
 
