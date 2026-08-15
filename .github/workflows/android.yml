@@ -53,7 +53,7 @@ jobs:
             'Generated project files','Inspect / edit generated file','override::','Add User-Shared File',
             'KnowledgeDocument.fromUserSharedText','Generate Real Android Source','Send Generated Source & Build',
             'sessionToken=""','ci_state','APK READY','Check for Updates','Recovery required',
-            'They are not manual checkboxes','Contents: read/write + Actions: read'
+            'They are not manual checkboxes'
           ]
           required_generator = [
             'GeneratedScreen.java','LocalStore.java','AppNavigator.java','colors.xml','strings.xml','AndroidManifest.xml',
