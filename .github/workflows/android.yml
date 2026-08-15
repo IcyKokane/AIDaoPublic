@@ -48,6 +48,8 @@ jobs:
           active = base / (match.group(1) + ".java")
           source = active.read_text()
           theme = pathlib.Path("android-bootstrap/app/src/main/res/values/styles.xml").read_text()
+          task_state = (base / "TaskExecutionState.java").read_text()
+          planner = (base / "ProjectPlanner.java").read_text()
           required = {
               "edge-to-edge": "setDecorFitsSystemWindows(false)",
               "system bars": "WindowInsets.Type.systemBars()",
@@ -58,18 +60,24 @@ jobs:
               "official update source": "https://raw.githubusercontent.com/IcyKokane/AIDaoPublic/main/updates/latest.json",
               "trusted repository": "/IcyKokane/AIDaoPublic/",
               "user-controlled update": "Open verified build page",
-              "sans-serif UI": "Typeface.create(\"sans-serif\"",
+              "explicit sans fallback": "Typeface.create(\"sans-serif\"",
+              "readable functional family": "sans-serif-condensed",
               "persistent workspace": "project_brief",
               "provider-backed plan generation": "providers.selected()",
               "editable requirement": "editListItem(\"Requirement\"",
-              "task progress": "task_done_",
+              "execution-owned task state": "task_state_",
+              "no manual completion interaction": "Tap-free status prevents manual checkmarks",
               "truthful source state": "Source generation\",\"Not connected",
           }
           missing = [k for k,v in required.items() if v not in source]
+          state_markers = ["PLANNED", "IN_PROGRESS", "VERIFYING", "COMPLETE", "BLOCKED"]
+          missing += ["task state " + s for s in state_markers if s not in task_state]
+          domain_markers = ["anime catalog", "episode discovery", "watch history", "provider failure isolation"]
+          missing += ["domain planning " + s for s in domain_markers if s not in planner.lower()]
           for k,v in {"dark status bar":"android:windowLightStatusBar\">false","dark nav bar":"android:windowLightNavigationBar\">false","cutout support":"android:windowLayoutInDisplayCutoutMode\">shortEdges"}.items():
               if v not in theme: missing.append(k)
           if missing: raise SystemExit("Android usability/workflow regression: " + ", ".join(missing))
-          print("Validated active Android workspace, interactive planning, insets, typography, and update safeguards")
+          print("Validated active Android workspace, domain planning, execution-owned tasks, insets, typography, and update safeguards")
           PY
 
       - name: Validate AI provider safety boundary
