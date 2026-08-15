@@ -89,6 +89,7 @@ jobs:
           local = (base / "LocalPlanningProvider.java").read_text()
           registry = (base / "ProviderRegistry.java").read_text()
           planner = (base / "ProjectPlanner.java").read_text()
+          generator = (base / "LocalSourceGenerator.java").read_text()
           required = {
               "provider request boundary": "final class Request",
               "provider result boundary": "final class Result",
@@ -98,11 +99,12 @@ jobs:
               "local planner use": "ProjectPlanner.build",
               "registry local default": "new LocalPlanningProvider()",
               "editable planning assumption": "should remain editable before implementation",
+              "local source safety": "never installs APKs",
           }
-          joined = "\n".join([provider, local, registry, planner])
+          joined = "\n".join([provider, local, registry, planner, generator])
           missing = [name for name, marker in required.items() if marker not in joined]
           if missing: raise SystemExit("AI provider safety regression: " + ", ".join(missing))
-          print("Validated local-first model provider abstraction and safe planning boundary")
+          print("Validated local-first model provider abstraction and safe planning/source boundary")
           PY
 
       - name: Set up JDK 17
@@ -115,6 +117,29 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.5.0"
+
+      - name: Generate acceptance Android project from AIDao source generator
+        run: |
+          rm -rf build/source-generator generated-acceptance
+          mkdir -p build/source-generator generated-acceptance
+          javac -d build/source-generator \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            acceptance/GenerateSampleProject.java
+          java -cp build/source-generator dev.thefoolish.aidao.GenerateSampleProject "$PWD/generated-acceptance"
+          test -f generated-acceptance/app/src/main/AndroidManifest.xml
+          test -f generated-acceptance/app/src/main/res/values/styles.xml
+          test -f generated-acceptance/.github/workflows/android.yml
+
+      - name: Build AIDao-generated acceptance APK
+        working-directory: generated-acceptance
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload generated acceptance APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidao-generated-acceptance-apk
+          path: generated-acceptance/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Build alpha APK
         working-directory: android-bootstrap
