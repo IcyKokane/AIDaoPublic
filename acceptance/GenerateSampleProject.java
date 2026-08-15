@@ -43,7 +43,7 @@ public final class GenerateSampleProject {
         }
 
         boolean verificationFailed = false;
-        for (String note : project.verification) {
+        for (String note : project.verificationNotes) {
             System.out.println(note);
             if (note.startsWith("FAIL ")) verificationFailed = true;
         }
