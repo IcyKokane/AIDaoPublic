@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate release metadata and product safeguards
+      - name: Validate release metadata and v0.5 safeguards
         run: |
           python3 - <<'PY'
           import json, pathlib, re
@@ -35,10 +35,12 @@ jobs:
           manifest = pathlib.Path('android-bootstrap/app/src/main/AndroidManifest.xml').read_text()
           launcher = re.search(r'android:name="\.([A-Za-z0-9_]+)"', manifest)
           if not launcher: raise SystemExit('Unable to determine launcher activity')
+          if launcher.group(1) != 'AIDaoActivityV5': raise SystemExit('v0.5 launcher is not active')
           source = (base / (launcher.group(1)+'.java')).read_text()
           task = (base/'TaskExecutionState.java').read_text()
           planner = (base/'ProjectPlanner.java').read_text().lower()
           generator = (base/'LocalSourceGenerator.java').read_text()
+          knowledge = (base/'KnowledgeDocument.java').read_text()
           gh = (base/'GitHubGeneratedBuildClient.java').read_text()
           repair = (base/'GeneratedProjectRepairer.java').read_text()
           trusted = pathlib.Path('.github/workflows/generated-project.yml').read_text()
@@ -47,9 +49,17 @@ jobs:
           required_source = [
             'setDecorFitsSystemWindows(false)','WindowInsets.Type.systemBars()','WindowInsets.Type.displayCutout()',
             'WindowInsets.Type.ime()','bottom.setVisibility(ime?View.GONE:View.VISIBLE)','Typeface.create("sans-serif"',
-            'aidao_workspace_v4','Describe what you want in ordinary language.','Generate Real Android Source',
-            'Generated project files','Send Generated Source & Build','sessionToken=""','ci_state','APK READY',
-            'They are not manual checkboxes'
+            'aidao_workspace_v4','Describe what you want in ordinary language.','Refine / Modify Project',
+            'Generated project files','Inspect / edit generated file','override::','Add User-Shared File',
+            'KnowledgeDocument.fromUserSharedText','Generate Real Android Source','Send Generated Source & Build',
+            'sessionToken=""','ci_state','APK READY','Check for Updates','Recovery required',
+            'They are not manual checkboxes','Contents: read/write + Actions: read'
+          ]
+          required_generator = [
+            'GeneratedScreen.java','LocalStore.java','AppNavigator.java','colors.xml','strings.xml','AndroidManifest.xml',
+            'DetailActivity.java','LibraryActivity.java','HistoryActivity.java','ProvidersActivity.java','PlayerActivity.java',
+            'MediaProvider.java','DemoProvider.java','Domain.FINANCE','Domain.TRACKER','Domain.SOCIAL','Domain.COMMERCE','Domain.CONTENT',
+            'nontrivial generated source tree'
           ]
           required_gh = [
             'isolated generated branch','sendBuildAndWait','repository_dispatch','/dispatches','generated-project.yml',
@@ -62,26 +72,33 @@ jobs:
           missing=[]
           missing += ['UI '+x for x in required_source if x not in source]
           missing += ['task '+x for x in ['PLANNED','IN_PROGRESS','VERIFYING','COMPLETE','BLOCKED'] if x not in task]
-          missing += ['domain '+x for x in ['anime catalog','episode discovery','watch history','provider failure isolation'] if x not in planner]
-          missing += ['generated '+x for x in ['settings.gradle.kts','app/build.gradle.kts','AndroidManifest.xml','styles.xml','.github/workflows/android.yml'] if x not in generator]
+          missing += ['planner '+x for x in ['anime catalog','episode discovery','watch history','provider failure isolation','higher priority','multiple android screens'] if x not in planner]
+          missing += ['generated '+x for x in required_generator if x not in generator]
+          missing += ['knowledge '+x for x in ['non-executable','executableLike','boundedPlanningExcerpt','200_000'] if x not in knowledge]
           missing += ['GitHub '+x for x in required_gh if x not in gh]
           missing += ['trusted '+x for x in required_trusted if x not in trusted]
-          missing += ['CI trusted dispatch acceptance gate' for x in ['repository_dispatch acceptance','generated-project.yml/runs','aidao-generated-onpath-apk'] if x not in pathlib.Path('.github/workflows/android.yml').read_text()]
           missing += ['repair '+x for x in required_repair if x not in repair]
           for x in ['android:windowLightStatusBar">false','android:windowLightNavigationBar">false','android:windowLayoutInDisplayCutoutMode">shortEdges']:
               if x not in theme: missing.append('theme '+x)
-          if missing: raise SystemExit('Product regression: '+', '.join(missing))
-          print(f'Validated AIDao {name.group(1)} ({code.group(1)}), generation, trusted dispatch, exact GitHub errors, safety boundaries, and Android usability')
+          if missing: raise SystemExit('v0.5 product regression: '+', '.join(missing))
+          print(f'Validated integrated AIDao {name.group(1)} ({code.group(1)}) v0.5 feature/safety surface')
           PY
 
-      - name: Validate local-first AI safety boundary
+      - name: Validate local-first AI and execution boundaries
         run: |
           python3 - <<'PY'
           import pathlib
           base=pathlib.Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao')
-          joined='\n'.join((base/f).read_text() for f in ['ModelProvider.java','LocalPlanningProvider.java','ProviderRegistry.java','ProjectPlanner.java','LocalSourceGenerator.java','GitHubGeneratedBuildClient.java'])
-          markers=['final class Request','final class Result','AIDao Local Planner','boolean isRemote()','never install APKs, publish code, spend money, or perform destructive actions','ProjectPlanner.build','new LocalPlanningProvider()','never installs APKs','Fine-grained token minimum for the full on-device path','isolated generated branch']
-          missing=[m for m in markers if m not in joined]
+          joined='\n'.join((base/f).read_text() for f in ['ModelProvider.java','LocalPlanningProvider.java','ProviderRegistry.java','ProjectPlanner.java','LocalSourceGenerator.java','GitHubGeneratedBuildClient.java','KnowledgeDocument.java'])
+          marker_groups=[
+            ['final class Request'],['final class Result'],['AIDao Local Planner'],['boolean isRemote()'],
+            ['never install APKs, publish code, spend money, or perform destructive actions'],['ProjectPlanner.build'],['new LocalPlanningProvider()'],
+            ['never installs APKs','never install APKs'],['Fine-grained token minimum for the full on-device path'],['isolated generated branch'],
+            ['non-executable representation'],['mayUseAsPlanningKnowledge']
+          ]
+          missing=[]
+          for group in marker_groups:
+              if not any(m in joined for m in group): missing.append(' OR '.join(group))
           if missing: raise SystemExit('AI/provider safety regression: '+', '.join(missing))
           PY
 
@@ -96,7 +113,7 @@ jobs:
         with:
           gradle-version: "9.5.0"
 
-      - name: Generate acceptance Android project from AIDao source generator
+      - name: Generate nontrivial v0.5 acceptance Android project
         run: |
           rm -rf build/source-generator generated-acceptance
           mkdir -p build/source-generator generated-acceptance
@@ -107,26 +124,32 @@ jobs:
           java -cp build/source-generator dev.thefoolish.aidao.GenerateSampleProject "$PWD/generated-acceptance"
           test -f generated-acceptance/app/src/main/AndroidManifest.xml
           test -f generated-acceptance/app/src/main/res/values/styles.xml
+          test -f generated-acceptance/app/src/main/res/values/colors.xml
+          test -f generated-acceptance/app/src/main/res/values/strings.xml
           test -f generated-acceptance/.github/workflows/android.yml
+          test "$(find generated-acceptance/app/src/main/java -type f | wc -l)" -ge 10
+          grep -q 'DetailActivity' generated-acceptance/app/src/main/AndroidManifest.xml
+          grep -q 'PlayerActivity' generated-acceptance/app/src/main/AndroidManifest.xml
+          grep -q 'MediaProvider' generated-acceptance/README.md
 
-      - name: Build AIDao-generated acceptance APK
+      - name: Build AIDao-generated v0.5 acceptance APK
         working-directory: generated-acceptance
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Upload generated acceptance APK
         uses: actions/upload-artifact@v4
         with:
-          name: aidao-generated-acceptance-apk
+          name: aidao-v05-generated-acceptance-apk
           path: generated-acceptance/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Exercise repository_dispatch acceptance path
+      - name: Exercise trusted repository_dispatch generated-app path
         id: onpath
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          branch="aidao-generated-acceptance-${GITHUB_RUN_ID}"
+          branch="aidao-generated-v05-acceptance-${GITHUB_RUN_ID}"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
 
           rm -rf /tmp/aidao-generated-onpath
@@ -138,11 +161,11 @@ jobs:
           git config user.email "aidao-ci@users.noreply.github.com"
           git checkout -q -b "$branch"
           git add .
-          git commit -q -m "AIDao repository_dispatch acceptance project"
+          git commit -q -m "AIDao v0.5 repository_dispatch acceptance project"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push -q origin "HEAD:refs/heads/$branch"
 
-          payload=$(printf '{"event_type":"aidao-generated-build","client_payload":{"target_branch":"%s","project_name":"AIDao Dispatch Acceptance"}}' "$branch")
+          payload=$(printf '{"event_type":"aidao-generated-build","client_payload":{"target_branch":"%s","project_name":"AIDao V0.5 Dispatch Acceptance"}}' "$branch")
           gh api --method POST "repos/${GITHUB_REPOSITORY}/dispatches" --input - <<< "$payload"
 
           echo "repository_dispatch acceptance: waiting for Generated Project CI run for $branch"
@@ -183,12 +206,12 @@ jobs:
         run: |
           gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}" || true
 
-      - name: Build alpha APK
+      - name: Build AIDao v0.5 APK
         working-directory: android-bootstrap
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Upload debug APK
+      - name: Upload AIDao v0.5 APK
         uses: actions/upload-artifact@v4
         with:
-          name: aidao-alpha-debug
+          name: aidao-v05-alpha-debug
           path: android-bootstrap/app/build/outputs/apk/debug/app-debug.apk
