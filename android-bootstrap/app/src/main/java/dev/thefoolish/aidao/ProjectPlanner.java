@@ -39,20 +39,20 @@ public final class ProjectPlanner {
         requirements.add("Provide an Android-native application with persistent project state, clear navigation, loading/empty/error states, and accessible touch targets.");
         tasks.add("Create the Android application shell, reusable theme/components, navigation model, and persistent project-level state.");
 
-        boolean anime=enabled(source,refinement,new String[]{"anime","episode","manga","watch anime"});
-        boolean media=anime||enabled(source,refinement,new String[]{"video","media","stream","player","playback","music","podcast"});
-        boolean providers=enabled(source,refinement,new String[]{"plugin","extension","provider","repository","repo","source"});
-        boolean social=enabled(source,refinement,new String[]{"chat","message","friend","profile","social","community","dating"});
-        boolean tracker=enabled(source,refinement,new String[]{"track","tracker","tracking","report","reports","analytics","usage","activity","habit"});
-        boolean finance=enabled(source,refinement,new String[]{"expense","budget","purchase","transaction","finance","money","spending"});
-        boolean commerce=enabled(source,refinement,new String[]{"shop","store","cart","product","checkout","marketplace","order"});
-        boolean content=enabled(source,refinement,new String[]{"note","document","article","post","journal","editor","write","content"});
-        boolean remoteData=enabled(source,refinement,new String[]{"api","server","backend","cloud","remote","web service","network","feed","sync"});
-        boolean camera=enabled(source,refinement,new String[]{"camera","photo","picture","scan","qr code","barcode"});
-        boolean notifications=enabled(source,refinement,new String[]{"notification","notify","alert","reminder"});
-        boolean location=enabled(source,refinement,new String[]{"location","route","map","gps","geofence"});
-        boolean background=enabled(source,refinement,new String[]{"background","periodic","scheduled","sync every","daily sync","worker"});
-        boolean bluetooth=enabled(source,refinement,new String[]{"bluetooth","ble","nearby device","wearable"});
+        boolean anime=enabled(source,refinement,new String[]{"anime","episode","episodes","manga","watch anime"});
+        boolean media=anime||enabled(source,refinement,new String[]{"video","videos","media","stream","streaming","player","playback","music","podcast","podcasts"});
+        boolean providers=enabled(source,refinement,new String[]{"plugin","plugins","extension","extensions","provider","providers","repository","repositories","repo","source","sources"});
+        boolean social=enabled(source,refinement,new String[]{"chat","message","messages","friend","friends","profile","profiles","social","community","dating"});
+        boolean tracker=enabled(source,refinement,new String[]{"track","tracker","tracking","report","reports","analytics","usage","activity","activities","habit","habits"});
+        boolean finance=enabled(source,refinement,new String[]{"expense","expenses","budget","budgets","purchase","purchases","transaction","transactions","finance","money","spending"});
+        boolean commerce=enabled(source,refinement,new String[]{"shop","store","cart","product","products","checkout","marketplace","order","orders"});
+        boolean content=enabled(source,refinement,new String[]{"note","notes","document","documents","article","articles","post","posts","journal","editor","write","writing","content"});
+        boolean remoteData=enabled(source,refinement,new String[]{"api","server","servers","backend","cloud","remote","web service","web services","network","feed","feeds","sync"});
+        boolean camera=enabled(source,refinement,new String[]{"camera","photo","photos","picture","pictures","scan","scanner","qr code","qr codes","barcode","barcodes"});
+        boolean notifications=enabled(source,refinement,new String[]{"notification","notifications","notify","alert","alerts","reminder","reminders"});
+        boolean location=enabled(source,refinement,new String[]{"location","locations","route","routes","map","maps","gps","geofence","geofencing"});
+        boolean background=enabled(source,refinement,new String[]{"background","periodic","scheduled","schedule","sync every","daily sync","worker","workers"});
+        boolean bluetooth=enabled(source,refinement,new String[]{"bluetooth","ble","nearby device","nearby devices","wearable","wearables"});
 
         boolean searchAllowed=!negatedAny(refinement,new String[]{"search","filter","browse"});
         boolean favoritesAllowed=!negatedAny(refinement,new String[]{"favorite","favorites","bookmark","bookmarks","library"});
@@ -132,16 +132,16 @@ public final class ProjectPlanner {
         feature(source,refinement,requirements,tasks,new String[]{"github"},
                 "Integrate with a user-controlled GitHub repository.",
                 "Add repository connection, synchronization status, permission diagnostics, and explicit send/build controls.");
-        feature(source,refinement,requirements,tasks,new String[]{"download","file","upload","import","export"},
+        feature(source,refinement,requirements,tasks,new String[]{"download","downloads","file","files","upload","uploads","import","imports","export","exports"},
                 "Allow user-controlled file import/export where required using Android-scoped storage.",
                 "Implement document-picker based file import/export and validate imported content before use.");
-        if(providers&&!anime) feature(source,refinement,requirements,tasks,new String[]{"plugin","extension","provider","repository","repo","source"},
+        if(providers&&!anime) feature(source,refinement,requirements,tasks,new String[]{"plugin","plugins","extension","extensions","provider","providers","repository","repositories","repo","source","sources"},
                 "Support replaceable provider/plugin-style data sources behind a stable app-owned interface.",
                 "Define provider contracts, provider discovery metadata, enable/disable state, and provider failure isolation.");
         feature(source,refinement,requirements,tasks,new String[]{"offline","local","device"},
                 "Keep useful app data available locally on-device with explicit ownership/clearing controls.",
                 "Add durable local persistence and recovery after process/app restart.");
-        feature(source,refinement,requirements,tasks,new String[]{"ai","model","assistant","generate"},
+        feature(source,refinement,requirements,tasks,new String[]{"ai","model","models","assistant","generate","generation"},
                 "Expose AI-assisted behavior through a visible provider boundary with request state, errors, and approval points.",
                 "Define a model-provider interface with a safe local/default implementation and explicit external-provider configuration.");
 
