@@ -84,7 +84,14 @@ jobs:
               "/dispatches",
               "generated-project.yml",
               "artifacts",
-              "trusted build workflow remains on the repository default branch",
+              "build workflow remains on the repository default branch",
+              "Contents: read/write + Actions: read",
+              "GitHub preflight",
+              "AUTH 401",
+              "PERMISSION 403",
+              "WORKFLOW 404",
+              "BRANCH 404",
+              "findRunForBranch",
           ]
           missing += ["GitHub transport " + s for s in transport_markers if s not in github_client]
           workflow_markers = ["repository_dispatch:", "aidao-generated-build", "target_branch", "Build generated debug APK", "Upload generated APK"]
@@ -95,7 +102,7 @@ jobs:
               if v not in theme: missing.append(k)
           if missing:
               raise SystemExit("Android generation/workflow regression: " + ", ".join(missing))
-          print("Validated end-to-end generation workspace, trusted repository-dispatch CI, execution-owned tasks, Android insets, user-controlled GitHub boundary, and bounded repair path")
+          print("Validated end-to-end generation workspace, trusted repository-dispatch CI, explicit GitHub permission preflight/errors, execution-owned tasks, Android insets, user-controlled GitHub boundary, and bounded repair path")
           PY
 
       - name: Validate AI provider safety boundary
