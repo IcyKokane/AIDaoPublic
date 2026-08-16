@@ -77,6 +77,35 @@ jobs:
           print('GitHub transport invariants passed')
           PY
 
+      - name: Verify GitHub App auth source boundary
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          activity = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
+          device = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GitHubDeviceAuthClient.java').read_text()
+          manifest = Path('android-bootstrap/app/src/main/AndroidManifest.xml').read_text()
+          combined = activity + '\n' + device
+          required = [
+              'GITHUB_APP_CLIENT_ID',
+              'https://github.com/login/device/code',
+              'https://github.com/login/oauth/access_token',
+              'urn:ietf:params:oauth:grant-type:device_code',
+              'sessionToken',
+          ]
+          missing = [x for x in required if x not in combined]
+          if missing:
+              raise SystemExit('Missing GitHub App auth marker(s): ' + ', '.join(missing))
+          forbidden = ['BEGIN RSA PRIVATE KEY','BEGIN PRIVATE KEY','client_secret=', 'github_pat_']
+          exposed = [x for x in forbidden if x in combined or x in manifest]
+          if exposed:
+              raise SystemExit('Secret-bearing GitHub auth material must not be bundled: ' + ', '.join(exposed))
+          match = re.search(r'GITHUB_APP_CLIENT_ID="([^"]+)"', activity)
+          if not match or not re.fullmatch(r'Iv[0-9A-Za-z]{18}', match.group(1)):
+              raise SystemExit('Configured public GitHub App Client ID is missing or malformed')
+          print('GitHub App source boundary passed: public client ID only; no bundled private key/client secret/PAT')
+          PY
+
       - name: Verify v1 economic contract has no required paid provider
         run: |
           python3 - <<'PY'
@@ -87,4 +116,44 @@ jobs:
               if marker.lower() not in (policy + registry).lower():
                   raise SystemExit('Provider economics contract missing marker: ' + marker)
           print('Zero-cost default / optional BYOK contract present')
+          PY
+
+      - name: STRICT RELEASE PREFLIGHT - verify live GitHub Device Flow
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re, urllib.error, urllib.parse, urllib.request
+
+          activity = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
+          match = re.search(r'GITHUB_APP_CLIENT_ID="([^"]+)"', activity)
+          if not match:
+              raise SystemExit('No GitHub App Client ID configured in AIDaoActivityV6')
+          client_id = match.group(1)
+          body = urllib.parse.urlencode({'client_id': client_id}).encode()
+          request = urllib.request.Request(
+              'https://github.com/login/device/code',
+              data=body,
+              headers={
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  'User-Agent': 'AIDao-V1-Release-Gate'
+              },
+              method='POST')
+          try:
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  payload = json.loads(response.read().decode())
+          except urllib.error.HTTPError as exc:
+              detail = exc.read().decode(errors='replace')
+              raise SystemExit(
+                  f'LIVE DEVICE FLOW PREFLIGHT FAILED HTTP {exc.code}. '
+                  'Verify the public Client ID and enable Device Flow in the AIDao GitHub App registration. '
+                  f'GitHub response: {detail[:300]}')
+          required = ['device_code','user_code','verification_uri','expires_in','interval']
+          missing = [key for key in required if not payload.get(key)]
+          if missing:
+              raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: GitHub response missing ' + ', '.join(missing))
+          if 'github.com/login/device' not in payload['verification_uri']:
+              raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: unexpected verification URI')
+          print('STRICT V1 RELEASE PREFLIGHT PASSED: live GitHub App Device Flow issued a device code')
           PY
