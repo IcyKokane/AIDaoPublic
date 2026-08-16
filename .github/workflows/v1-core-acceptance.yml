@@ -1,6 +1,8 @@
 name: AIDao V1 Core Acceptance
 
 on:
+  push:
+    branches: ['aidao-v1-core-tests']
   pull_request:
     paths:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/**'
