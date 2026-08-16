@@ -19,20 +19,20 @@ jobs:
           from pathlib import Path
           import json, re, urllib.error, urllib.parse, urllib.request
 
-          activity = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
-          match = re.search(r'GITHUB_APP_CLIENT_ID="([^"]+)"', activity)
+          auth = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GitHubDeviceAuthClient.java').read_text()
+          match = re.search(r'AIDAO_GITHUB_APP_CLIENT_ID\s*=\s*"([^"]+)"', auth)
           if not match:
-              raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: no public GitHub App Client ID is configured')
+              raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: no canonical public GitHub App Client ID is configured')
           client_id = match.group(1)
           if not re.fullmatch(r'Iv[0-9A-Za-z]{18}', client_id):
               raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: configured public Client ID is malformed')
 
+          url = 'https://github.com/login/device/code?' + urllib.parse.urlencode({'client_id': client_id})
           request = urllib.request.Request(
-              'https://github.com/login/device/code',
-              data=urllib.parse.urlencode({'client_id': client_id}).encode(),
+              url,
+              data=b'',
               headers={
                   'Accept': 'application/json',
-                  'Content-Type': 'application/x-www-form-urlencoded',
                   'User-Agent': 'AIDao-V1-Live-Device-Flow-Preflight'
               },
               method='POST')
@@ -43,8 +43,8 @@ jobs:
               detail = exc.read().decode(errors='replace')
               raise SystemExit(
                   f'LIVE DEVICE FLOW PREFLIGHT FAILED HTTP {exc.code}. '
-                  'In GitHub App AIDao-TheFoolish, enable Device Flow under General -> Identifying and authorizing users, '
-                  f'and verify Client ID {client_id}. GitHub response: {detail[:300]}')
+                  'Verify Device Flow is enabled for AIDao-TheFoolish and that the configured public Client ID matches GitHub. '
+                  f'Client ID: {client_id}. GitHub response: {detail[:300]}')
 
           required = ['device_code','user_code','verification_uri','expires_in','interval']
           missing = [key for key in required if not payload.get(key)]
