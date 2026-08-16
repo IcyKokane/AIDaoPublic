@@ -1,7 +1,7 @@
 {
-  "version": "1.0.0",
-  "versionCode": 100,
+  "version": "1.0.1",
+  "versionCode": 101,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "AIDao v1.0 release candidate. Preserves the validated v0.5 creation workflow while adding stronger planner and generated-project acceptance coverage, deterministic project revision and source-override conflict handling, a fine-grained-PAT-compatible isolated-branch Contents API transport, trusted repository_dispatch generated-app builds, explicit CI diagnostics, and a zero-cost default provider policy. Core operation remains local/deterministic by default; optional remote providers must be explicitly selected and use user-supplied credentials/funding. Credentials remain session-only; installation, publication, spending, destructive actions, and unsafe provider acquisition remain user-controlled."
+  "notes": "AIDao v1.0.1 GitHub App authentication test build. Adds a repository-scoped GitHub App Device Flow path that uses only the public GitHub App Client ID in the APK; no GitHub App private key, client secret, or long-lived personal access token is embedded or persisted. The validated v1.0 creation workspace, isolated generated branches, trusted repository_dispatch CI, local deterministic generation, user-controlled source overrides, bounded repair, and zero-required-service-cost policy remain intact. GitHub authorization and permission failures are translated into concise human-readable guidance instead of exposing raw API JSON in the new GitHub App build path."
 }
