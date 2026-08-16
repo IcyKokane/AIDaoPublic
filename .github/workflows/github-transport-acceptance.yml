@@ -1,0 +1,64 @@
+name: GitHub Transport Acceptance
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fine-grained-token-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify generated-project transport contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          client_path = Path("android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GitHubGeneratedBuildClient.java")
+          workflow_path = Path(".github/workflows/generated-project.yml")
+          client = client_path.read_text(encoding="utf-8")
+          workflow = workflow_path.read_text(encoding="utf-8")
+
+          required_client = [
+              'TOKEN_PERMISSION_SUMMARY = "Contents: read/write + Actions: read"',
+              'GENERATED_PROJECT_ROOT = ".aidao-generated-project"',
+              '/git/refs',
+              '/contents/',
+              'repository_dispatch',
+              '\\"project_root\\"',
+          ]
+          for needle in required_client:
+              if needle not in client:
+                  raise SystemExit(f"Missing transport invariant in client: {needle}")
+
+          forbidden_client = [
+              '/git/blobs',
+              '/git/trees',
+              '/git/commits',
+              'Workflows write is required',
+          ]
+          for needle in forbidden_client:
+              if needle in client:
+                  raise SystemExit(f"Forbidden fine-grained-token transport path regressed: {needle}")
+
+          required_workflow = [
+              'REQUESTED_PROJECT_ROOT:',
+              '.aidao-generated-project',
+              'Generated project may not supply executable GitHub workflows',
+              'gradle :app:assembleDebug',
+          ]
+          for needle in required_workflow:
+              if needle not in workflow:
+                  raise SystemExit(f"Missing trusted-workflow invariant: {needle}")
+
+          print("PASS: fine-grained PAT transport uses isolated ref + Contents API + trusted repository_dispatch workflow")
+          PY
