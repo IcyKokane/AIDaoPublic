@@ -18,7 +18,7 @@ public final class ProviderRegistry {
     private ProviderEconomicsPolicy.Decision lastSelectionDecision;
 
     public ProviderRegistry() {
-        ModelProvider local = ProviderEconomicsPolicy.defaultProvider();
+        ModelProvider local = new LocalPlanningProvider();
         if (!ProviderEconomicsPolicy.eligibleAsRequiredCoreProvider(local)) {
             throw new IllegalStateException("Default provider must remain local/zero-cost.");
         }
