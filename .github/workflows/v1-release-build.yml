@@ -18,17 +18,17 @@ jobs:
       - name: Verify v1 release identity
         run: |
           python3 - <<'PY'
-          import json, pathlib, re
+          import json, pathlib
           gradle = pathlib.Path('android-bootstrap/app/build.gradle.kts').read_text()
-          ui = pathlib.Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV5.java').read_text()
+          ui = pathlib.Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
           metadata = json.loads(pathlib.Path('updates/latest.json').read_text())
-          if 'versionCode = 100' not in gradle or 'versionName = "1.0.0"' not in gradle:
-              raise SystemExit('Android package is not identified as AIDao 1.0.0 / versionCode 100')
-          if metadata.get('version') != '1.0.0' or metadata.get('versionCode') != 100:
-              raise SystemExit('Update metadata is not identified as AIDao 1.0.0 / versionCode 100')
-          if 'Developer workspace · v1.0' not in ui:
-              raise SystemExit('Visible workspace version label is not v1.0')
-          print('AIDao v1 release identity verified')
+          if 'versionCode = 101' not in gradle or 'versionName = "1.0.1"' not in gradle:
+              raise SystemExit('Android package is not identified as AIDao 1.0.1 / versionCode 101')
+          if metadata.get('version') != '1.0.1' or metadata.get('versionCode') != 101:
+              raise SystemExit('Update metadata is not identified as AIDao 1.0.1 / versionCode 101')
+          if 'AIDao v1.0.1 GitHub App entrypoint' not in ui:
+              raise SystemExit('GitHub App V1 entrypoint identity is missing')
+          print('AIDao v1.0.1 release identity verified')
           PY
 
       - uses: actions/setup-java@v4
