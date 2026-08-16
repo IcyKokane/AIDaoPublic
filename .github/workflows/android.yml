@@ -16,10 +16,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate release metadata and v0.5 safeguards
+      - name: Validate release metadata and integrated V1 safeguards
         run: |
           python3 - <<'PY'
-          import json, pathlib, re
+          import json, pathlib, re, xml.etree.ElementTree as ET
           gradle = pathlib.Path('android-bootstrap/app/build.gradle.kts').read_text()
           metadata = json.loads(pathlib.Path('updates/latest.json').read_text())
           name = re.search(r'versionName\s*=\s*"([^"]+)"', gradle)
@@ -32,11 +32,23 @@ jobs:
               raise SystemExit('downloadUrl must stay inside AIDaoPublic')
 
           base = pathlib.Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao')
-          manifest = pathlib.Path('android-bootstrap/app/src/main/AndroidManifest.xml').read_text()
-          launcher = re.search(r'android:name="\.([A-Za-z0-9_]+)"', manifest)
-          if not launcher: raise SystemExit('Unable to determine launcher activity')
-          if launcher.group(1) != 'AIDaoActivityV5': raise SystemExit('v0.5 launcher is not active')
-          source = (base / (launcher.group(1)+'.java')).read_text()
+          manifest_path = pathlib.Path('android-bootstrap/app/src/main/AndroidManifest.xml')
+          manifest = manifest_path.read_text()
+          android_ns = '{http://schemas.android.com/apk/res/android}'
+          tree = ET.fromstring(manifest)
+          launchers=[]
+          for activity in tree.findall('./application/activity'):
+              for intent in activity.findall('intent-filter'):
+                  actions={a.get(android_ns+'name') for a in intent.findall('action')}
+                  categories={c.get(android_ns+'name') for c in intent.findall('category')}
+                  if 'android.intent.action.MAIN' in actions and 'android.intent.category.LAUNCHER' in categories:
+                      launchers.append(activity.get(android_ns+'name'))
+          if launchers != ['.AIDaoActivityV6']:
+              raise SystemExit('AIDaoActivityV6 must be the sole launcher; found: '+repr(launchers))
+
+          legacy = (base/'AIDaoActivityV5.java').read_text()
+          auth = (base/'AIDaoActivityV6.java').read_text()
+          device = (base/'GitHubDeviceAuthClient.java').read_text()
           task = (base/'TaskExecutionState.java').read_text()
           planner = (base/'ProjectPlanner.java').read_text().lower()
           generator = (base/'LocalSourceGenerator.java').read_text()
@@ -46,14 +58,23 @@ jobs:
           trusted = pathlib.Path('.github/workflows/generated-project.yml').read_text()
           theme = pathlib.Path('android-bootstrap/app/src/main/res/values/styles.xml').read_text()
 
-          required_source = [
+          required_legacy = [
             'setDecorFitsSystemWindows(false)','WindowInsets.Type.systemBars()','WindowInsets.Type.displayCutout()',
             'WindowInsets.Type.ime()','bottom.setVisibility(ime?View.GONE:View.VISIBLE)','Typeface.create("sans-serif"',
             'aidao_workspace_v4','Describe what you want in ordinary language.','Refine / Modify Project',
             'Generated project files','Inspect / edit generated file','override::','Add User-Shared File',
-            'KnowledgeDocument.fromUserSharedText','Generate Real Android Source','Send Generated Source & Build',
-            'sessionToken=""','ci_state','APK READY','Check for Updates','Recovery required',
-            'They are not manual checkboxes'
+            'KnowledgeDocument.fromUserSharedText','Generate Real Android Source','Configure GitHub & Build',
+            'ci_state','APK READY','Check for Updates','Recovery required','They are not manual checkboxes'
+          ]
+          required_auth = [
+            'AIDao v1.0.1 GitHub App entrypoint','GITHUB_APP_CLIENT_ID','GitHubDeviceAuthClient',
+            'Connect GitHub App & Build','No fine-grained token is required','sessionToken=""',
+            'GitHub authorization was denied','Contents read/write and Actions read access',
+            'Open AIDao Workspace','runRemoteBuild(repo,sessionToken)'
+          ]
+          required_device = [
+            'https://github.com/login/device/code','https://github.com/login/oauth/access_token',
+            'urn:ietf:params:oauth:grant-type:device_code','authorization_pending','slow_down'
           ]
           required_generator = [
             'GeneratedScreen.java','LocalStore.java','AppNavigator.java','colors.xml','strings.xml','AndroidManifest.xml',
@@ -65,12 +86,14 @@ jobs:
             'isolated generated branch','sendBuildAndWait','repository_dispatch','/dispatches','generated-project.yml',
             'artifacts','build workflow remains on the repository default branch','Contents: read/write + Actions: read',
             'GitHub preflight','AUTH 401','PERMISSION 403','WORKFLOW 404','BRANCH 404','findRunForBranch',
-            'Fine-grained token minimum for the full on-device path','GENERATED_PROJECT_ROOT','/contents/'
+            'GENERATED_PROJECT_ROOT','/contents/'
           ]
           required_trusted = ['repository_dispatch:','aidao-generated-build','target_branch','project_root','Build generated debug APK','Upload generated APK']
           required_repair = ['Repair Android theme/resource linkage only','Repair generated Gradle plugin/toolchain compatibility only']
           missing=[]
-          missing += ['UI '+x for x in required_source if x not in source]
+          missing += ['workspace '+x for x in required_legacy if x not in legacy]
+          missing += ['GitHub App UI '+x for x in required_auth if x not in auth]
+          missing += ['device auth '+x for x in required_device if x not in device]
           missing += ['task '+x for x in ['PLANNED','IN_PROGRESS','VERIFYING','COMPLETE','BLOCKED'] if x not in task]
           missing += ['planner '+x for x in ['anime catalog','episode discovery','watch history','provider failure isolation','higher priority','multiple android screens','remote/network data access','runtime permission'] if x not in planner]
           missing += ['generated '+x for x in required_generator if x not in generator]
@@ -80,8 +103,11 @@ jobs:
           missing += ['repair '+x for x in required_repair if x not in repair]
           for x in ['android:windowLightStatusBar">false','android:windowLightNavigationBar">false','android:windowLayoutInDisplayCutoutMode">shortEdges']:
               if x not in theme: missing.append('theme '+x)
-          if missing: raise SystemExit('v0.5 product regression: '+', '.join(missing))
-          print(f'Validated integrated AIDao {name.group(1)} ({code.group(1)}) v0.5 feature/safety surface plus v1 transport invariants')
+          combined_auth=auth+'\n'+device+'\n'+manifest
+          for forbidden in ['BEGIN RSA PRIVATE KEY','BEGIN PRIVATE KEY','github_pat_','client_secret=']:
+              if forbidden in combined_auth: missing.append('bundled secret '+forbidden)
+          if missing: raise SystemExit('Integrated V1 product regression: '+', '.join(missing))
+          print(f'Validated integrated AIDao {name.group(1)} ({code.group(1)}): preserved workspace/safety surface plus GitHub App V1 transport/auth invariants')
           PY
 
       - name: Validate local-first AI and execution boundaries
@@ -93,7 +119,7 @@ jobs:
           marker_groups=[
             ['final class Request'],['final class Result'],['AIDao Local Planner'],['boolean isRemote()'],
             ['never install APKs, publish code, spend money, or perform destructive actions'],['ProjectPlanner.build'],['new LocalPlanningProvider()'],
-            ['never installs APKs','never install APKs'],['Fine-grained token minimum for the full on-device path'],['isolated generated branch'],
+            ['never installs APKs','never install APKs'],['isolated generated branch'],
             ['non-executable representation'],['mayUseAsPlanningKnowledge']
           ]
           missing=[]
@@ -113,7 +139,7 @@ jobs:
         with:
           gradle-version: "9.5.0"
 
-      - name: Generate nontrivial v0.5 acceptance Android project
+      - name: Generate nontrivial V1 acceptance Android project
         run: |
           rm -rf build/source-generator generated-acceptance
           mkdir -p build/source-generator generated-acceptance
@@ -133,14 +159,14 @@ jobs:
           grep -q 'PlayerActivity' generated-acceptance/app/src/main/AndroidManifest.xml
           grep -q 'MediaProvider' generated-acceptance/README.md
 
-      - name: Build AIDao-generated v0.5 acceptance APK
+      - name: Build AIDao-generated V1 acceptance APK
         working-directory: generated-acceptance
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Upload generated acceptance APK
         uses: actions/upload-artifact@v4
         with:
-          name: aidao-v05-generated-acceptance-apk
+          name: aidao-v1-generated-acceptance-apk
           path: generated-acceptance/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Exercise exact Contents API -> repository_dispatch generated-app path
@@ -150,7 +176,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          branch="aidao-generated-v05-acceptance-${GITHUB_RUN_ID}"
+          branch="aidao-generated-v1-acceptance-${GITHUB_RUN_ID}"
           project_root=".aidao-generated-project"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
 
@@ -222,12 +248,12 @@ jobs:
         run: |
           gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}" || true
 
-      - name: Build AIDao v0.5 APK
+      - name: Build AIDao V1 APK
         working-directory: android-bootstrap
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Upload AIDao v0.5 APK
+      - name: Upload AIDao V1 APK
         uses: actions/upload-artifact@v4
         with:
-          name: aidao-v05-alpha-debug
+          name: aidao-v1-alpha-debug
           path: android-bootstrap/app/build/outputs/apk/debug/app-debug.apk
