@@ -1,0 +1,36 @@
+name: Project Revision Acceptance
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  revision-ledger:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Compile revision ledger acceptance
+        run: |
+          rm -rf build/revision-acceptance
+          mkdir -p build/revision-acceptance
+          javac -d build/revision-acceptance \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
+            acceptance/ProjectRevisionAcceptance.java
+
+      - name: Verify non-destructive regeneration bookkeeping
+        run: java -cp build/revision-acceptance dev.thefoolish.aidao.ProjectRevisionAcceptance
