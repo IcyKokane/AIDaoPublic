@@ -1,0 +1,47 @@
+name: Override Conflict Acceptance
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject*.java"
+      - "android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java"
+      - "android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedOverrideConflictActions.java"
+      - "acceptance/OverrideConflictActionsAcceptance.java"
+      - ".github/workflows/override-conflict-acceptance.yml"
+  pull_request:
+    paths:
+      - "android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject*.java"
+      - "android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java"
+      - "android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedOverrideConflictActions.java"
+      - "acceptance/OverrideConflictActionsAcceptance.java"
+      - ".github/workflows/override-conflict-acceptance.yml"
+  workflow_dispatch:
+
+jobs:
+  verify-conflict-actions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Compile override conflict acceptance
+        run: |
+          rm -rf build/override-conflict-acceptance
+          mkdir -p build/override-conflict-acceptance
+          javac -d build/override-conflict-acceptance \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedOverrideConflictActions.java \
+            acceptance/OverrideConflictActionsAcceptance.java
+
+      - name: Verify explicit stale/orphaned conflict decisions
+        run: java -cp build/override-conflict-acceptance dev.thefoolish.aidao.OverrideConflictActionsAcceptance
