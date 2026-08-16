@@ -31,6 +31,7 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ModelProvider.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalPlanningProvider.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderEconomicsPolicy.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderRegistry.java \
             acceptance/ProviderEconomicsAcceptance.java
 
       - name: Verify zero-cost core and optional BYOK boundary

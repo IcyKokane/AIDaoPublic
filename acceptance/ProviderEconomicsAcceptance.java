@@ -36,6 +36,35 @@ public final class ProviderEconomicsAcceptance {
         require(byok.fundingMode == ProviderEconomicsPolicy.FundingMode.USER_FUNDED_OPTIONAL,
                 "Remote enhancement must remain user-funded/optional.");
 
+        ProviderRegistry registry = new ProviderRegistry();
+        require(registry.selected() instanceof LocalPlanningProvider,
+                "Registry must start on the zero-cost local provider.");
+        registry.register(remote);
+        require(!registry.select(remote.id()),
+                "Legacy selection API must never silently select a remote provider.");
+        require(registry.selected() instanceof LocalPlanningProvider,
+                "Denied remote selection must leave the local provider active.");
+        require(registry.lastSelectionDecision() != null && !registry.lastSelectionDecision().allowed,
+                "Denied remote selection must expose a policy decision for UI diagnostics.");
+
+        require(!registry.select(remote.id(), true, false),
+                "Explicit remote opt-in without BYOK must remain blocked.");
+        require(registry.selected() instanceof LocalPlanningProvider,
+                "Blocked non-BYOK selection must not replace the local provider.");
+
+        require(registry.select(remote.id(), true, true),
+                "Explicit BYOK remote selection should be allowed as an optional enhancement.");
+        require(registry.selected() == remote,
+                "Authorized remote provider must become selected only after explicit BYOK authorization.");
+        require(registry.lastSelectionDecision() != null
+                        && registry.lastSelectionDecision().fundingMode == ProviderEconomicsPolicy.FundingMode.USER_FUNDED_OPTIONAL,
+                "Authorized remote provider must remain classified as user-funded optional.");
+
+        require(registry.select(local.id()),
+                "Zero-cost local provider must always be selectable without credentials.");
+        require(registry.selected() instanceof LocalPlanningProvider,
+                "Registry must be able to return to the zero-cost core path.");
+
         ModelProvider.Result plan = local.plan(new ModelProvider.Request(
                 "Offline Sample",
                 "Create a simple notes app with local persistence.",
@@ -43,7 +72,7 @@ public final class ProviderEconomicsAcceptance {
         require(plan.plan != null && !plan.plan.tasks.isEmpty(), "Zero-cost default path must remain functional.");
         require(!plan.remote, "Default planning result must report local execution.");
 
-        System.out.println("PASS: zero-cost default provider economics and BYOK boundary verified");
+        System.out.println("PASS: zero-cost default provider economics, registry selection gate, and BYOK boundary verified");
     }
 
     private static void require(boolean condition, String message) {
