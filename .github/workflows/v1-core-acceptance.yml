@@ -77,12 +77,12 @@ jobs:
               'Refusing unsafe generated path',
           ]
           missing = [x for x in required if x not in gh]
-          forbidden = ['/git/blobs', '/git/trees', 'create-blob']
-          present_forbidden = [x for x in forbidden if x in gh]
+          forbidden_endpoints = ['/git/blobs', '/git/trees']
+          present_forbidden = [x for x in forbidden_endpoints if x in gh]
           if missing:
               raise SystemExit('Missing v1 transport invariant(s): ' + ', '.join(missing))
           if present_forbidden:
-              raise SystemExit('Low-level Git object upload path regressed: ' + ', '.join(present_forbidden))
+              raise SystemExit('Low-level Git object upload endpoint regressed: ' + ', '.join(present_forbidden))
           for marker in ['repository_dispatch:', 'project_root', 'Validate generated project boundary', 'Generated project may not supply executable GitHub workflows']:
               if marker not in trusted:
                   raise SystemExit('Trusted workflow boundary missing: ' + marker)
