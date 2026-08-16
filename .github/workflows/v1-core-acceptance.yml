@@ -91,7 +91,7 @@ jobs:
 
       - name: Verify source-regeneration conflict protections are tested
         run: |
-          grep -q 'STALE_BASELINE' acceptance/ProjectRevisionAcceptance.java
-          grep -q 'ORPHANED' acceptance/ProjectRevisionAcceptance.java
-          grep -q 'APPLIES_CLEANLY' acceptance/ProjectRevisionAcceptance.java
+          grep -q 'clean override should be buildable' acceptance/ProjectRevisionAcceptance.java
+          grep -q 'stale override must block a build' acceptance/ProjectRevisionAcceptance.java
+          grep -q 'orphaned override must block a build' acceptance/ProjectRevisionAcceptance.java
           echo 'Project revision conflict coverage passed'
