@@ -1,0 +1,92 @@
+name: AIDao V1 Core Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/**'
+      - 'acceptance/**'
+      - '.github/workflows/v1-core-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Compile planner behavior acceptance
+        run: |
+          rm -rf build/v1-core
+          mkdir -p build/v1-core
+          javac -d build/v1-core \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectPlanner.java \
+            acceptance/PlannerBehaviorAcceptance.java
+
+      - name: Run planner behavior acceptance
+        run: java -cp build/v1-core dev.thefoolish.aidao.PlannerBehaviorAcceptance
+
+      - name: Compile generated-project validation acceptance
+        run: |
+          javac -d build/v1-core \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            acceptance/GeneratedProjectValidationAcceptance.java
+
+      - name: Run generated-project validation acceptance
+        run: java -cp build/v1-core dev.thefoolish.aidao.GeneratedProjectValidationAcceptance
+
+      - name: Compile revision and override acceptance
+        run: |
+          javac -d build/v1-core \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
+            acceptance/ProjectRevisionAcceptance.java
+
+      - name: Run revision and override acceptance
+        run: java -cp build/v1-core dev.thefoolish.aidao.ProjectRevisionAcceptance
+
+      - name: Validate fine-grained GitHub transport contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          gh = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GitHubGeneratedBuildClient.java').read_text()
+          trusted = Path('.github/workflows/generated-project.yml').read_text()
+          required = [
+              'GENERATED_PROJECT_ROOT',
+              '/contents/',
+              'repository_dispatch',
+              'Contents: read/write + Actions: read',
+              'Workflows write is intentionally not required',
+              'if(f.path.startsWith(".github/workflows/")) continue',
+              'Refusing unsafe generated path',
+          ]
+          missing = [x for x in required if x not in gh]
+          forbidden = ['/git/blobs', '/git/trees', 'create-blob']
+          present_forbidden = [x for x in forbidden if x in gh]
+          if missing:
+              raise SystemExit('Missing v1 transport invariant(s): ' + ', '.join(missing))
+          if present_forbidden:
+              raise SystemExit('Low-level Git object upload path regressed: ' + ', '.join(present_forbidden))
+          for marker in ['repository_dispatch:', 'project_root', 'Validate generated project boundary', 'Generated project may not supply executable GitHub workflows']:
+              if marker not in trusted:
+                  raise SystemExit('Trusted workflow boundary missing: ' + marker)
+          print('Fine-grained GitHub transport contract passed')
+          PY
+
+      - name: Verify source-regeneration conflict protections are tested
+        run: |
+          grep -q 'STALE_BASELINE' acceptance/ProjectRevisionAcceptance.java
+          grep -q 'ORPHANED' acceptance/ProjectRevisionAcceptance.java
+          grep -q 'APPLIES_CLEANLY' acceptance/ProjectRevisionAcceptance.java
+          echo 'Project revision conflict coverage passed'
