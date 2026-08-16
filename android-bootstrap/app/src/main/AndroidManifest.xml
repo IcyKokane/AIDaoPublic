@@ -9,7 +9,7 @@
         android:allowBackup="true"
         android:supportsRtl="true">
         <activity
-            android:name=".AIDaoActivityV6"
+            android:name=".AIDaoActivityV5"
             android:exported="true"
             android:screenOrientation="unspecified"
             android:windowSoftInputMode="adjustResize|stateAlwaysHidden">
@@ -19,9 +19,15 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".AIDaoActivityV5"
-            android:exported="false"
+            android:name=".AIDaoActivityV6"
+            android:label="AIDao GitHub"
+            android:exported="true"
             android:screenOrientation="unspecified"
-            android:windowSoftInputMode="adjustResize|stateAlwaysHidden" />
+            android:windowSoftInputMode="adjustResize|stateAlwaysHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>
