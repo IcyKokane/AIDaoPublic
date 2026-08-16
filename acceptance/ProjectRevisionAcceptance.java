@@ -19,13 +19,23 @@ public final class ProjectRevisionAcceptance {
 
         Map<String,String> overrides = new HashMap<>();
         Map<String,String> bases = new HashMap<>();
-        overrides.put(target, original.content.replace("</resources>", "  <string name=\"custom_label\">User edit</string></resources>"));
+        String userEdit = original.content.replace("</resources>", "  <string name=\"custom_label\">User edit</string></resources>");
+        overrides.put(target, userEdit);
         bases.put(target, ProjectRevisionLedger.hash(original.content));
 
         ProjectRevisionLedger ledger = new ProjectRevisionLedger();
         ProjectRevisionLedger.Snapshot clean = ledger.inspect(first, overrides, bases);
         require(clean.cleanOverrides == 1, "expected one clean override");
         require(!clean.hasConflicts(), "clean override unexpectedly conflicted");
+
+        GeneratedProjectOverrideResolver resolver = new GeneratedProjectOverrideResolver();
+        GeneratedProjectOverrideResolver.Resolution cleanResolution = resolver.resolve(first, overrides, bases);
+        require(cleanResolution.canBuild(), "clean override should be buildable");
+        require(cleanResolution.appliedOverrides == 1, "clean override was not applied");
+        require(userEdit.equals(cleanResolution.project.find(target).content), "resolved project does not contain user edit");
+
+        Map<String,String> captured = GeneratedProjectOverrideResolver.captureBaselineHashes(first, overrides);
+        require(ProjectRevisionLedger.hash(original.content).equals(captured.get(target)), "baseline capture did not fingerprint generated source");
 
         GeneratedProject second = new LocalSourceGenerator().generate(
                 "Revision Ledger Acceptance",
@@ -38,12 +48,26 @@ public final class ProjectRevisionAcceptance {
         require(stale.staleOverrides == 1, "expected stale override detection");
         require(stale.hasConflicts(), "stale override must block silent application");
 
-        overrides.put("app/src/main/java/dev/thefoolish/generated/revisionledgeracceptance/Removed.java", "package example;");
+        GeneratedProjectOverrideResolver.Resolution staleResolution = resolver.resolve(second, overrides, staleBases);
+        require(!staleResolution.canBuild(), "stale override must block a build until user resolution");
+        require(staleResolution.appliedOverrides == 0, "stale override must not be silently applied");
+        require(!userEdit.equals(staleResolution.project.find(target).content), "stale override leaked into regenerated source");
+
+        String orphanPath = "app/src/main/java/dev/thefoolish/generated/revisionledgeracceptance/Removed.java";
+        overrides.put(orphanPath, "package example;");
         ProjectRevisionLedger.Snapshot orphan = ledger.inspect(second, overrides, staleBases);
         require(orphan.orphanedOverrides == 1, "expected orphaned override detection");
         require(orphan.hasConflicts(), "orphaned override must block silent loss");
 
-        System.out.println("Project revision acceptance passed: clean/stale/orphaned override states are deterministic.");
+        GeneratedProjectOverrideResolver.Resolution orphanResolution = resolver.resolve(second, overrides, staleBases);
+        require(!orphanResolution.canBuild(), "orphaned override must block a build until user resolution");
+        boolean orphanSeen = false;
+        for (GeneratedProjectOverrideResolver.Conflict conflict : orphanResolution.conflicts) {
+            if (orphanPath.equals(conflict.path) && conflict.state == ProjectRevisionLedger.OverrideState.ORPHANED) orphanSeen = true;
+        }
+        require(orphanSeen, "orphaned override was not surfaced in resolver conflicts");
+
+        System.out.println("Project revision acceptance passed: clean overrides apply; stale/orphaned edits block silent regeneration.");
     }
 
     private static void require(boolean value, String message) {

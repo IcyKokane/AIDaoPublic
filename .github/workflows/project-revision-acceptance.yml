@@ -21,7 +21,7 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Compile revision ledger acceptance
+      - name: Compile revision safety acceptance
         run: |
           rm -rf build/revision-acceptance
           mkdir -p build/revision-acceptance
@@ -30,7 +30,8 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
             acceptance/ProjectRevisionAcceptance.java
 
-      - name: Verify non-destructive regeneration bookkeeping
+      - name: Verify non-destructive regeneration and override conflict handling
         run: java -cp build/revision-acceptance dev.thefoolish.aidao.ProjectRevisionAcceptance
