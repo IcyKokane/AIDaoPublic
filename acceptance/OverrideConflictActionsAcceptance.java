@@ -1,13 +1,15 @@
 package dev.thefoolish.aidao;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /** CI acceptance for explicit stale/orphaned generated-source conflict actions. */
 public final class OverrideConflictActionsAcceptance {
     public static void main(String[] args) {
-        GeneratedProject first = generate("Initial title");
+        GeneratedProject first = generate();
         String target = "app/src/main/res/values/strings.xml";
         GeneratedProject.FileEntry original = first.find(target);
         require(original != null, "missing strings.xml");
@@ -18,7 +20,11 @@ public final class OverrideConflictActionsAcceptance {
         overrides.put(target, userEdit);
         bases.put(target, ProjectRevisionLedger.hash(original.content));
 
-        GeneratedProject changed = generate("Changed generated title");
+        // Simulate a deterministic generator evolution that changes the same file.
+        // The acceptance must not depend on a particular planner phrase affecting
+        // strings.xml, only on the revision-safety contract itself.
+        String evolved = original.content.replace("</resources>", "  <string name=\"generated_revision\">Generator vNext</string>\n</resources>");
+        GeneratedProject changed = replace(first, target, evolved);
         GeneratedProjectOverrideResolver.Resolution stale =
                 new GeneratedProjectOverrideResolver().resolve(changed, overrides, bases);
         require(!stale.canBuild(), "changed generation baseline must create an explicit stale conflict");
@@ -64,16 +70,26 @@ public final class OverrideConflictActionsAcceptance {
         System.out.println("Override conflict actions acceptance passed: stale edits require explicit rebase/discard and orphaned files cannot silently return.");
     }
 
-    private static GeneratedProject generate(String title) {
+    private static GeneratedProject generate() {
         return new LocalSourceGenerator().generate(
                 "Conflict Safety App",
                 "Create a small Android inventory utility with explore, detail, and settings screens.",
                 Arrays.asList(
                         "Generate connected Android screens with persistent local state.",
-                        "Use application title " + title + "."),
+                        "Keep generated source deterministic across identical inputs."),
                 Arrays.asList(
                         "Generate the Android source tree.",
                         "Verify the generated project."));
+    }
+
+    private static GeneratedProject replace(GeneratedProject project, String path, String content) {
+        List<GeneratedProject.FileEntry> files = new ArrayList<>();
+        for (GeneratedProject.FileEntry file : project.files) {
+            files.add(path.equals(file.path)
+                    ? new GeneratedProject.FileEntry(file.path, content, file.taskHint)
+                    : file);
+        }
+        return new GeneratedProject(project.projectName, project.packageName, files, project.verificationNotes);
     }
 
     private static void require(boolean value, String message) {
