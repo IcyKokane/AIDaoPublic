@@ -2,7 +2,8 @@ name: Integrate GitHub App UI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -11,36 +12,11 @@ jobs:
   patch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ github.token }}
-      - name: Replace normal PAT UI with GitHub App entrypoint
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          path = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV5.java')
-          source = path.read_text()
-          if 'Fine-grained GitHub token (not saved)' not in source:
-              print('GitHub App UI already integrated; no patch required.')
-              raise SystemExit(0)
-
-          new_method = '''    private void github(){heading("GitHub build connection");if(!prefs.getBoolean("generated",false)){card("Generated source required","Generate and verify the local Android source tree before connecting GitHub.",YELLOW);return;}card("GitHub App authorization","AIDao now uses GitHub Device Flow for the normal build path. No fine-grained personal access token, GitHub App private key, or client secret is required on the phone.",GREEN);card("Repository boundary",prefs.getString("repo","IcyKokane/AIDaoPublic")+" · access is limited by the AIDao-TheFoolish GitHub App installation and your GitHub account permissions.",BLUE);content.addView(text("Connect GitHub opens AIDao's secure GitHub App build screen. GitHub gives you a short approval code; after you approve AIDao in the browser, the generated source is uploaded to an isolated branch and the trusted default-branch CI produces the APK.",12,MUTED,false),lp(-1,-2,0,dp(8),0,dp(10)));Button connect=primary("Connect GitHub App & Build");connect.setOnClickListener(v->startActivity(new Intent(this,AIDaoActivityV6.class)));content.addView(connect,lp(-1,dp(52),0,dp(12),0,0));String run=prefs.getString("run_url",null);if(run!=null&&!run.isEmpty()){Button open=secondary("Open Latest CI Run / APK Artifact");open.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(run))));content.addView(open,lp(-1,dp(50),0,dp(10),0,0));}}
-'''
-          pattern = re.compile(r'    private void github\(\)\{.*?\n    private void startRemoteBuild', re.S)
-          source, count = pattern.subn(new_method + '    private void startRemoteBuild', source, count=1)
-          if count != 1:
-              raise SystemExit(f'Expected to replace exactly one GitHub UI method, replaced {count}')
-          source = source.replace('Re-enter a GitHub token to safely retry; credentials were not stored.', 'Reconnect the GitHub App to safely retry; authorization tokens are never stored.')
-          source = source.replace('GitHub tokens are session-only and never persisted by AIDao.', 'GitHub App user tokens are session-only and never persisted by AIDao; the private key and client secret are never bundled in the APK.')
-          if 'Fine-grained GitHub token (not saved)' in source:
-              raise SystemExit('PAT input remained after GitHub App UI patch')
-          if 'Connect GitHub App & Build' not in source or 'AIDaoActivityV6.class' not in source:
-              raise SystemExit('GitHub App entrypoint missing after patch')
-          path.write_text(source)
-          print('Validated workspace GitHub tab now routes to GitHub App Device Flow build path.')
-          PY
-      - name: Commit integrated UI if changed
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Patch validated workspace GitHub tab
+        run: python3 tools/integrate_github_app_ui.py
+      - name: Commit migration if changed
         run: |
           if git diff --quiet; then
             echo "No changes to commit."
