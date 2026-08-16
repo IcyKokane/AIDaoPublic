@@ -1,0 +1,56 @@
+name: AIDao V1 Live Device Flow Preflight
+
+on:
+  push:
+    branches: ["aidao-v1-live-preflight"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-device-flow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify live GitHub App Device Flow
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re, urllib.error, urllib.parse, urllib.request
+
+          activity = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
+          match = re.search(r'GITHUB_APP_CLIENT_ID="([^"]+)"', activity)
+          if not match:
+              raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: no public GitHub App Client ID is configured')
+          client_id = match.group(1)
+          if not re.fullmatch(r'Iv[0-9A-Za-z]{18}', client_id):
+              raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: configured public Client ID is malformed')
+
+          request = urllib.request.Request(
+              'https://github.com/login/device/code',
+              data=urllib.parse.urlencode({'client_id': client_id}).encode(),
+              headers={
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  'User-Agent': 'AIDao-V1-Live-Device-Flow-Preflight'
+              },
+              method='POST')
+          try:
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  payload = json.loads(response.read().decode())
+          except urllib.error.HTTPError as exc:
+              detail = exc.read().decode(errors='replace')
+              raise SystemExit(
+                  f'LIVE DEVICE FLOW PREFLIGHT FAILED HTTP {exc.code}. '
+                  'In GitHub App AIDao-TheFoolish, enable Device Flow under General -> Identifying and authorizing users, '
+                  f'and verify Client ID {client_id}. GitHub response: {detail[:300]}')
+
+          required = ['device_code','user_code','verification_uri','expires_in','interval']
+          missing = [key for key in required if not payload.get(key)]
+          if missing:
+              raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: GitHub response missing '+', '.join(missing))
+          if 'github.com/login/device' not in payload['verification_uri']:
+              raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: unexpected verification URI '+str(payload['verification_uri']))
+          print('STRICT V1 LIVE DEVICE FLOW PREFLIGHT PASSED: GitHub issued a device authorization code')
+          PY
