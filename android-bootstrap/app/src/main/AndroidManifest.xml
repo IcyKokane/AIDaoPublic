@@ -10,17 +10,12 @@
         android:supportsRtl="true">
         <activity
             android:name=".AIDaoActivityV5"
-            android:exported="true"
+            android:exported="false"
             android:screenOrientation="unspecified"
-            android:windowSoftInputMode="adjustResize|stateAlwaysHidden">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:windowSoftInputMode="adjustResize|stateAlwaysHidden" />
         <activity
             android:name=".AIDaoActivityV6"
-            android:label="AIDao GitHub"
+            android:label="AIDao"
             android:exported="true"
             android:screenOrientation="unspecified"
             android:windowSoftInputMode="adjustResize|stateAlwaysHidden">
