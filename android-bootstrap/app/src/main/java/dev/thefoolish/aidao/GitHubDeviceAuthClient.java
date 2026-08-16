@@ -24,6 +24,9 @@ final class GitHubDeviceAuthClient {
     static final String ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token";
     static final String DEFAULT_VERIFICATION_URL = "https://github.com/login/device";
     static final String GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
+    // Public identifier for the installed AIDao-TheFoolish GitHub App.
+    // This is intentionally safe to ship in the APK; secrets/private keys are never embedded.
+    static final String AIDAO_GITHUB_APP_CLIENT_ID = "Iv23liCpkWHmKdijzsLC";
 
     static final class DeviceCode {
         final String deviceCode;
@@ -62,9 +65,10 @@ final class GitHubDeviceAuthClient {
         boolean authorized(){ return state==State.AUTHORIZED && accessToken!=null && !accessToken.isEmpty(); }
     }
 
-    DeviceCode begin(String clientId) throws Exception {
+    DeviceCode begin(String ignoredClientId) throws Exception {
+        String clientId=AIDAO_GITHUB_APP_CLIENT_ID;
         requireClientId(clientId);
-        String body="client_id="+form(clientId.trim());
+        String body="client_id="+form(clientId);
         String json=postForm(DEVICE_CODE_URL,body);
         String device=value(json,"device_code");
         String user=value(json,"user_code");
@@ -76,11 +80,12 @@ final class GitHubDeviceAuthClient {
         return new DeviceCode(device,user,uri,System.currentTimeMillis()+expires*1000L,interval);
     }
 
-    TokenResult pollOnce(String clientId,DeviceCode code,int currentIntervalSeconds) throws Exception {
+    TokenResult pollOnce(String ignoredClientId,DeviceCode code,int currentIntervalSeconds) throws Exception {
+        String clientId=AIDAO_GITHUB_APP_CLIENT_ID;
         requireClientId(clientId);
         if(code==null) throw new IllegalArgumentException("Device authorization session is required.");
         if(code.expired()) return new TokenResult(TokenResult.State.EXPIRED,null,null,"The GitHub authorization code expired.",Math.max(5,currentIntervalSeconds));
-        String body="client_id="+form(clientId.trim())+
+        String body="client_id="+form(clientId)+
             "&device_code="+form(code.deviceCode)+
             "&grant_type="+form(GRANT_TYPE);
         String json=postForm(ACCESS_TOKEN_URL,body);
