@@ -1,0 +1,68 @@
+name: GitHub App Auth Acceptance
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Android GitHub App auth boundary
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          base = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao')
+          device = (base/'GitHubDeviceAuthClient.java').read_text()
+          entry = (base/'AIDaoActivityV6.java').read_text()
+          manifest = Path('android-bootstrap/app/src/main/AndroidManifest.xml').read_text()
+
+          required_device = [
+              'https://github.com/login/device/code',
+              'https://github.com/login/oauth/access_token',
+              'urn:ietf:params:oauth:grant-type:device_code',
+              'client_id=',
+              'authorization_pending',
+              'slow_down',
+              'access_denied',
+              'expired_token',
+          ]
+          required_entry = [
+              'GITHUB_APP_CLIENT_ID',
+              'Connect GitHub App & Build',
+              'AIDao-TheFoolish',
+              'GitHubDeviceAuthClient',
+              'sessionToken=""',
+              'GitHubGeneratedBuildClient',
+              'Contents read/write and Actions read',
+              'private key',
+              'client secret',
+              'friendlyError',
+              'friendlyFailure',
+          ]
+          missing = [f'device:{x}' for x in required_device if x not in device]
+          missing += [f'entry:{x}' for x in required_entry if x not in entry]
+          if 'android:name=".AIDaoActivityV6"' not in manifest:
+              missing.append('manifest:AIDaoActivityV6')
+
+          combined = device + '\n' + entry
+          forbidden = [
+              'BEGIN RSA PRIVATE KEY',
+              'BEGIN PRIVATE KEY',
+              'client_secret=',
+              'Fine-grained GitHub token (not saved)',
+          ]
+          leaked = [x for x in forbidden if x in combined]
+          if missing:
+              raise SystemExit('GitHub App auth regression: ' + ', '.join(missing))
+          if leaked:
+              raise SystemExit('Secret/PAT regression in GitHub App path: ' + ', '.join(leaked))
+          if len(__import__('re').search(r'GITHUB_APP_CLIENT_ID="([^"]+)"', entry).group(1)) != 20:
+              raise SystemExit('Public GitHub App client ID must be the expected 20-character identifier')
+          print('GitHub App Device Flow boundary validated: public client ID only; no bundled private key/client secret/PAT UI')
+          PY
