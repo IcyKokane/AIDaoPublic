@@ -1,7 +1,7 @@
 {
-  "version": "0.5.0-alpha",
-  "versionCode": 50,
+  "version": "1.0.0",
+  "versionCode": 100,
   "downloadUrl": "https://github.com/IcyKokane/AIDaoPublic/actions/workflows/android.yml",
   "channel": "alpha",
-  "notes": "AIDao v0.5 creation milestone. Adds iterative natural-language project refinement, richer domain-aware planning, nontrivial multi-screen Android source generation, reusable navigation/UI/local-persistence architecture, generated resources and manifests, project file inspection with user-controlled local source overrides, safe directed knowledge ingestion from explicitly shared text/reference files without silent execution, persistent interrupted-build recovery, improved Activity/Settings surfaces, and preserved user-controlled Check for Updates. The validated GitHub path continues to upload generated app source only to isolated branches, trigger the trusted main-branch generated-project workflow with repository_dispatch, surface explicit permission/auth/build/artifact errors, and perform bounded repair/rebuild. Credentials remain session-only; installation, publication, spending, destructive actions, and unsafe provider acquisition remain user-controlled."
+  "notes": "AIDao v1.0 release candidate. Preserves the validated v0.5 creation workflow while adding stronger planner and generated-project acceptance coverage, deterministic project revision and source-override conflict handling, a fine-grained-PAT-compatible isolated-branch Contents API transport, trusted repository_dispatch generated-app builds, explicit CI diagnostics, and a zero-cost default provider policy. Core operation remains local/deterministic by default; optional remote providers must be explicitly selected and use user-supplied credentials/funding. Credentials remain session-only; installation, publication, spending, destructive actions, and unsafe provider acquisition remain user-controlled."
 }
