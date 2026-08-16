@@ -42,6 +42,7 @@ jobs:
           javac -d build/v1-core \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GeneratedProjectValidationAcceptance.java
 
       - name: Run generated-project validation acceptance
