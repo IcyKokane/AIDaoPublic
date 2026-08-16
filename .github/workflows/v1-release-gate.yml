@@ -1,0 +1,90 @@
+name: AIDao V1 Release Gate
+
+on:
+  push:
+    branches: ['aidao-v1-gate-integration']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-release-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Compile and run planner acceptance
+        run: |
+          rm -rf build/v1-gate && mkdir -p build/v1-gate
+          javac -d build/v1-gate \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectPlanner.java \
+            acceptance/PlannerBehaviorAcceptance.java
+          java -cp build/v1-gate dev.thefoolish.aidao.PlannerBehaviorAcceptance
+
+      - name: Compile and run generated-project validation
+        run: |
+          rm -rf build/v1-gate && mkdir -p build/v1-gate
+          javac -d build/v1-gate \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            acceptance/GeneratedProjectValidationAcceptance.java
+          java -cp build/v1-gate dev.thefoolish.aidao.GeneratedProjectValidationAcceptance
+
+      - name: Compile and run revision safety acceptance
+        run: |
+          rm -rf build/v1-gate && mkdir -p build/v1-gate
+          javac -d build/v1-gate \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
+            acceptance/ProjectRevisionAcceptance.java
+          java -cp build/v1-gate dev.thefoolish.aidao.ProjectRevisionAcceptance
+
+      - name: Compile and run zero-cost provider economics acceptance
+        run: |
+          rm -rf build/v1-gate && mkdir -p build/v1-gate
+          javac -d build/v1-gate \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectPlanner.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ModelProvider.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalPlanningProvider.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderEconomicsPolicy.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderRegistry.java \
+            acceptance/ProviderEconomicsAcceptance.java
+          java -cp build/v1-gate dev.thefoolish.aidao.ProviderEconomicsAcceptance
+
+      - name: Verify fine-grained GitHub transport invariants
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          gh = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GitHubGeneratedBuildClient.java').read_text()
+          trusted = Path('.github/workflows/generated-project.yml').read_text()
+          required = ['GENERATED_PROJECT_ROOT','/contents/','repository_dispatch','Contents: read/write + Actions: read','Workflows write is intentionally not required','Refusing unsafe generated path']
+          missing = [x for x in required if x not in gh]
+          forbidden = [x for x in ['/git/blobs','/git/trees'] if x in gh]
+          if missing: raise SystemExit('Missing transport invariant(s): ' + ', '.join(missing))
+          if forbidden: raise SystemExit('Forbidden low-level Git upload endpoint(s): ' + ', '.join(forbidden))
+          for marker in ['repository_dispatch:','project_root','Validate generated project boundary','Generated project may not supply executable GitHub workflows']:
+              if marker not in trusted: raise SystemExit('Trusted workflow boundary missing: ' + marker)
+          print('GitHub transport invariants passed')
+          PY
+
+      - name: Verify v1 economic contract has no required paid provider
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          policy = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderEconomicsPolicy.java').read_text()
+          registry = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderRegistry.java').read_text()
+          for marker in ['zero-cost','BYOK']:
+              if marker.lower() not in (policy + registry).lower():
+                  raise SystemExit('Provider economics contract missing marker: ' + marker)
+          print('Zero-cost default / optional BYOK contract present')
+          PY
