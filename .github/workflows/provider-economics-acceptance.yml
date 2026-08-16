@@ -1,0 +1,37 @@
+name: Provider Economics Acceptance
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zero-cost-provider-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Compile provider economics acceptance
+        run: |
+          rm -rf build/provider-economics-acceptance
+          mkdir -p build/provider-economics-acceptance
+          javac -d build/provider-economics-acceptance \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectPlanner.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ModelProvider.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalPlanningProvider.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderEconomicsPolicy.java \
+            acceptance/ProviderEconomicsAcceptance.java
+
+      - name: Verify zero-cost core and optional BYOK boundary
+        run: java -cp build/provider-economics-acceptance dev.thefoolish.aidao.ProviderEconomicsAcceptance
