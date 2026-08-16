@@ -3,9 +3,12 @@ package dev.thefoolish.aidao;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,6 +27,7 @@ final class GitHubDeviceAuthClient {
     static final String ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token";
     static final String DEFAULT_VERIFICATION_URL = "https://github.com/login/device";
     static final String GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
+    static final int NETWORK_ATTEMPTS = 3;
     // Public identifier for the installed AIDao-TheFoolish GitHub App.
     // This is intentionally safe to ship in the APK; secrets/private keys are never embedded.
     static final String AIDAO_GITHUB_APP_CLIENT_ID = "Iv23liCpkWHmKdijzsLC";
@@ -44,6 +48,14 @@ final class GitHubDeviceAuthClient {
         }
 
         boolean expired(){ return System.currentTimeMillis()>=expiresAtMillis; }
+        boolean usable(){
+            if(deviceCode==null||deviceCode.trim().isEmpty()||userCode==null||userCode.trim().isEmpty())return false;
+            if(verificationUri==null||verificationUri.trim().isEmpty())return false;
+            try{
+                URL u=new URL(verificationUri);
+                return "https".equalsIgnoreCase(u.getProtocol())&&"github.com".equalsIgnoreCase(u.getHost());
+            }catch(Exception ignored){return false;}
+        }
     }
 
     static final class TokenResult {
@@ -77,13 +89,15 @@ final class GitHubDeviceAuthClient {
         int interval=number(json,"interval",5);
         if(device==null||user==null) throw new IllegalStateException("GitHub device authorization did not return a usable device code.");
         if(uri==null||uri.trim().isEmpty()) uri=DEFAULT_VERIFICATION_URL;
-        return new DeviceCode(device,user,uri,System.currentTimeMillis()+expires*1000L,interval);
+        DeviceCode result=new DeviceCode(device,user,uri,System.currentTimeMillis()+expires*1000L,interval);
+        if(!result.usable())throw new IllegalStateException("GitHub device authorization returned an unsafe or incomplete verification link.");
+        return result;
     }
 
     TokenResult pollOnce(String ignoredClientId,DeviceCode code,int currentIntervalSeconds) throws Exception {
         String clientId=AIDAO_GITHUB_APP_CLIENT_ID;
         requireClientId(clientId);
-        if(code==null) throw new IllegalArgumentException("Device authorization session is required.");
+        if(code==null||!code.usable()) throw new IllegalArgumentException("Device authorization session is required.");
         if(code.expired()) return new TokenResult(TokenResult.State.EXPIRED,null,null,"The GitHub authorization code expired.",Math.max(5,currentIntervalSeconds));
         String body="client_id="+form(clientId)+
             "&device_code="+form(code.deviceCode)+
@@ -103,25 +117,49 @@ final class GitHubDeviceAuthClient {
     }
 
     private String postForm(String endpoint,String body) throws Exception {
+        Exception last=null;
+        for(int attempt=1;attempt<=NETWORK_ATTEMPTS;attempt++){
+            try{
+                return postFormOnce(endpoint,body);
+            }catch(UnknownHostException e){
+                last=e;
+                if(attempt==NETWORK_ATTEMPTS)throw new IllegalStateException("NETWORK_DNS: AIDao could not resolve github.com after "+NETWORK_ATTEMPTS+" attempts. Check that the phone has Internet access and that Private DNS/VPN/ad blocking is not blocking GitHub.",e);
+            }catch(SocketTimeoutException e){
+                last=e;
+                if(attempt==NETWORK_ATTEMPTS)throw new IllegalStateException("NETWORK_TIMEOUT: GitHub did not respond after "+NETWORK_ATTEMPTS+" attempts. Check the connection and try again.",e);
+            }catch(ConnectException e){
+                last=e;
+                if(attempt==NETWORK_ATTEMPTS)throw new IllegalStateException("NETWORK_CONNECT: AIDao could not establish a secure connection to GitHub after "+NETWORK_ATTEMPTS+" attempts.",e);
+            }
+            try{Thread.sleep(700L*attempt);}catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw interrupted;}
+        }
+        throw last==null?new IllegalStateException("GitHub network request failed."):last;
+    }
+
+    private String postFormOnce(String endpoint,String body) throws Exception {
         HttpURLConnection c=(HttpURLConnection)new URL(endpoint).openConnection();
         c.setRequestMethod("POST");
         c.setConnectTimeout(12000);
         c.setReadTimeout(25000);
         c.setDoOutput(true);
+        c.setUseCaches(false);
         c.setRequestProperty("Accept","application/json");
         c.setRequestProperty("Content-Type","application/x-www-form-urlencoded; charset=utf-8");
-        c.setRequestProperty("User-Agent","AIDao-Android");
-        try(OutputStream out=c.getOutputStream()){out.write(body.getBytes(StandardCharsets.UTF_8));}
-        int status=c.getResponseCode();
-        java.io.InputStream stream=(status>=200&&status<300)?c.getInputStream():c.getErrorStream();
-        StringBuilder b=new StringBuilder();
-        if(stream!=null){
-            BufferedReader r=new BufferedReader(new InputStreamReader(stream,StandardCharsets.UTF_8));
-            String line; while((line=r.readLine())!=null)b.append(line); r.close();
+        c.setRequestProperty("User-Agent","AIDao-Android/1.0.1");
+        try{
+            try(OutputStream out=c.getOutputStream()){out.write(body.getBytes(StandardCharsets.UTF_8));}
+            int status=c.getResponseCode();
+            java.io.InputStream stream=(status>=200&&status<300)?c.getInputStream():c.getErrorStream();
+            StringBuilder b=new StringBuilder();
+            if(stream!=null){
+                BufferedReader r=new BufferedReader(new InputStreamReader(stream,StandardCharsets.UTF_8));
+                String line; while((line=r.readLine())!=null)b.append(line); r.close();
+            }
+            if(status<200||status>=300) throw new IllegalStateException("GitHub authorization HTTP "+status+": "+trim(b.toString(),500));
+            return b.toString();
+        }finally{
+            c.disconnect();
         }
-        c.disconnect();
-        if(status<200||status>=300) throw new IllegalStateException("GitHub authorization HTTP "+status+": "+trim(b.toString(),500));
-        return b.toString();
     }
 
     private void requireClientId(String clientId){
