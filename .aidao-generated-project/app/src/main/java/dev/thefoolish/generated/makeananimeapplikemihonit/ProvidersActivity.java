@@ -1,0 +1,2 @@
+package dev.thefoolish.generated.makeananimeapplikemihonit;
+public final class ProvidersActivity extends GeneratedScreen { protected void render(){MediaProvider p=new DemoProvider();body.addView(text("Providers",22,true));body.addView(text(p.displayName()+" · "+p.health(),15,false));body.addView(text("Provider implementations are isolated. This generated sample does not download or execute untrusted extensions.",13,false));Button catalog=action("Back to Catalog");catalog.setOnClickListener(v->AppNavigator.open(this,MainActivity.class));body.addView(catalog);} }
