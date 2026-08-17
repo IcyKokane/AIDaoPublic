@@ -20,6 +20,8 @@ final class GeneratedFidelityValidator {
         require(notes, files, packageName, "ExtensionRepositoryClient.java", "repository sync implementation");
         require(notes, files, packageName, "ExtensionManager.java", "extension state implementation");
         require(notes, files, packageName, "RepositoryMediaProvider.java", "provider isolation implementation");
+        require(notes, files, packageName, "BuiltInProviderCatalog.java", "built-in provider catalog implementation");
+        require(notes, files, packageName, "JikanCatalogProvider.java", "reviewed real provider implementation");
 
         String joined = joinExecutableSource(files);
         failIf(notes, joined, "DemoProvider", "fabricated DemoProvider placeholder is forbidden in executable source");
@@ -31,6 +33,20 @@ final class GeneratedFidelityValidator {
                 joined.contains("ExtensionRepositoryClient") && joined.contains("AVAILABLE") &&
                 joined.contains("ENABLED") && joined.contains("FAILED");
         notes.add((repoBehavior ? "PASS " : "FAIL ") + "semantic repository/extension lifecycle gate");
+
+        boolean builtInProvider = joined.contains("BuiltInProviderCatalog") &&
+                joined.contains("JikanCatalogProvider") &&
+                joined.contains("https://api.jikan.moe/v4/anime") &&
+                joined.contains("builtin.jikan.catalog") &&
+                joined.contains("metadata-only");
+        notes.add((builtInProvider ? "PASS " : "FAIL ") + "pre-generation capability research / built-in provider gate");
+
+        boolean providerIsActuallyUsed = joined.contains("BuiltInProviderCatalog.providers()") &&
+                joined.contains("new ArrayList<>(BuiltInProviderCatalog.providers())");
+        notes.add((providerIsActuallyUsed ? "PASS " : "FAIL ") + "built-in provider is active in generated Browse/Search flow");
+
+        boolean honestCapabilityBoundary = joined.contains("Catalog metadata only") || joined.contains("metadata-only");
+        notes.add((honestCapabilityBoundary ? "PASS " : "FAIL ") + "provider capability limitation is explicit");
 
         boolean nativeUi = joined.contains("sans-serif") && joined.contains("setStatusBarColor") &&
                 joined.contains("Library") && joined.contains("History") && joined.contains("Downloads") &&
