@@ -1,0 +1,1 @@
+package dev.thefoolish.generated.anishelf;import android.app.Activity;import android.content.Intent;public final class AppNavigator{private AppNavigator(){}public static void open(Activity a,Class target){if(a.getClass()!=target)a.startActivity(new Intent(a,target));}}
