@@ -19,12 +19,6 @@ final class GeneratedProject {
             this.taskHint = taskHint;
         }
 
-        /**
-         * Compatibility normalization for deterministic generated source.
-         * Java cannot overload a getter/setter solely by return type, so the
-         * generated LocalStore setter is named putText and its generated call
-         * sites are rewritten consistently before the immutable tree exists.
-         */
         private static String normalizeGeneratedContent(String path, String source) {
             if (source == null) return "";
             String out = source;
@@ -64,10 +58,12 @@ final class GeneratedProject {
                 fidelity.projectName, fidelity.packageName, fidelity.files);
         FidelityResult nativeFidelity = applyNativeFidelityIfAvailable(
                 capability.projectName, capability.packageName, capability.files);
+        FidelityResult referenceBehavior = applyMihonBehaviorIfAvailable(
+                nativeFidelity.projectName, nativeFidelity.packageName, nativeFidelity.files);
 
-        this.projectName = nativeFidelity.projectName;
-        this.packageName = nativeFidelity.packageName;
-        List<FileEntry> immutableSource = new ArrayList<>(nativeFidelity.files == null ? Collections.emptyList() : nativeFidelity.files);
+        this.projectName = referenceBehavior.projectName;
+        this.packageName = referenceBehavior.packageName;
+        List<FileEntry> immutableSource = new ArrayList<>(referenceBehavior.files == null ? Collections.emptyList() : referenceBehavior.files);
         this.files = Collections.unmodifiableList(immutableSource);
 
         List<String> notes = new ArrayList<>();
@@ -75,6 +71,7 @@ final class GeneratedProject {
         if (fidelity.notes != null) notes.addAll(fidelity.notes);
         if (capability.notes != null) notes.addAll(capability.notes);
         if (nativeFidelity.notes != null) notes.addAll(nativeFidelity.notes);
+        if (referenceBehavior.notes != null) notes.addAll(referenceBehavior.notes);
 
         GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(this.packageName, immutableSource);
         notes.addAll(structural.notes);
@@ -82,11 +79,6 @@ final class GeneratedProject {
         this.verificationNotes = Collections.unmodifiableList(notes);
     }
 
-    /**
-     * The legacy acceptance harness intentionally compiles the core generator as
-     * a very small standalone Java set. Reflection keeps that harness compatible
-     * while the full Android build loads the fidelity module normally.
-     */
     @SuppressWarnings("unchecked")
     private static FidelityResult applyFidelityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
         try {
@@ -104,7 +96,6 @@ final class GeneratedProject {
         }
     }
 
-    /** Runs capability research after the fidelity transform but before semantic validation. */
     private static FidelityResult applyProviderCapabilityIntegrationIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
         try {
             Class<?> type = Class.forName("dev.thefoolish.aidao.ProviderCapabilityIntegrator");
@@ -121,7 +112,6 @@ final class GeneratedProject {
         }
     }
 
-    /** Applies phone-native chrome after provider integration so it can preserve real provider wiring. */
     private static FidelityResult applyNativeFidelityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
         try {
             Class<?> type = Class.forName("dev.thefoolish.aidao.NativeFidelityPostProcessor");
@@ -134,6 +124,22 @@ final class GeneratedProject {
         } catch (Exception brokenNativeFidelityModule) {
             List<String> notes = new ArrayList<>();
             notes.add("FAIL native Android fidelity transformation failed: " + brokenNativeFidelityModule.getClass().getSimpleName());
+            return new FidelityResult(projectName, packageName, raw, notes);
+        }
+    }
+
+    private static FidelityResult applyMihonBehaviorIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
+        try {
+            Class<?> type = Class.forName("dev.thefoolish.aidao.MihonBehaviorPostProcessor");
+            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
+            process.setAccessible(true);
+            Object result = process.invoke(null, projectName, packageName, raw);
+            return readResult(result);
+        } catch (ClassNotFoundException unavailableInLegacyHarness) {
+            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
+        } catch (Exception brokenReferenceProfile) {
+            List<String> notes = new ArrayList<>();
+            notes.add("FAIL reference-app behavior transformation failed: " + brokenReferenceProfile.getClass().getSimpleName());
             return new FidelityResult(projectName, packageName, raw, notes);
         }
     }
