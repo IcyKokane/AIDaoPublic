@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <color name="bg">#121318</color>
+  <color name="panel">#1D1F27</color>
+  <color name="accent">#5094FF</color>
+  <color name="muted">#9DA2B2</color>
+</resources>
