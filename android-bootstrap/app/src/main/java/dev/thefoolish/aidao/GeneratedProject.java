@@ -33,9 +33,7 @@ final class GeneratedProject {
             }
             out = out.replace("store.text(\"last_episode\"", "store.putText(\"last_episode\"");
             out = out.replace("store.text(\"last_surface\"", "store.putText(\"last_surface\"");
-            // The fidelity media history screen reads this key; retain getter semantics after the legacy setter rewrite above.
             out = out.replace("String last=store.putText(\"last_episode\",\"\")", "String last=store.text(\"last_episode\",\"\")");
-            // Fidelity screens use android.widget.Button directly instead of relying on the legacy GeneratedScreen nested type.
             out = out.replace("Button save=button(\"Save +60s test progress\")", "android.widget.Button save=button(\"Save +60s test progress\")");
             return out;
         }
@@ -62,15 +60,18 @@ final class GeneratedProject {
     GeneratedProject(String projectName, String packageName, List<FileEntry> files, List<String> verificationNotes) {
         List<FileEntry> raw = new ArrayList<>(files == null ? Collections.emptyList() : files);
         FidelityResult fidelity = applyFidelityIfAvailable(projectName, packageName, raw);
+        FidelityResult capability = applyProviderCapabilityIntegrationIfAvailable(
+                fidelity.projectName, fidelity.packageName, fidelity.files);
 
-        this.projectName = fidelity.projectName;
-        this.packageName = fidelity.packageName;
-        List<FileEntry> immutableSource = new ArrayList<>(fidelity.files == null ? Collections.emptyList() : fidelity.files);
+        this.projectName = capability.projectName;
+        this.packageName = capability.packageName;
+        List<FileEntry> immutableSource = new ArrayList<>(capability.files == null ? Collections.emptyList() : capability.files);
         this.files = Collections.unmodifiableList(immutableSource);
 
         List<String> notes = new ArrayList<>();
         if (verificationNotes != null) notes.addAll(verificationNotes);
         if (fidelity.notes != null) notes.addAll(fidelity.notes);
+        if (capability.notes != null) notes.addAll(capability.notes);
 
         GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(this.packageName, immutableSource);
         notes.addAll(structural.notes);
@@ -81,9 +82,7 @@ final class GeneratedProject {
     /**
      * The legacy acceptance harness intentionally compiles the core generator as
      * a very small standalone Java set. Reflection keeps that harness compatible
-     * while the full Android build loads the fidelity module normally. Failure
-     * to load the optional module never grants a false PASS; the dedicated
-     * fidelity acceptance workflow compiles it explicitly.
+     * while the full Android build loads the fidelity module normally.
      */
     @SuppressWarnings("unchecked")
     private static FidelityResult applyFidelityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
@@ -92,14 +91,7 @@ final class GeneratedProject {
             Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
             process.setAccessible(true);
             Object result = process.invoke(null, projectName, packageName, raw);
-            Class<?> resultType = result.getClass();
-            Field projectField = resultType.getDeclaredField("projectName");
-            Field packageField = resultType.getDeclaredField("packageName");
-            Field filesField = resultType.getDeclaredField("files");
-            Field notesField = resultType.getDeclaredField("notes");
-            projectField.setAccessible(true); packageField.setAccessible(true); filesField.setAccessible(true); notesField.setAccessible(true);
-            return new FidelityResult((String) projectField.get(result), (String) packageField.get(result),
-                    (List<FileEntry>) filesField.get(result), (List<String>) notesField.get(result));
+            return readResult(result);
         } catch (ClassNotFoundException unavailableInLegacyHarness) {
             return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
         } catch (Exception brokenFidelityModule) {
@@ -107,6 +99,38 @@ final class GeneratedProject {
             notes.add("FAIL generated-app fidelity transformation failed: " + brokenFidelityModule.getClass().getSimpleName());
             return new FidelityResult(projectName, packageName, raw, notes);
         }
+    }
+
+    /** Runs capability research after the fidelity transform but before semantic validation. */
+    private static FidelityResult applyProviderCapabilityIntegrationIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
+        try {
+            Class<?> type = Class.forName("dev.thefoolish.aidao.ProviderCapabilityIntegrator");
+            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
+            process.setAccessible(true);
+            Object result = process.invoke(null, projectName, packageName, raw);
+            return readResult(result);
+        } catch (ClassNotFoundException unavailableInLegacyHarness) {
+            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
+        } catch (Exception brokenCapabilityModule) {
+            List<String> notes = new ArrayList<>();
+            notes.add("FAIL provider capability integration failed: " + brokenCapabilityModule.getClass().getSimpleName());
+            return new FidelityResult(projectName, packageName, raw, notes);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static FidelityResult readResult(Object result) throws Exception {
+        Class<?> resultType = result.getClass();
+        Field projectField = resultType.getDeclaredField("projectName");
+        Field packageField = resultType.getDeclaredField("packageName");
+        Field filesField = resultType.getDeclaredField("files");
+        Field notesField = resultType.getDeclaredField("notes");
+        projectField.setAccessible(true);
+        packageField.setAccessible(true);
+        filesField.setAccessible(true);
+        notesField.setAccessible(true);
+        return new FidelityResult((String) projectField.get(result), (String) packageField.get(result),
+                (List<FileEntry>) filesField.get(result), (List<String>) notesField.get(result));
     }
 
     @SuppressWarnings("unchecked")
