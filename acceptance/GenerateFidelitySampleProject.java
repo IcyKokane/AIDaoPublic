@@ -58,7 +58,8 @@ public final class GenerateFidelitySampleProject {
                 root + "RepositoriesActivity.java", root + "PlayerActivity.java", root + "MediaProvider.java",
                 root + "ExtensionRecord.java", root + "RepositoryStore.java", root + "ExtensionRepositoryClient.java",
                 root + "ExtensionManager.java", root + "RepositoryMediaProvider.java",
-                root + "BuiltInProviderCatalog.java", root + "JikanCatalogProvider.java"
+                root + "BuiltInProviderCatalog.java", root + "JikanCatalogProvider.java", root + "AniListCatalogProvider.java",
+                root + "UpdatesActivity.java", root + "MoreActivity.java"
         };
         for (String path : required) if (!project.hasPath(path)) throw new IllegalStateException("Missing fidelity file: " + path);
 
@@ -75,8 +76,11 @@ public final class GenerateFidelitySampleProject {
             if (source.contains(forbidden)) throw new IllegalStateException("Placeholder/fabricated executable content survived fidelity pass: " + forbidden);
         for (String marker : new String[]{
                 "ExtensionRepositoryClient", "RepositoryStore", "RepositoriesActivity", "ExtensionRecord.State.ENABLED",
-                "BuiltInProviderCatalog", "JikanCatalogProvider", "https://api.jikan.moe/v4/anime",
-                "new ArrayList<>(BuiltInProviderCatalog.providers())", "metadata-only"
+                "BuiltInProviderCatalog", "JikanCatalogProvider", "AniListCatalogProvider",
+                "https://api.jikan.moe/v4/anime", "https://graphql.anilist.co",
+                "new ArrayList<>(BuiltInProviderCatalog.providers())", "Catalog metadata only",
+                "setOnApplyWindowInsetsListener", "Some sources could not be reached",
+                "LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class"
         }) if (!source.contains(marker)) throw new IllegalStateException("Missing semantic fidelity marker: " + marker);
 
         System.out.println("Generated fidelity acceptance project: " + project.projectName + " / " + project.packageName + " / " + project.files.size() + " files");
