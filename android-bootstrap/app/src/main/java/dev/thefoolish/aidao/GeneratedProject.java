@@ -62,16 +62,19 @@ final class GeneratedProject {
         FidelityResult fidelity = applyFidelityIfAvailable(projectName, packageName, raw);
         FidelityResult capability = applyProviderCapabilityIntegrationIfAvailable(
                 fidelity.projectName, fidelity.packageName, fidelity.files);
+        FidelityResult nativeFidelity = applyNativeFidelityIfAvailable(
+                capability.projectName, capability.packageName, capability.files);
 
-        this.projectName = capability.projectName;
-        this.packageName = capability.packageName;
-        List<FileEntry> immutableSource = new ArrayList<>(capability.files == null ? Collections.emptyList() : capability.files);
+        this.projectName = nativeFidelity.projectName;
+        this.packageName = nativeFidelity.packageName;
+        List<FileEntry> immutableSource = new ArrayList<>(nativeFidelity.files == null ? Collections.emptyList() : nativeFidelity.files);
         this.files = Collections.unmodifiableList(immutableSource);
 
         List<String> notes = new ArrayList<>();
         if (verificationNotes != null) notes.addAll(verificationNotes);
         if (fidelity.notes != null) notes.addAll(fidelity.notes);
         if (capability.notes != null) notes.addAll(capability.notes);
+        if (nativeFidelity.notes != null) notes.addAll(nativeFidelity.notes);
 
         GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(this.packageName, immutableSource);
         notes.addAll(structural.notes);
@@ -114,6 +117,23 @@ final class GeneratedProject {
         } catch (Exception brokenCapabilityModule) {
             List<String> notes = new ArrayList<>();
             notes.add("FAIL provider capability integration failed: " + brokenCapabilityModule.getClass().getSimpleName());
+            return new FidelityResult(projectName, packageName, raw, notes);
+        }
+    }
+
+    /** Applies phone-native chrome after provider integration so it can preserve real provider wiring. */
+    private static FidelityResult applyNativeFidelityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
+        try {
+            Class<?> type = Class.forName("dev.thefoolish.aidao.NativeFidelityPostProcessor");
+            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
+            process.setAccessible(true);
+            Object result = process.invoke(null, projectName, packageName, raw);
+            return readResult(result);
+        } catch (ClassNotFoundException unavailableInLegacyHarness) {
+            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
+        } catch (Exception brokenNativeFidelityModule) {
+            List<String> notes = new ArrayList<>();
+            notes.add("FAIL native Android fidelity transformation failed: " + brokenNativeFidelityModule.getClass().getSimpleName());
             return new FidelityResult(projectName, packageName, raw, notes);
         }
     }
