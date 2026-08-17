@@ -76,7 +76,7 @@ jobs:
             while IFS= read -r -d '' file; do
               # Defense in depth: collapse package qualifiers that a source-rewrite pass
               # may have accidentally applied more than once.
-              while grep -qE 'android\.(widget|graphics|content|app)\.android\.\1\.' "$file" 2>/dev/null; do
+              while grep -qE 'android\.widget\.android\.widget\.|android\.graphics\.android\.graphics\.|android\.content\.android\.content\.|android\.app\.android\.app\.' "$file"; do
                 sed -Ei \
                   -e 's/android\.widget\.android\.widget\./android.widget./g' \
                   -e 's/android\.graphics\.android\.graphics\./android.graphics./g' \
@@ -85,7 +85,7 @@ jobs:
                   "$file"
               done
             done < <(find "$src" -type f -name '*.java' -print0)
-            if grep -R -nE 'android\.(widget|graphics|content|app)\.android\.(widget|graphics|content|app)\.' "$src"; then
+            if grep -R -nE 'android\.widget\.android\.widget\.|android\.graphics\.android\.graphics\.|android\.content\.android\.content\.|android\.app\.android\.app\.' "$src"; then
               echo "Repeated Android package qualifier survived normalization"
               exit 1
             fi
