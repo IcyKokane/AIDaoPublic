@@ -22,13 +22,22 @@ final class GeneratedProject {
         private static String normalizeGeneratedContent(String path, String source) {
             if (source == null) return "";
             String out = source;
+            while (out.contains("android.widget.android.widget.")) {
+                out = out.replace("android.widget.android.widget.", "android.widget.");
+            }
             if (path != null && path.endsWith("/LocalStore.java")) {
                 out = out.replace("public void text(String k,String v)", "public void putText(String k,String v)");
             }
             out = out.replace("store.text(\"last_episode\"", "store.putText(\"last_episode\"");
             out = out.replace("store.text(\"last_surface\"", "store.putText(\"last_surface\"");
             out = out.replace("String last=store.putText(\"last_episode\",\"\")", "String last=store.text(\"last_episode\",\"\")");
-            out = out.replace("Button save=button(\"Save +60s test progress\")", "android.widget.Button save=button(\"Save +60s test progress\")");
+            String saveButton = "Button save=button(\"Save +60s test progress\")";
+            if (!out.contains("android.widget." + saveButton)) {
+                out = out.replace(saveButton, "android.widget." + saveButton);
+            }
+            while (out.contains("android.widget.android.widget.")) {
+                out = out.replace("android.widget.android.widget.", "android.widget.");
+            }
             return out;
         }
     }
