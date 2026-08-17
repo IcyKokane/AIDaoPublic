@@ -1,0 +1,2 @@
+package dev.thefoolish.generated.makeananimeapplikemihonit;
+public final class LibraryActivity extends GeneratedScreen { protected void render(){body.addView(text("Library",22,true));body.addView(text("Favorites are stored locally. Open an item from Catalog to add or remove it.",14,false));Button catalog=action("Back to Catalog");catalog.setOnClickListener(v->AppNavigator.open(this,MainActivity.class));body.addView(catalog);} }
