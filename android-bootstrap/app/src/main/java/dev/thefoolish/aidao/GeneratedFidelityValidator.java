@@ -32,7 +32,7 @@ final class GeneratedFidelityValidator {
                 joined.contains("ENABLED") && joined.contains("FAILED");
         notes.add((repoBehavior ? "PASS " : "FAIL ") + "semantic repository/extension lifecycle gate");
 
-        boolean nativeUi = joined.contains("sans-serif") && joined.contains("statusBarColor") &&
+        boolean nativeUi = joined.contains("sans-serif") && joined.contains("setStatusBarColor") &&
                 joined.contains("Library") && joined.contains("History") && joined.contains("Downloads") &&
                 joined.contains("Extensions");
         notes.add((nativeUi ? "PASS " : "FAIL ") + "Android navigation and native UI gate");
