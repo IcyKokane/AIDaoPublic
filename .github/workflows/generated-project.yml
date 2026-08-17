@@ -65,6 +65,32 @@ jobs:
             exit 1
           fi
 
+      - name: Normalize and validate generated Java source hygiene
+        shell: bash
+        env:
+          PROJECT_ROOT: ${{ steps.root.outputs.project_root }}
+        run: |
+          set -euo pipefail
+          src="$PROJECT_ROOT/app/src/main/java"
+          if [[ -d "$src" ]]; then
+            while IFS= read -r -d '' file; do
+              # Defense in depth: collapse package qualifiers that a source-rewrite pass
+              # may have accidentally applied more than once.
+              while grep -qE 'android\.(widget|graphics|content|app)\.android\.\1\.' "$file" 2>/dev/null; do
+                sed -Ei \
+                  -e 's/android\.widget\.android\.widget\./android.widget./g' \
+                  -e 's/android\.graphics\.android\.graphics\./android.graphics./g' \
+                  -e 's/android\.content\.android\.content\./android.content./g' \
+                  -e 's/android\.app\.android\.app\./android.app./g' \
+                  "$file"
+              done
+            done < <(find "$src" -type f -name '*.java' -print0)
+            if grep -R -nE 'android\.(widget|graphics|content|app)\.android\.(widget|graphics|content|app)\.' "$src"; then
+              echo "Repeated Android package qualifier survived normalization"
+              exit 1
+            fi
+          fi
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
