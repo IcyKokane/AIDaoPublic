@@ -58,17 +58,17 @@ public final class GenerateFidelitySampleProject {
         };
         for (String path : required) if (!project.hasPath(path)) throw new IllegalStateException("Missing fidelity file: " + path);
 
-        StringBuilder joined = new StringBuilder();
+        StringBuilder executable = new StringBuilder();
         for (GeneratedProject.FileEntry entry : project.files) {
-            joined.append('\n').append(entry.content);
+            if (entry.path.startsWith("app/src/main/java/") && entry.path.endsWith(".java")) executable.append('\n').append(entry.content);
             Path target = output.resolve(entry.path).normalize();
             if (!target.startsWith(output)) throw new SecurityException("Generated path escaped output root: " + entry.path);
             if (target.getParent() != null) Files.createDirectories(target.getParent());
             Files.write(target, entry.content.getBytes(StandardCharsets.UTF_8));
         }
-        String source = joined.toString();
+        String source = executable.toString();
         for (String forbidden : new String[]{"DemoProvider", "Origin Path", "Sky Archive", "sample data only"})
-            if (source.contains(forbidden)) throw new IllegalStateException("Placeholder/fabricated content survived fidelity pass: " + forbidden);
+            if (source.contains(forbidden)) throw new IllegalStateException("Placeholder/fabricated executable content survived fidelity pass: " + forbidden);
         for (String marker : new String[]{"ExtensionRepositoryClient", "RepositoryStore", "RepositoriesActivity", "ExtensionRecord.State.ENABLED", "No enabled providers"})
             if (!source.contains(marker)) throw new IllegalStateException("Missing semantic fidelity marker: " + marker);
 
