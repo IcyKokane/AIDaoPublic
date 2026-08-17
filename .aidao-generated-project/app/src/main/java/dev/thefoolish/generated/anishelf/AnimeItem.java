@@ -1,0 +1,1 @@
+package dev.thefoolish.generated.anishelf;public final class AnimeItem{public final String id,title,summary,provider;public final int episodes;public AnimeItem(String id,String title,String summary,String provider,int episodes){this.id=id;this.title=title;this.summary=summary;this.provider=provider;this.episodes=Math.max(0,episodes);}}
