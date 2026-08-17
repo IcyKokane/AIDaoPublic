@@ -1,0 +1,8 @@
+package dev.thefoolish.generated.makeananimeapplikemihonit;
+
+import android.content.Intent;import android.widget.*;import java.util.*;
+public final class MainActivity extends GeneratedScreen { private final MediaProvider provider=new DemoProvider();
+ protected void render(){body.addView(text("Catalog",22,true));body.addView(text("Make an anime app like Mihon, it should have repository based providers, have libraries based on the anime websites. I should be able to favorite show, download to watch offline and make tags to look for genres.",14,false));EditText q=new EditText(this);q.setHint("Search anime");body.addView(q);Button search=action("Search");body.addView(search);LinearLayout results=new LinearLayout(this);results.setOrientation(LinearLayout.VERTICAL);body.addView(results);search.setOnClickListener(v->show(results,q.getText().toString()));show(results,"");nav();}
+ private void show(LinearLayout r,String q){r.removeAllViews();try{for(AnimeItem a:provider.search(q)){Button b=action(a.title+" · "+a.episodes+" episodes");b.setOnClickListener(v->{Intent i=new Intent(this,DetailActivity.class);i.putExtra("id",a.id);i.putExtra("title",a.title);i.putExtra("summary",a.summary);i.putExtra("episodes",a.episodes);startActivity(i);});r.addView(b);}}catch(Exception e){r.addView(text("Provider error: "+e.getMessage(),14,false));}}
+ private void nav(){gap();Button lib=action("Library");lib.setOnClickListener(v->AppNavigator.open(this,LibraryActivity.class));body.addView(lib);Button hist=action("History");hist.setOnClickListener(v->AppNavigator.open(this,HistoryActivity.class));body.addView(hist);Button providers=action("Providers");providers.setOnClickListener(v->AppNavigator.open(this,ProvidersActivity.class));body.addView(providers);}
+}
