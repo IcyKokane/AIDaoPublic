@@ -10,7 +10,7 @@ import java.util.Locale;
  *
  * V1 deliberately uses a small reviewed registry rather than executing arbitrary
  * extension code or scraping unreviewed repositories. Entries record provenance,
- * license posture, API scope, and whether the provider is safe to bundle.
+ * license/API posture, scope, and whether the provider is safe to bundle.
  */
 final class ProviderCapabilityResearch {
     static final class Candidate {
@@ -53,8 +53,8 @@ final class ProviderCapabilityResearch {
         if (!animeMedia) return Collections.emptyList();
 
         List<Candidate> out = new ArrayList<>();
-        // Jikan is an open-source REST API and exposes a public, unauthenticated v4 service.
-        // It supplies catalog metadata only; it is never represented as a streaming source.
+        // Jikan exposes a public unauthenticated v4 REST service. It supplies catalog
+        // metadata only and is never represented as a streaming/download source.
         out.add(new Candidate(
                 "builtin.jikan.catalog",
                 "Jikan Catalog",
@@ -65,6 +65,22 @@ final class ProviderCapabilityResearch {
                 "https://api.jikan.moe/v4/anime?q={query}&limit=20",
                 true,
                 "Catalog metadata only; no episode video or download URLs are provided."
+        ));
+
+        // AniList documents a public GraphQL endpoint used by its own ecosystem. The
+        // generated app uses only unauthenticated read-only media search here, retaining
+        // a second independent catalog source so a transient outage does not make the
+        // generated app appear empty or broken.
+        out.add(new Candidate(
+                "builtin.anilist.catalog",
+                "AniList Catalog",
+                "https://github.com/AniList/docs",
+                "GraphQL",
+                "API terms apply",
+                "anime-catalog-search",
+                "https://graphql.anilist.co",
+                true,
+                "Catalog metadata only; authentication, list mutation, streaming, and download URLs are not bundled."
         ));
         return out;
     }
