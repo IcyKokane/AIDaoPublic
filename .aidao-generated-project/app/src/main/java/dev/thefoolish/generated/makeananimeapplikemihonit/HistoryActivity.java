@@ -1,0 +1,2 @@
+package dev.thefoolish.generated.makeananimeapplikemihonit;
+public final class HistoryActivity extends GeneratedScreen { protected void render(){body.addView(text("History",22,true));body.addView(text("Playback progress and the last watched episode are stored locally on-device.",14,false));Button catalog=action("Back to Catalog");catalog.setOnClickListener(v->AppNavigator.open(this,MainActivity.class));body.addView(catalog);} }
