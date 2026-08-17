@@ -18,7 +18,7 @@ final class GeneratedProject {
         }
 
         /**
-         * Compatibility normalization for the v0.5 deterministic generator.
+         * Compatibility normalization for deterministic generated source.
          * Java cannot overload a getter/setter solely by return type, so the
          * generated LocalStore setter is named putText and its generated call
          * sites are rewritten consistently before the immutable tree exists.
@@ -41,15 +41,22 @@ final class GeneratedProject {
     final List<String> verificationNotes;
 
     GeneratedProject(String projectName, String packageName, List<FileEntry> files, List<String> verificationNotes) {
-        this.projectName = projectName;
-        this.packageName = packageName;
-        List<FileEntry> immutableSource = new ArrayList<>(files == null ? Collections.emptyList() : files);
+        List<FileEntry> raw = new ArrayList<>(files == null ? Collections.emptyList() : files);
+        GeneratedProjectFidelityPostProcessor.Result fidelity =
+                GeneratedProjectFidelityPostProcessor.process(projectName, packageName, raw);
+
+        this.projectName = fidelity.projectName;
+        this.packageName = fidelity.packageName;
+        List<FileEntry> immutableSource = new ArrayList<>(fidelity.files == null ? Collections.emptyList() : fidelity.files);
         this.files = Collections.unmodifiableList(immutableSource);
 
         List<String> notes = new ArrayList<>();
         if (verificationNotes != null) notes.addAll(verificationNotes);
-        GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(packageName, immutableSource);
+        if (fidelity.notes != null) notes.addAll(fidelity.notes);
+
+        GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(this.packageName, immutableSource);
         notes.addAll(structural.notes);
+        notes.addAll(GeneratedFidelityValidator.validate(this.packageName, immutableSource));
         this.verificationNotes = Collections.unmodifiableList(notes);
     }
 
