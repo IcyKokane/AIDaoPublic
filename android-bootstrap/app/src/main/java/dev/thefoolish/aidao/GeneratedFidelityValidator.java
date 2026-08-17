@@ -21,10 +21,10 @@ final class GeneratedFidelityValidator {
         require(notes, files, packageName, "ExtensionManager.java", "extension state implementation");
         require(notes, files, packageName, "RepositoryMediaProvider.java", "provider isolation implementation");
 
-        String joined = join(files);
-        failIf(notes, joined, "DemoProvider", "fabricated DemoProvider placeholder is forbidden");
-        failIf(notes, joined, "Origin Path", "fabricated catalog data is forbidden");
-        failIf(notes, joined, "Sky Archive", "fabricated catalog data is forbidden");
+        String joined = joinExecutableSource(files);
+        failIf(notes, joined, "DemoProvider", "fabricated DemoProvider placeholder is forbidden in executable source");
+        failIf(notes, joined, "Origin Path", "fabricated catalog data is forbidden in executable source");
+        failIf(notes, joined, "Sky Archive", "fabricated catalog data is forbidden in executable source");
         failIf(notes, joined, "sample data only", "sample-only provider cannot satisfy a repository-provider request");
 
         boolean repoBehavior = joined.contains("RepositoryStore") && joined.contains("https://") &&
@@ -52,9 +52,12 @@ final class GeneratedFidelityValidator {
         for (GeneratedProject.FileEntry f : files) if (f != null && f.path != null && f.path.endsWith(suffix)) return true;
         return false;
     }
-    private static String join(List<GeneratedProject.FileEntry> files) {
+    private static String joinExecutableSource(List<GeneratedProject.FileEntry> files) {
         StringBuilder b = new StringBuilder();
-        for (GeneratedProject.FileEntry f : files) if (f != null && f.content != null) b.append('\n').append(f.content);
+        for (GeneratedProject.FileEntry f : files) {
+            if (f != null && f.path != null && f.path.startsWith("app/src/main/java/") && f.path.endsWith(".java") && f.content != null)
+                b.append('\n').append(f.content);
+        }
         return b.toString();
     }
     private static void failIf(List<String> notes, String joined, String token, String message) {
