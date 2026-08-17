@@ -33,6 +33,10 @@ final class GeneratedProject {
             }
             out = out.replace("store.text(\"last_episode\"", "store.putText(\"last_episode\"");
             out = out.replace("store.text(\"last_surface\"", "store.putText(\"last_surface\"");
+            // The fidelity media history screen reads this key; retain getter semantics after the legacy setter rewrite above.
+            out = out.replace("String last=store.putText(\"last_episode\",\"\")", "String last=store.text(\"last_episode\",\"\")");
+            // Fidelity screens use android.widget.Button directly instead of relying on the legacy GeneratedScreen nested type.
+            out = out.replace("Button save=button(\"Save +60s test progress\")", "android.widget.Button save=button(\"Save +60s test progress\")");
             return out;
         }
     }
