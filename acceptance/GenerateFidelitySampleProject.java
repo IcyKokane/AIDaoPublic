@@ -72,8 +72,11 @@ public final class GenerateFidelitySampleProject {
             Files.write(target, entry.content.getBytes(StandardCharsets.UTF_8));
         }
         String source = executable.toString();
-        for (String forbidden : new String[]{"DemoProvider", "Origin Path", "Sky Archive", "sample data only"})
-            if (source.contains(forbidden)) throw new IllegalStateException("Placeholder/fabricated executable content survived fidelity pass: " + forbidden);
+        for (String forbidden : new String[]{
+                "DemoProvider", "Origin Path", "Sky Archive", "sample data only",
+                "android.widget.android.widget.", "android.graphics.android.graphics.",
+                "android.content.android.content.", "android.app.android.app."
+        }) if (source.contains(forbidden)) throw new IllegalStateException("Forbidden/corrupted generated executable content survived fidelity pass: " + forbidden);
         for (String marker : new String[]{
                 "ExtensionRepositoryClient", "RepositoryStore", "RepositoriesActivity", "ExtensionRecord.State.ENABLED",
                 "BuiltInProviderCatalog", "JikanCatalogProvider", "AniListCatalogProvider",
