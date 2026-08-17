@@ -1,0 +1,124 @@
+package dev.thefoolish.aidao;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Final generated-media UX pass. It replaces the generic vertical scaffold with
+ * a phone-native shell, fixed bottom navigation, inset-aware chrome, card-based
+ * browse results, and asynchronous provider search with actionable failures.
+ */
+final class NativeFidelityPostProcessor {
+    static final class Result {
+        final String projectName;
+        final String packageName;
+        final List<GeneratedProject.FileEntry> files;
+        final List<String> notes;
+        Result(String projectName, String packageName, List<GeneratedProject.FileEntry> files, List<String> notes) {
+            this.projectName = projectName;
+            this.packageName = packageName;
+            this.files = files;
+            this.notes = notes;
+        }
+    }
+
+    static Result process(String projectName, String packageName, List<GeneratedProject.FileEntry> incoming) {
+        List<GeneratedProject.FileEntry> source = incoming == null ? new ArrayList<>() : new ArrayList<>(incoming);
+        boolean media = hasSuffix(source, "/MediaProvider.java") || hasSuffix(source, "/AnimeItem.java");
+        if (!media) return new Result(projectName, packageName, source, new ArrayList<>());
+
+        String javaPath = packageName.replace('.', '/');
+        List<GeneratedProject.FileEntry> out = new ArrayList<>();
+        for (GeneratedProject.FileEntry file : source) {
+            if (file == null) continue;
+            if (file.path.endsWith("/AppScreen.java") || file.path.endsWith("/MainActivity.java") || file.path.endsWith("/ProvidersActivity.java")) continue;
+            out.add(file);
+        }
+        add(out, javaPath, "AppScreen.java", appScreen(packageName, projectName), "Use inset-aware phone-native app chrome and fixed bottom navigation");
+        add(out, javaPath, "MainActivity.java", mainActivity(packageName), "Use asynchronous provider search and card-based mobile browse results");
+        add(out, javaPath, "ProvidersActivity.java", providersActivity(packageName), "Present built-in and repository providers as mobile extension cards");
+
+        List<String> notes = new ArrayList<>();
+        notes.add("PASS native-fidelity pass uses fixed bottom navigation outside scroll content");
+        notes.add("PASS status/navigation insets are applied to generated phone chrome");
+        notes.add("PASS Browse uses asynchronous provider requests so network work never blocks the Android UI thread");
+        notes.add("PASS provider failures are shown separately from genuine zero-result searches");
+        notes.add("PASS generated extension inventory uses card hierarchy instead of a desktop-style vertical control form");
+        return new Result(projectName, packageName, out, notes);
+    }
+
+    private static boolean hasSuffix(List<GeneratedProject.FileEntry> files, String suffix) {
+        for (GeneratedProject.FileEntry f : files) if (f != null && f.path != null && f.path.endsWith(suffix)) return true;
+        return false;
+    }
+
+    private static void add(List<GeneratedProject.FileEntry> out, String path, String name, String content, String hint) {
+        out.add(new GeneratedProject.FileEntry("app/src/main/java/" + path + "/" + name, content, hint));
+    }
+
+    private static String appScreen(String pkg, String appName) {
+        return "package " + pkg + ";\n" +
+                "import android.app.*;import android.content.*;import android.graphics.*;import android.graphics.drawable.*;import android.os.*;import android.view.*;import android.widget.*;\n" +
+                "public abstract class AppScreen extends Activity{" +
+                "protected LinearLayout body;protected LocalStore store;private TextView topTitle;private LinearLayout bottomNav;" +
+                "protected final int BG=Color.rgb(15,17,22),SURFACE=Color.rgb(27,30,38),SURFACE2=Color.rgb(36,40,50),TEXT=Color.rgb(238,240,246),MUTED=Color.rgb(164,171,187),ACCENT=Color.rgb(111,125,255);" +
+                "@Override public void onCreate(Bundle state){super.onCreate(state);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);store=new LocalStore(this);" +
+                "LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);" +
+                "LinearLayout appBar=new LinearLayout(this);appBar.setOrientation(LinearLayout.VERTICAL);appBar.setBackgroundColor(BG);appBar.setPadding(dp(20),dp(12),dp(20),dp(10));" +
+                "TextView brand=text(\"" + java(appName) + "\",12,false);brand.setTextColor(MUTED);brand.setPadding(0,0,0,dp(2));appBar.addView(brand);topTitle=text(\"Browse\",24,true);appBar.addView(topTitle);root.addView(appBar,new LinearLayout.LayoutParams(-1,-2));" +
+                "ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(16),dp(8),dp(16),dp(24));scroll.addView(body,new ScrollView.LayoutParams(-1,-2));root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));" +
+                "bottomNav=new LinearLayout(this);bottomNav.setOrientation(LinearLayout.HORIZONTAL);bottomNav.setBackgroundColor(SURFACE);bottomNav.setPadding(dp(6),dp(6),dp(6),dp(6));root.addView(bottomNav,new LinearLayout.LayoutParams(-1,-2));buildBottomNav();setContentView(root);" +
+                "if(Build.VERSION.SDK_INT>=21){root.setOnApplyWindowInsetsListener((v,insets)->{int top=insets.getSystemWindowInsetTop();int bottom=insets.getSystemWindowInsetBottom();appBar.setPadding(dp(20),top+dp(10),dp(20),dp(10));bottomNav.setPadding(dp(6),dp(6),dp(6),bottom+dp(6));return insets;});root.requestApplyInsets();}" +
+                "render();}" +
+                "protected abstract void render();" +
+                "protected void title(String s){topTitle.setText(s==null?\"\":s);}" +
+                "protected void subtitle(String s){TextView t=text(s,14,false);t.setTextColor(MUTED);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,0,0,dp(12));body.addView(t,p);}" +
+                "protected void section(String s){TextView t=text(s,18,true);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,dp(10),0,dp(8));body.addView(t,p);}" +
+                "protected TextView text(String value,int size,boolean bold){TextView t=new TextView(this);t.setText(value);t.setTextColor(TEXT);t.setTextSize(size);t.setTypeface(android.graphics.Typeface.create(\"sans-serif\",bold?1:0));t.setGravity(Gravity.CENTER_VERTICAL);return t;}" +
+                "protected Button button(String label){Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);b.setTextColor(TEXT);b.setMinHeight(dp(48));b.setBackground(round(SURFACE2,14));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(50));p.setMargins(0,dp(6),0,dp(6));b.setLayoutParams(p);return b;}" +
+                "protected LinearLayout card(String heading,String supporting){LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setPadding(dp(16),dp(14),dp(16),dp(14));c.setBackground(round(SURFACE,16));TextView h=text(heading,16,true);c.addView(h);if(supporting!=null&&supporting.length()>0){TextView s=text(supporting,13,false);s.setTextColor(MUTED);s.setPadding(0,dp(4),0,0);c.addView(s);}LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,0,0,dp(10));c.setLayoutParams(p);return c;}" +
+                "protected GradientDrawable round(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}" +
+                "protected void nav(){}" +
+                "private void buildBottomNav(){String[] names={\"Browse\",\"Library\",\"History\",\"Downloads\",\"Extensions\"};Class[] screens={MainActivity.class,LibraryActivity.class,HistoryActivity.class,DownloadsActivity.class,ProvidersActivity.class};for(int i=0;i<names.length;i++){final Class target=screens[i];TextView item=text(names[i],11,false);item.setGravity(Gravity.CENTER);item.setMinHeight(dp(52));item.setPadding(dp(4),0,dp(4),0);item.setOnClickListener(v->AppNavigator.open(this,target));bottomNav.addView(item,new LinearLayout.LayoutParams(0,dp(52),1));}}" +
+                "protected int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+.5f);}" +
+                "}\n";
+    }
+
+    private static String mainActivity(String pkg) {
+        return "package " + pkg + ";\n" +
+                "import android.content.*;import android.graphics.*;import android.view.*;import android.widget.*;import java.util.*;\n" +
+                "public final class MainActivity extends AppScreen{private LinearLayout results;private EditText query;private Button search;private ProgressBar progress;" +
+                "protected void render(){title(\"Browse\");subtitle(\"Search across installed sources. Built-in providers are ready immediately; repository sources stay optional and user-controlled.\");" +
+                "query=new EditText(this);query.setHint(\"Search anime\");query.setSingleLine(true);query.setTextColor(TEXT);query.setHintTextColor(MUTED);query.setTextSize(16);query.setPadding(dp(14),0,dp(14),0);query.setBackground(round(SURFACE,14));body.addView(query,new LinearLayout.LayoutParams(-1,dp(52)));" +
+                "search=button(\"Search installed sources\");search.setOnClickListener(v->searchAsync());body.addView(search);" +
+                "LinearLayout source=card(\"Installed source\",BuiltInProviderCatalog.provenance());source.setOnClickListener(v->AppNavigator.open(this,ProvidersActivity.class));body.addView(source);" +
+                "progress=new ProgressBar(this);progress.setVisibility(View.GONE);LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(-1,dp(42));pp.setMargins(0,dp(4),0,dp(4));body.addView(progress,pp);" +
+                "section(\"Results\");results=new LinearLayout(this);results.setOrientation(LinearLayout.VERTICAL);body.addView(results);showReady();}" +
+                "private void showReady(){results.removeAllViews();TextView t=text(\"Enter a title to search the providers already installed in this app.\",14,false);t.setTextColor(MUTED);results.addView(t);}" +
+                "private void searchAsync(){String q=query.getText().toString().trim();if(q.length()==0){query.setError(\"Enter a title\");return;}search.setEnabled(false);progress.setVisibility(View.VISIBLE);results.removeAllViews();results.addView(text(\"Searching installed sources…\",14,false));" +
+                "new Thread(()->{List<AnimeItem> found=new ArrayList<>();List<String> failures=new ArrayList<>();List<MediaProvider> providers=new ArrayList<>(BuiltInProviderCatalog.providers());for(ExtensionRecord x:new ExtensionManager(this).known())if(x.state==ExtensionRecord.State.ENABLED)providers.add(new RepositoryMediaProvider(x));" +
+                "for(MediaProvider p:providers){try{found.addAll(p.search(q));}catch(Exception e){String m=e.getMessage()==null?e.getClass().getSimpleName():e.getMessage();failures.add(p.displayName()+\": \"+m);}}runOnUiThread(()->showSearchResult(q,found,failures));}).start();}" +
+                "private void showSearchResult(String q,List<AnimeItem> found,List<String> failures){search.setEnabled(true);progress.setVisibility(View.GONE);results.removeAllViews();" +
+                "if(!failures.isEmpty()){LinearLayout c=card(\"Some sources could not be reached\",android.text.TextUtils.join(\"\\n\",failures));results.addView(c);}" +
+                "if(found.isEmpty()){String msg=failures.isEmpty()?\"No matches found for \\\"\"+q+\"\\\". Try another title.\":\"No results were returned because one or more sources failed. Check the error above and your connection.\";TextView empty=text(msg,14,false);empty.setTextColor(MUTED);results.addView(empty);return;}" +
+                "for(AnimeItem a:found){String meta=(a.episodes>0?a.episodes+\" episodes · \":\"\")+a.provider;LinearLayout c=card(a.title,meta);c.setClickable(true);c.setOnClickListener(v->{Intent i=new Intent(this,DetailActivity.class);i.putExtra(\"id\",a.id);i.putExtra(\"title\",a.title);i.putExtra(\"summary\",a.summary);i.putExtra(\"provider\",a.provider);i.putExtra(\"episodes\",a.episodes);startActivity(i);});results.addView(c);}}" +
+                "}\n";
+    }
+
+    private static String providersActivity(String pkg) {
+        return "package " + pkg + ";\n" +
+                "import android.widget.*;import java.util.*;\n" +
+                "public final class ProvidersActivity extends AppScreen{protected void render(){title(\"Extensions\");subtitle(\"Installed sources are available immediately. Add repositories only when you want more compatible sources.\");" +
+                "section(\"Built in\");List<MediaProvider> built=BuiltInProviderCatalog.providers();if(built.isEmpty())body.addView(card(\"No built-in sources\",\"AIDao could not safely bundle a compatible source for this project.\"));for(MediaProvider p:built){body.addView(card(p.displayName()+\" · Enabled\",p.health()+\"\\n\"+BuiltInProviderCatalog.provenance()));}" +
+                "section(\"Repository extensions\");List<ExtensionRecord> known=new ExtensionManager(this).known();if(known.isEmpty()){body.addView(card(\"No additional extensions\",\"The app is still usable with its built-in source. Add a compatible HTTPS repository to discover more providers.\"));}" +
+                "for(ExtensionRecord x:known){LinearLayout c=card(x.name+\" · \"+x.state,x.version+\" · \"+x.repoUrl);Button toggle=button(x.state==ExtensionRecord.State.ENABLED?\"Disable extension\":\"Enable extension\");toggle.setOnClickListener(v->{ExtensionRecord.State next=x.state==ExtensionRecord.State.ENABLED?ExtensionRecord.State.DISABLED:ExtensionRecord.State.ENABLED;new ExtensionManager(this).setState(x.id,next);recreate();});c.addView(toggle);body.addView(c);}" +
+                "Button repos=button(\"Manage repositories\");repos.setOnClickListener(v->AppNavigator.open(this,RepositoriesActivity.class));body.addView(repos);}}\n";
+    }
+
+    private static String java(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", " ");
+    }
+
+    private NativeFidelityPostProcessor() {}
+}
