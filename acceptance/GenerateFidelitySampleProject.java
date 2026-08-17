@@ -7,7 +7,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
-/** CI harness for the generated-app fidelity milestone. */
+/** CI harness for the generated-app fidelity and provider-integration milestone. */
 public final class GenerateFidelitySampleProject {
     public static void main(String[] args) throws Exception {
         if (args.length != 1) throw new IllegalArgumentException("Expected output directory");
@@ -16,6 +16,7 @@ public final class GenerateFidelitySampleProject {
 
         List<String> requirements = Arrays.asList(
                 "Search anime through repository-backed providers rather than fabricated sample entries.",
+                "Bundle at least one reviewed real provider when a safe compatible public source is available.",
                 "Allow users to add and remove HTTPS extension repository URLs and sync extension metadata.",
                 "Show extension states including available, installed, enabled, disabled, and failed.",
                 "Provide Browse, Detail, Library, History, Downloads, Extensions, Repositories, and Player surfaces.",
@@ -24,6 +25,8 @@ public final class GenerateFidelitySampleProject {
         );
         List<String> tasks = Arrays.asList(
                 "Infer a concise product identity independently of the raw request.",
+                "Research reviewed provider capabilities before generation.",
+                "Integrate safe built-in providers into the generated app.",
                 "Generate Android-native media navigation and persistence.",
                 "Generate repository and extension lifecycle components.",
                 "Generate provider failure isolation and honest incomplete states.",
@@ -54,7 +57,8 @@ public final class GenerateFidelitySampleProject {
                 root + "HistoryActivity.java", root + "DownloadsActivity.java", root + "ProvidersActivity.java",
                 root + "RepositoriesActivity.java", root + "PlayerActivity.java", root + "MediaProvider.java",
                 root + "ExtensionRecord.java", root + "RepositoryStore.java", root + "ExtensionRepositoryClient.java",
-                root + "ExtensionManager.java", root + "RepositoryMediaProvider.java"
+                root + "ExtensionManager.java", root + "RepositoryMediaProvider.java",
+                root + "BuiltInProviderCatalog.java", root + "JikanCatalogProvider.java"
         };
         for (String path : required) if (!project.hasPath(path)) throw new IllegalStateException("Missing fidelity file: " + path);
 
@@ -69,8 +73,11 @@ public final class GenerateFidelitySampleProject {
         String source = executable.toString();
         for (String forbidden : new String[]{"DemoProvider", "Origin Path", "Sky Archive", "sample data only"})
             if (source.contains(forbidden)) throw new IllegalStateException("Placeholder/fabricated executable content survived fidelity pass: " + forbidden);
-        for (String marker : new String[]{"ExtensionRepositoryClient", "RepositoryStore", "RepositoriesActivity", "ExtensionRecord.State.ENABLED", "No enabled providers"})
-            if (!source.contains(marker)) throw new IllegalStateException("Missing semantic fidelity marker: " + marker);
+        for (String marker : new String[]{
+                "ExtensionRepositoryClient", "RepositoryStore", "RepositoriesActivity", "ExtensionRecord.State.ENABLED",
+                "BuiltInProviderCatalog", "JikanCatalogProvider", "https://api.jikan.moe/v4/anime",
+                "new ArrayList<>(BuiltInProviderCatalog.providers())", "metadata-only"
+        }) if (!source.contains(marker)) throw new IllegalStateException("Missing semantic fidelity marker: " + marker);
 
         System.out.println("Generated fidelity acceptance project: " + project.projectName + " / " + project.packageName + " / " + project.files.size() + " files");
     }
