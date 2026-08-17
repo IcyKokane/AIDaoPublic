@@ -7,6 +7,7 @@ on:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java'
@@ -40,6 +41,7 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
@@ -47,17 +49,22 @@ jobs:
             acceptance/GenerateFidelitySampleProject.java
           java -cp build/fidelity-generator dev.thefoolish.aidao.GenerateFidelitySampleProject "$PWD/generated-fidelity"
           test -f generated-fidelity/app/src/main/AndroidManifest.xml
-          test "$(find generated-fidelity/app/src/main/java -type f | wc -l)" -ge 19
+          test "$(find generated-fidelity/app/src/main/java -type f | wc -l)" -ge 21
           ! grep -R -q 'Origin Path\|Sky Archive\|sample data only' generated-fidelity/app/src/main || exit 1
           grep -R -q 'ExtensionRepositoryClient' generated-fidelity/app/src/main/java
           grep -R -q 'RepositoriesActivity' generated-fidelity/app/src/main/java
           grep -R -q 'BuiltInProviderCatalog' generated-fidelity/app/src/main/java
           grep -R -q 'JikanCatalogProvider' generated-fidelity/app/src/main/java
+          grep -R -q 'AniListCatalogProvider' generated-fidelity/app/src/main/java
           grep -R -q 'https://api.jikan.moe/v4/anime' generated-fidelity/app/src/main/java
+          grep -R -q 'https://graphql.anilist.co' generated-fidelity/app/src/main/java
           grep -R -q 'new ArrayList<>(BuiltInProviderCatalog.providers())' generated-fidelity/app/src/main/java
           grep -R -q 'setOnApplyWindowInsetsListener' generated-fidelity/app/src/main/java
           grep -R -q 'new Thread(()->' generated-fidelity/app/src/main/java
           grep -R -q 'Some sources could not be reached' generated-fidelity/app/src/main/java
+          grep -R -q 'UpdatesActivity' generated-fidelity/app/src/main/java
+          grep -R -q 'MoreActivity' generated-fidelity/app/src/main/java
+          grep -R -q 'LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class' generated-fidelity/app/src/main/java
 
       - name: Build materially improved generated APK
         working-directory: generated-fidelity
