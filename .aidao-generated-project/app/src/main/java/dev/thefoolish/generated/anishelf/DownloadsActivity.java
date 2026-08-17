@@ -1,0 +1,1 @@
+package dev.thefoolish.generated.anishelf;public final class DownloadsActivity extends AppScreen{protected void render(){title("Downloads");subtitle("Download records are local. A provider must expose a compatible downloadable media URL before an item can be queued.");body.addView(text("No download queued.",14,false));nav();}}
