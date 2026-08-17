@@ -1,0 +1,1 @@
+package dev.thefoolish.generated.anishelf;public final class HistoryActivity extends AppScreen{protected void render(){title("History");subtitle("Watch history and resume position are stored locally on this device.");String last=store.text("last_episode","");body.addView(text(last.length()==0?"Nothing watched yet.":last,14,false));nav();}}
