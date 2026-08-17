@@ -22,6 +22,7 @@ final class GeneratedFidelityValidator {
         require(notes, files, packageName, "RepositoryMediaProvider.java", "provider isolation implementation");
         require(notes, files, packageName, "BuiltInProviderCatalog.java", "built-in provider catalog implementation");
         require(notes, files, packageName, "JikanCatalogProvider.java", "reviewed real provider implementation");
+        require(notes, files, packageName, "AppScreen.java", "phone-native app chrome implementation");
 
         String joined = joinExecutableSource(files);
         failIf(notes, joined, "DemoProvider", "fabricated DemoProvider placeholder is forbidden in executable source");
@@ -48,10 +49,25 @@ final class GeneratedFidelityValidator {
         boolean honestCapabilityBoundary = joined.contains("Catalog metadata only") || joined.contains("metadata-only");
         notes.add((honestCapabilityBoundary ? "PASS " : "FAIL ") + "provider capability limitation is explicit");
 
-        boolean nativeUi = joined.contains("sans-serif") && joined.contains("setStatusBarColor") &&
-                joined.contains("Library") && joined.contains("History") && joined.contains("Downloads") &&
-                joined.contains("Extensions");
-        notes.add((nativeUi ? "PASS " : "FAIL ") + "Android navigation and native UI gate");
+        boolean nativeChrome = joined.contains("setOnApplyWindowInsetsListener") &&
+                joined.contains("bottomNav") && joined.contains("ScrollView") &&
+                joined.contains("Gravity.CENTER") && joined.contains("setNavigationBarColor") &&
+                joined.contains("round(SURFACE");
+        notes.add((nativeChrome ? "PASS " : "FAIL ") + "phone-native fixed navigation / inset-aware chrome gate");
+
+        boolean responsiveHierarchy = joined.contains("card(String heading,String supporting)") &&
+                joined.contains("section(String s)") && joined.contains("setMinHeight(dp(52))") &&
+                joined.contains("setPadding(dp(16)");
+        notes.add((responsiveHierarchy ? "PASS " : "FAIL ") + "mobile touch-target / card hierarchy gate");
+
+        boolean asynchronousProviderSearch = joined.contains("new Thread(()->") &&
+                joined.contains("runOnUiThread") && joined.contains("ProgressBar") &&
+                joined.contains("Some sources could not be reached");
+        notes.add((asynchronousProviderSearch ? "PASS " : "FAIL ") + "non-blocking provider search and actionable error-state gate");
+
+        boolean distinguishesFailureFromEmpty = joined.contains("No matches found for") &&
+                joined.contains("No results were returned because one or more sources failed");
+        notes.add((distinguishesFailureFromEmpty ? "PASS " : "FAIL ") + "provider failure is distinct from genuine zero-result state");
 
         return notes;
     }
