@@ -48,6 +48,11 @@ final class MihonBehaviorPostProcessor {
                         "Browse installed sources and search their catalogs. Built-in providers are ready immediately; additional repositories remain optional and user-controlled.");
                 content = content.replace("section(\"Results\")", "section(\"Search results\")");
             }
+            // Keep generated Java type names idempotent across repeated fidelity passes.
+            // A prior compatibility rewrite may already qualify Button; never double-qualify it.
+            while (content.contains("android.widget.android.widget.")) {
+                content = content.replace("android.widget.android.widget.", "android.widget.");
+            }
             if (f.path.equals(root + "UpdatesActivity.java")) hasUpdates = true;
             if (f.path.equals(root + "MoreActivity.java")) hasMore = true;
             out.add(new GeneratedProject.FileEntry(f.path, content, f.taskHint));
