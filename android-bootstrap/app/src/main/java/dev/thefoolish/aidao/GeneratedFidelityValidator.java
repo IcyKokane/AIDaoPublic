@@ -21,7 +21,8 @@ final class GeneratedFidelityValidator {
         require(notes, files, packageName, "ExtensionManager.java", "extension state implementation");
         require(notes, files, packageName, "RepositoryMediaProvider.java", "provider isolation implementation");
         require(notes, files, packageName, "BuiltInProviderCatalog.java", "built-in provider catalog implementation");
-        require(notes, files, packageName, "JikanCatalogProvider.java", "reviewed real provider implementation");
+        require(notes, files, packageName, "JikanCatalogProvider.java", "reviewed Jikan provider implementation");
+        require(notes, files, packageName, "AniListCatalogProvider.java", "reviewed AniList provider implementation");
         require(notes, files, packageName, "AppScreen.java", "phone-native app chrome implementation");
 
         String joined = joinExecutableSource(files);
@@ -39,14 +40,21 @@ final class GeneratedFidelityValidator {
                 joined.contains("JikanCatalogProvider") &&
                 joined.contains("https://api.jikan.moe/v4/anime") &&
                 joined.contains("builtin.jikan.catalog") &&
-                joined.contains("metadata-only");
-        notes.add((builtInProvider ? "PASS " : "FAIL ") + "pre-generation capability research / built-in provider gate");
+                joined.contains("metadata only");
+        notes.add((builtInProvider ? "PASS " : "FAIL ") + "pre-generation capability research / built-in Jikan provider gate");
+
+        boolean redundantProviders = joined.contains("AniListCatalogProvider") &&
+                joined.contains("https://graphql.anilist.co") &&
+                joined.contains("builtin.anilist.catalog") &&
+                joined.contains("out.add(new JikanCatalogProvider())") &&
+                joined.contains("out.add(new AniListCatalogProvider())");
+        notes.add((redundantProviders ? "PASS " : "FAIL ") + "multiple reviewed built-in provider redundancy gate");
 
         boolean providerIsActuallyUsed = joined.contains("BuiltInProviderCatalog.providers()") &&
                 joined.contains("new ArrayList<>(BuiltInProviderCatalog.providers())");
-        notes.add((providerIsActuallyUsed ? "PASS " : "FAIL ") + "built-in provider is active in generated Browse/Search flow");
+        notes.add((providerIsActuallyUsed ? "PASS " : "FAIL ") + "built-in providers are active in generated Browse/Search flow");
 
-        boolean honestCapabilityBoundary = joined.contains("Catalog metadata only") || joined.contains("metadata-only");
+        boolean honestCapabilityBoundary = joined.contains("catalog metadata only") || joined.contains("metadata-only");
         notes.add((honestCapabilityBoundary ? "PASS " : "FAIL ") + "provider capability limitation is explicit");
 
         boolean nativeChrome = joined.contains("setOnApplyWindowInsetsListener") &&
