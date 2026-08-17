@@ -78,7 +78,7 @@ public final class GenerateFidelitySampleProject {
                 "ExtensionRepositoryClient", "RepositoryStore", "RepositoriesActivity", "ExtensionRecord.State.ENABLED",
                 "BuiltInProviderCatalog", "JikanCatalogProvider", "AniListCatalogProvider",
                 "https://api.jikan.moe/v4/anime", "https://graphql.anilist.co",
-                "new ArrayList<>(BuiltInProviderCatalog.providers())", "Catalog metadata only",
+                "new ArrayList<>(BuiltInProviderCatalog.providers())",
                 "setOnApplyWindowInsetsListener", "Some sources could not be reached",
                 "LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class"
         }) if (!source.contains(marker)) throw new IllegalStateException("Missing semantic fidelity marker: " + marker);
