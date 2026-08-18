@@ -89,10 +89,14 @@ jobs:
               echo "Repeated Android package qualifier survived normalization"
               exit 1
             fi
+            if grep -R -nE 'Save local sample state|placeholder data|sample data only|Playback surface placeholder|DemoProvider' "$src"; then
+              echo "Generated executable source still contains fake-completion or placeholder behavior"
+              exit 1
+            fi
           fi
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
