@@ -12,7 +12,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  actions: read
 
 jobs:
   generate-and-build:
@@ -38,7 +39,7 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GenerateQualityMatrixProjects.java
           java -cp build/quality-generator dev.thefoolish.aidao.GenerateQualityMatrixProjects "$PWD/generated-quality"
-          ! grep -R -q 'Save local sample state\|sample state\|android\.widget\.android\.widget\.' generated-quality/app generated-quality 2>/dev/null || exit 1
+          ! grep -R -q 'Save local sample state\|sample state\|android\.widget\.android\.widget\.' generated-quality 2>/dev/null || exit 1
 
       - name: Build finance product APK
         working-directory: generated-quality/finance
@@ -51,6 +52,98 @@ jobs:
       - name: Build content product APK
         working-directory: generated-quality/content
         run: gradle :app:assembleDebug --stacktrace
+
+      - name: Exercise three products through trusted repository_dispatch CI
+        id: trusted
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          project_root='.aidao-generated-project'
+          default_branch=$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.default_branch')
+          parent_sha=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${default_branch}" --jq '.object.sha')
+          cleanup_file="$RUNNER_TEMP/aidao-quality-branches.txt"
+          : > "$cleanup_file"
+
+          for sample in finance tracker content; do
+            branch="aidao-generated-quality-${sample}-${GITHUB_RUN_ID}"
+            echo "$branch" >> "$cleanup_file"
+            echo "Creating isolated quality branch: $branch"
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="refs/heads/${branch}" -f sha="${parent_sha}" >/dev/null
+
+            uploaded=0
+            while IFS= read -r -d '' file; do
+              rel="${file#generated-quality/${sample}/}"
+              case "$rel" in
+                .github/workflows/*) continue ;;
+              esac
+              encoded=$(base64 -w0 "$file")
+              api_path="repos/${GITHUB_REPOSITORY}/contents/${project_root}/${rel}"
+              jq -n --arg message "AIDao quality ${sample}: ${rel}" \
+                    --arg content "$encoded" --arg branch "$branch" \
+                    '{message:$message,content:$content,branch:$branch}' \
+                | gh api --method PUT "$api_path" --input - >/dev/null
+              uploaded=$((uploaded+1))
+            done < <(find "generated-quality/${sample}" -type f -not -path '*/build/*' -print0)
+            [[ "$uploaded" -ge 10 ]] || { echo "$sample upload was unexpectedly small: $uploaded files"; exit 1; }
+
+            gh api "repos/${GITHUB_REPOSITORY}/contents/${project_root}/settings.gradle.kts?ref=${branch}" --jq '.sha' >/dev/null
+            if gh api "repos/${GITHUB_REPOSITORY}/contents/${project_root}/.github/workflows/android.yml?ref=${branch}" >/dev/null 2>&1; then
+              echo "Generated workflows must not cross the trusted build boundary"
+              exit 1
+            fi
+
+            payload=$(printf '{"event_type":"aidao-generated-build","client_payload":{"target_branch":"%s","project_name":"AIDao Quality %s","project_root":"%s"}}' "$branch" "$sample" "$project_root")
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/dispatches" --input - <<< "$payload"
+
+            run_id=''
+            for attempt in $(seq 1 60); do
+              runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/generated-project.yml/runs?event=repository_dispatch&per_page=40")
+              run_id=$(jq -r --arg b "$branch" '.workflow_runs[] | select(.display_title | contains($b)) | .id' <<< "$runs" | head -n1)
+              [[ -n "$run_id" && "$run_id" != 'null' ]] && break
+              sleep 5
+            done
+            [[ -n "$run_id" && "$run_id" != 'null' ]] || { echo "No trusted generated build appeared for $sample"; exit 1; }
+
+            conclusion=''
+            for attempt in $(seq 1 120); do
+              run=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")
+              status=$(jq -r '.status' <<< "$run")
+              conclusion=$(jq -r '.conclusion // ""' <<< "$run")
+              echo "$sample trusted run ${run_id}: ${status}${conclusion:+ / ${conclusion}}"
+              [[ "$status" == 'completed' ]] && break
+              sleep 5
+            done
+            [[ "$conclusion" == 'success' ]] || { echo "$sample trusted build failed: ${conclusion:-unknown}"; exit 1; }
+
+            artifacts=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=20")
+            artifact_name=$(jq -r '.artifacts[0].name // ""' <<< "$artifacts")
+            [[ "$artifact_name" == aidao-generated-apk-* ]] || { echo "$sample did not produce the trusted APK artifact"; exit 1; }
+            echo "$sample trusted APK: $artifact_name"
+          done
+
+          echo "cleanup_file=$cleanup_file" >> "$GITHUB_OUTPUT"
+
+      - name: Remove quality-matrix generated branches
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLEANUP_FILE: ${{ steps.trusted.outputs.cleanup_file }}
+        shell: bash
+        run: |
+          set +e
+          if [[ -n "$CLEANUP_FILE" && -f "$CLEANUP_FILE" ]]; then
+            while IFS= read -r branch; do
+              [[ -n "$branch" ]] && gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}" >/dev/null 2>&1 || true
+            done < "$CLEANUP_FILE"
+          else
+            for sample in finance tracker content; do
+              branch="aidao-generated-quality-${sample}-${GITHUB_RUN_ID}"
+              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}" >/dev/null 2>&1 || true
+            done
+          fi
 
       - name: Upload quality matrix APKs
         uses: actions/upload-artifact@v4
