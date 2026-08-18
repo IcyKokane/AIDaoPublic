@@ -13,9 +13,6 @@ on:
       - 'android-bootstrap/**'
   workflow_dispatch:
 
-# Quality-candidate runs are intentionally expensive: each one exercises several
-# generated apps through trusted repository_dispatch CI. Never let a stale run
-# race a newer main-branch candidate or move the validated-candidate marker.
 concurrency:
   group: aidao-v1-quality-candidate-main
   cancel-in-progress: true
@@ -29,6 +26,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Expose candidate run marker
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="refs/heads/aidao-v1-candidate-running-${GITHUB_RUN_ID}"
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="$ref" -f sha="$GITHUB_SHA" >/dev/null || true
+          echo "Candidate run marker: ${ref#refs/heads/}"
 
       - uses: actions/setup-java@v5
         with:
@@ -159,9 +166,6 @@ jobs:
           [[ -n "$run_id" && "$run_id" != 'null' ]] || { echo 'No quality-matrix workflow run appeared'; exit 1; }
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
           conclusion=''
-          # Five trusted repository_dispatch builds run sequentially. Give the
-          # matrix enough time to exercise real CI rather than treating a slow
-          # but healthy build as a release failure.
           for attempt in $(seq 1 900); do
             run=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")
             status=$(jq -r '.status' <<< "$run")
@@ -222,6 +226,7 @@ jobs:
           fi
           run_ref="refs/heads/aidao-v1-candidate-run-${GITHUB_RUN_ID}"
           gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="$run_ref" -f sha="$GITHUB_SHA" >/dev/null || true
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/aidao-v1-candidate-running-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true
           echo "Validated V1 candidate: $GITHUB_SHA / run $GITHUB_RUN_ID"
 
       - name: Upload V1 candidate APK
