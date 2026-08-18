@@ -2,14 +2,15 @@ from pathlib import Path
 
 ROOT = Path("android-bootstrap/app/src/main/java/dev/thefoolish/aidao")
 
-# Repeated-package strings must exist in the sanitizer/validator as regression
+# Repeated-package strings must exist in sanitizers/validators as regression
 # signatures, so never reject the repository merely because those literals are
-# present there. Instead, reject them if they leak into ordinary production
-# implementation files where they would represent real source corruption.
+# present in code whose job is to detect or repair them. Ordinary production
+# implementation files must still remain free of the corrupted qualifiers.
 intentional_guard_files = {
     "GeneratedProject.java",
     "GeneratedProjectRepairer.java",
     "GeneratedProjectValidator.java",
+    "MihonBehaviorPostProcessor.java",
 }
 qualifier_markers = [
     "android.widget.android.widget.",
