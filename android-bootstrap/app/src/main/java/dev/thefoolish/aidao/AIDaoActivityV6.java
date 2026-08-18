@@ -52,6 +52,7 @@ public class AIDaoActivityV6 extends Activity {
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         prefs=getSharedPreferences("aidao_workspace_v4",MODE_PRIVATE);
+        recoverInterruptedBuild();
         Window w=getWindow();
         w.setStatusBarColor(BG);w.setNavigationBarColor(Color.rgb(12,13,17));
         w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
@@ -63,6 +64,16 @@ public class AIDaoActivityV6 extends Activity {
         cancelAuth=true;
         sessionToken="";
         super.onDestroy();
+    }
+
+    private void recoverInterruptedBuild(){
+        String stage=prefs.getString("stage","");
+        if("BUILD RUNNING".equals(stage)){
+            prefs.edit()
+                    .putString("ci_state","Recovery required · the previous GitHub authorization/build session was interrupted. Reconnect GitHub App & Build to safely retry; session credentials were not stored.")
+                    .putString("stage","BUILD RECOVERY")
+                    .apply();
+        }
     }
 
     private void render(){
