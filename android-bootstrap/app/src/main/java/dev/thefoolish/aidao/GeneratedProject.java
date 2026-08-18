@@ -91,6 +91,29 @@ final class GeneratedProject {
         this.verificationNotes = Collections.unmodifiableList(notes);
     }
 
+    /**
+     * Wrap an already-transformed/resolved source tree without running product
+     * post-processors a second time. This is required after user overrides or
+     * bounded CI repairs so unrelated transformations cannot overwrite edits.
+     */
+    static GeneratedProject resolved(String projectName, String packageName, List<FileEntry> files, List<String> verificationNotes) {
+        return new GeneratedProject(projectName, packageName, files, verificationNotes, true);
+    }
+
+    private GeneratedProject(String projectName, String packageName, List<FileEntry> files, List<String> verificationNotes, boolean resolvedTree) {
+        if (!resolvedTree) throw new IllegalArgumentException("resolved tree marker required");
+        this.projectName = projectName;
+        this.packageName = packageName;
+        List<FileEntry> immutableSource = new ArrayList<>(files == null ? Collections.emptyList() : files);
+        this.files = Collections.unmodifiableList(immutableSource);
+        List<String> notes = new ArrayList<>();
+        if (verificationNotes != null) notes.addAll(verificationNotes);
+        GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(this.packageName, immutableSource);
+        notes.addAll(structural.notes);
+        notes.addAll(validateFidelityIfAvailable(this.packageName, immutableSource));
+        this.verificationNotes = Collections.unmodifiableList(notes);
+    }
+
     @SuppressWarnings("unchecked")
     private static FidelityResult applyFidelityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
         try {

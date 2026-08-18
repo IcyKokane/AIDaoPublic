@@ -31,7 +31,7 @@ final class GeneratedProjectRepairer {
             action="Normalize generated Java source and regenerate deterministic source without changing the plan, repository default branch, or user permissions.";
             for(GeneratedProject.FileEntry e:original.files){String n=sanitizeJava(e.path,e.content);changed|=!n.equals(e.content);out.add(new GeneratedProject.FileEntry(e.path,n,e.taskHint));}
         }
-        return new RepairResult(new GeneratedProject(original.projectName,original.packageName,out,original.verificationNotes),action,changed);
+        return new RepairResult(GeneratedProject.resolved(original.projectName,original.packageName,out,original.verificationNotes),action,changed);
     }
 
     private static String sanitizeJava(String path,String source){

@@ -91,7 +91,7 @@ final class GeneratedProjectOverrideResolver {
             }
         }
 
-        GeneratedProject project = new GeneratedProject(
+        GeneratedProject project = GeneratedProject.resolved(
                 generated.projectName,
                 generated.packageName,
                 resolved,
