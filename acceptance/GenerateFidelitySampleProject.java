@@ -21,7 +21,7 @@ public final class GenerateFidelitySampleProject {
                 "Show extension states including available, installed, enabled, disabled, and failed.",
                 "Provide Browse, Detail, Library, History, Downloads, Extensions, Repositories, and Player surfaces.",
                 "Persist favorites, history, downloads metadata, repository configuration, extension state, and resume progress locally.",
-                "Use Android-native navigation and typography, and clearly identify unsupported provider capabilities instead of faking them."
+                "Use Android-native navigation and typography, expose accessible interaction labels, and clearly identify unsupported provider capabilities instead of faking them."
         );
         List<String> tasks = Arrays.asList(
                 "Infer a concise product identity independently of the raw request.",
@@ -83,6 +83,8 @@ public final class GenerateFidelitySampleProject {
                 "https://api.jikan.moe/v4/anime", "https://graphql.anilist.co",
                 "new ArrayList<>(BuiltInProviderCatalog.providers())",
                 "setOnApplyWindowInsetsListener", "Some sources could not be reached",
+                "setContentDescription(label)", "setContentDescription(\"Open \"+names[i])",
+                "query.setContentDescription(\"Search anime\")", "c.setContentDescription(\"Open \"+a.title)",
                 "LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class"
         }) if (!source.contains(marker)) throw new IllegalStateException("Missing semantic fidelity marker: " + marker);
 
