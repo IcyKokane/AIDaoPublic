@@ -1,0 +1,1 @@
+package dev.thefoolish.generated.anishelf;public final class LibraryActivity extends AppScreen{protected void render(){title("Library");subtitle("Library is backed by local favorite state from detail screens. Provider metadata remains source-owned.");nav();}}
