@@ -42,6 +42,21 @@ public final class ProjectRevisionAcceptance {
                 "Create a simple Android inventory utility with explore, detail, settings, and reporting screens.",
                 Collections.singletonList("Persist local inventory state and include reporting."),
                 Collections.singletonList("Generate and verify source."));
+
+        // A refinement that changes unrelated generated source must not destroy a clean user edit.
+        GeneratedProject.FileEntry refinedTarget = second.find(target);
+        require(refinedTarget != null, "refinement removed unrelated strings resource");
+        require(ProjectRevisionLedger.hash(original.content).equals(ProjectRevisionLedger.hash(refinedTarget.content)),
+                "acceptance target unexpectedly changed during unrelated refinement");
+        ProjectRevisionLedger.Snapshot refinedClean = ledger.inspect(second, overrides, bases);
+        require(refinedClean.cleanOverrides == 1 && !refinedClean.hasConflicts(),
+                "unrelated refinement incorrectly invalidated a clean user edit");
+        GeneratedProjectOverrideResolver.Resolution refinedResolution = resolver.resolve(second, overrides, bases);
+        require(refinedResolution.canBuild(), "unrelated refinement should remain buildable with clean edit");
+        require(refinedResolution.appliedOverrides == 1, "clean user edit was lost during refinement");
+        require(userEdit.equals(refinedResolution.project.find(target).content),
+                "unrelated refinement did not preserve the user edit");
+
         Map<String,String> staleBases = new HashMap<>(bases);
         staleBases.put(target, "0000000000000000000000000000000000000000000000000000000000000000");
         ProjectRevisionLedger.Snapshot stale = ledger.inspect(second, overrides, staleBases);
@@ -67,7 +82,7 @@ public final class ProjectRevisionAcceptance {
         }
         require(orphanSeen, "orphaned override was not surfaced in resolver conflicts");
 
-        System.out.println("Project revision acceptance passed: clean overrides apply; stale/orphaned edits block silent regeneration.");
+        System.out.println("Project revision acceptance passed: clean edits survive unrelated refinement; stale/orphaned edits block silent regeneration.");
     }
 
     private static void require(boolean value, String message) {
