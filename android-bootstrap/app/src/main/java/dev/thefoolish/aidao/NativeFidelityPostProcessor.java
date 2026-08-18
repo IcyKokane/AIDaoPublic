@@ -44,6 +44,7 @@ final class NativeFidelityPostProcessor {
         notes.add("PASS Browse uses asynchronous provider requests so network work never blocks the Android UI thread");
         notes.add("PASS provider failures are shown separately from genuine zero-result searches");
         notes.add("PASS generated extension inventory uses card hierarchy instead of a desktop-style vertical control form");
+        notes.add("PASS interactive generated media controls expose accessibility labels and >=48dp touch targets");
         return new Result(projectName, packageName, out, notes);
     }
 
@@ -75,11 +76,11 @@ final class NativeFidelityPostProcessor {
                 "protected void subtitle(String s){TextView t=text(s,14,false);t.setTextColor(MUTED);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,0,0,dp(12));body.addView(t,p);}" +
                 "protected void section(String s){TextView t=text(s,18,true);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,dp(10),0,dp(8));body.addView(t,p);}" +
                 "protected TextView text(String value,int size,boolean bold){TextView t=new TextView(this);t.setText(value);t.setTextColor(TEXT);t.setTextSize(size);t.setTypeface(android.graphics.Typeface.create(\"sans-serif\",bold?1:0));t.setGravity(Gravity.CENTER_VERTICAL);return t;}" +
-                "protected Button button(String label){Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);b.setTextColor(TEXT);b.setMinHeight(dp(48));b.setBackground(round(SURFACE2,14));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(50));p.setMargins(0,dp(6),0,dp(6));b.setLayoutParams(p);return b;}" +
+                "protected Button button(String label){Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);b.setTextColor(TEXT);b.setMinHeight(dp(48));b.setContentDescription(label);b.setBackground(round(SURFACE2,14));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(50));p.setMargins(0,dp(6),0,dp(6));b.setLayoutParams(p);return b;}" +
                 "protected LinearLayout card(String heading,String supporting){LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setPadding(dp(16),dp(14),dp(16),dp(14));c.setBackground(round(SURFACE,16));TextView h=text(heading,16,true);c.addView(h);if(supporting!=null&&supporting.length()>0){TextView s=text(supporting,13,false);s.setTextColor(MUTED);s.setPadding(0,dp(4),0,0);c.addView(s);}LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,0,0,dp(10));c.setLayoutParams(p);return c;}" +
                 "protected GradientDrawable round(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}" +
                 "protected void nav(){}" +
-                "private void buildBottomNav(){String[] names={\"Browse\",\"Library\",\"History\",\"Downloads\",\"Extensions\"};Class[] screens={MainActivity.class,LibraryActivity.class,HistoryActivity.class,DownloadsActivity.class,ProvidersActivity.class};for(int i=0;i<names.length;i++){final Class target=screens[i];TextView item=text(names[i],11,false);item.setGravity(Gravity.CENTER);item.setMinHeight(dp(52));item.setPadding(dp(4),0,dp(4),0);item.setOnClickListener(v->AppNavigator.open(this,target));bottomNav.addView(item,new LinearLayout.LayoutParams(0,dp(52),1));}}" +
+                "private void buildBottomNav(){String[] names={\"Browse\",\"Library\",\"History\",\"Downloads\",\"Extensions\"};Class[] screens={MainActivity.class,LibraryActivity.class,HistoryActivity.class,DownloadsActivity.class,ProvidersActivity.class};for(int i=0;i<names.length;i++){final Class target=screens[i];TextView item=text(names[i],11,false);item.setGravity(Gravity.CENTER);item.setMinHeight(dp(52));item.setPadding(dp(4),0,dp(4),0);item.setContentDescription(\"Open \"+names[i]);item.setOnClickListener(v->AppNavigator.open(this,target));bottomNav.addView(item,new LinearLayout.LayoutParams(0,dp(52),1));}}" +
                 "protected int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+.5f);}" +
                 "}\n";
     }
@@ -89,9 +90,9 @@ final class NativeFidelityPostProcessor {
                 "import android.content.*;import android.graphics.*;import android.view.*;import android.widget.*;import java.util.*;\n" +
                 "public final class MainActivity extends AppScreen{private LinearLayout results;private EditText query;private Button search;private ProgressBar progress;" +
                 "protected void render(){title(\"Browse\");subtitle(\"Search across installed sources. Built-in providers are ready immediately; repository sources stay optional and user-controlled.\");" +
-                "query=new EditText(this);query.setHint(\"Search anime\");query.setSingleLine(true);query.setTextColor(TEXT);query.setHintTextColor(MUTED);query.setTextSize(16);query.setPadding(dp(14),0,dp(14),0);query.setBackground(round(SURFACE,14));body.addView(query,new LinearLayout.LayoutParams(-1,dp(52)));" +
+                "query=new EditText(this);query.setHint(\"Search anime\");query.setContentDescription(\"Search anime\");query.setSingleLine(true);query.setTextColor(TEXT);query.setHintTextColor(MUTED);query.setTextSize(16);query.setPadding(dp(14),0,dp(14),0);query.setBackground(round(SURFACE,14));body.addView(query,new LinearLayout.LayoutParams(-1,dp(52)));" +
                 "search=button(\"Search installed sources\");search.setOnClickListener(v->searchAsync());body.addView(search);" +
-                "LinearLayout source=card(\"Installed source\",BuiltInProviderCatalog.provenance());source.setOnClickListener(v->AppNavigator.open(this,ProvidersActivity.class));body.addView(source);" +
+                "LinearLayout source=card(\"Installed source\",BuiltInProviderCatalog.provenance());source.setContentDescription(\"Open installed sources\");source.setClickable(true);source.setOnClickListener(v->AppNavigator.open(this,ProvidersActivity.class));body.addView(source);" +
                 "progress=new ProgressBar(this);progress.setVisibility(View.GONE);LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(-1,dp(42));pp.setMargins(0,dp(4),0,dp(4));body.addView(progress,pp);" +
                 "section(\"Results\");results=new LinearLayout(this);results.setOrientation(LinearLayout.VERTICAL);body.addView(results);showReady();}" +
                 "private void showReady(){results.removeAllViews();TextView t=text(\"Enter a title to search the providers already installed in this app.\",14,false);t.setTextColor(MUTED);results.addView(t);}" +
@@ -101,7 +102,7 @@ final class NativeFidelityPostProcessor {
                 "private void showSearchResult(String q,List<AnimeItem> found,List<String> failures){search.setEnabled(true);progress.setVisibility(View.GONE);results.removeAllViews();" +
                 "if(!failures.isEmpty()){LinearLayout c=card(\"Some sources could not be reached\",android.text.TextUtils.join(\"\\n\",failures));results.addView(c);}" +
                 "if(found.isEmpty()){String msg=failures.isEmpty()?\"No matches found for \\\"\"+q+\"\\\". Try another title.\":\"No results were returned because one or more sources failed. Check the error above and your connection.\";TextView empty=text(msg,14,false);empty.setTextColor(MUTED);results.addView(empty);return;}" +
-                "for(AnimeItem a:found){String meta=(a.episodes>0?a.episodes+\" episodes · \":\"\")+a.provider;LinearLayout c=card(a.title,meta);c.setClickable(true);c.setOnClickListener(v->{Intent i=new Intent(this,DetailActivity.class);i.putExtra(\"id\",a.id);i.putExtra(\"title\",a.title);i.putExtra(\"summary\",a.summary);i.putExtra(\"provider\",a.provider);i.putExtra(\"episodes\",a.episodes);startActivity(i);});results.addView(c);}}" +
+                "for(AnimeItem a:found){String meta=(a.episodes>0?a.episodes+\" episodes · \":\"\")+a.provider;LinearLayout c=card(a.title,meta);c.setContentDescription(\"Open \"+a.title);c.setClickable(true);c.setOnClickListener(v->{Intent i=new Intent(this,DetailActivity.class);i.putExtra(\"id\",a.id);i.putExtra(\"title\",a.title);i.putExtra(\"summary\",a.summary);i.putExtra(\"provider\",a.provider);i.putExtra(\"episodes\",a.episodes);startActivity(i);});results.addView(c);}}" +
                 "}\n";
     }
 
