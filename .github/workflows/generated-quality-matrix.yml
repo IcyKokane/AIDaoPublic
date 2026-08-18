@@ -20,6 +20,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Expose quality run marker
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="aidao-quality-run-${GITHUB_RUN_ID}"
+          default_branch=$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.default_branch')
+          parent_sha=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${default_branch}" --jq '.object.sha')
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/heads/${branch}" -f sha="${parent_sha}" >/dev/null
+          echo "Quality run marker: $branch"
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -39,7 +52,7 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GenerateQualityMatrixProjects.java
           java -cp build/quality-generator dev.thefoolish.aidao.GenerateQualityMatrixProjects "$PWD/generated-quality"
-          ! grep -R -q 'Save local sample state\|sample state\|android\.widget\.android\.widget\.' generated-quality 2>/dev/null || exit 1
+          ! grep -R -q 'Save local sample state\|sample state\|placeholder data\|android\.widget\.android\.widget\.' generated-quality 2>/dev/null || exit 1
 
       - name: Build finance product APK
         working-directory: generated-quality/finance
@@ -123,10 +136,9 @@ jobs:
             [[ "$artifact_name" == aidao-generated-apk-* ]] || { echo "$sample did not produce the trusted APK artifact"; exit 1; }
             echo "$sample trusted APK: $artifact_name"
           done
-
           echo "cleanup_file=$cleanup_file" >> "$GITHUB_OUTPUT"
 
-      - name: Remove quality-matrix generated branches
+      - name: Remove quality-matrix generated branches and run marker
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -134,6 +146,7 @@ jobs:
         shell: bash
         run: |
           set +e
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/aidao-quality-run-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true
           if [[ -n "$CLEANUP_FILE" && -f "$CLEANUP_FILE" ]]; then
             while IFS= read -r branch; do
               [[ -n "$branch" ]] && gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}" >/dev/null 2>&1 || true
