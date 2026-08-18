@@ -2,9 +2,23 @@ name: AIDao V1 Quality Candidate
 
 on:
   push:
+    branches:
+      - main
     paths:
       - '.github/workflows/v1-quality-candidate.yml'
+      - '.github/workflows/generated-quality-matrix.yml'
+      - '.github/workflows/generated-fidelity-acceptance.yml'
+      - '.github/workflows/generated-project.yml'
+      - 'acceptance/**'
+      - 'android-bootstrap/**'
   workflow_dispatch:
+
+# Quality-candidate runs are intentionally expensive: each one exercises several
+# generated apps through trusted repository_dispatch CI. Never let a stale run
+# race a newer main-branch candidate or move the validated-candidate marker.
+concurrency:
+  group: aidao-v1-quality-candidate-main
+  cancel-in-progress: true
 
 permissions:
   contents: write
