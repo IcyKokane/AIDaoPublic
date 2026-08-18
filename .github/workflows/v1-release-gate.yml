@@ -53,9 +53,11 @@ jobs:
           javac -d build/v1-gate \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectRepairer.java \
             acceptance/ProjectRevisionAcceptance.java
           java -cp build/v1-gate dev.thefoolish.aidao.ProjectRevisionAcceptance
 
