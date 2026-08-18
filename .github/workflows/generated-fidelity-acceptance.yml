@@ -17,6 +17,12 @@ on:
       - 'acceptance/GenerateFidelitySampleProject.java'
       - 'acceptance/GeneralRequestFidelityAcceptance.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
+  pull_request:
+    paths:
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ExplicitRequestFidelityPostProcessor.java'
+      - 'acceptance/GeneralRequestFidelityAcceptance.java'
+      - '.github/workflows/generated-fidelity-acceptance.yml'
   workflow_dispatch:
 
 permissions:
