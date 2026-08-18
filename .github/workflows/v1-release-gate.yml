@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -27,22 +27,38 @@ jobs:
             acceptance/PlannerBehaviorAcceptance.java
           java -cp build/v1-gate dev.thefoolish.aidao.PlannerBehaviorAcceptance
 
-      - name: Compile and run generated-project validation
+      - name: Compile and run generated-project validation with full fidelity pipeline
         run: |
           rm -rf build/v1-gate && mkdir -p build/v1-gate
           javac -d build/v1-gate \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GeneratedProjectValidationAcceptance.java
           java -cp build/v1-gate dev.thefoolish.aidao.GeneratedProjectValidationAcceptance
 
-      - name: Compile and run revision safety acceptance
+      - name: Compile and run revision safety acceptance with full fidelity pipeline
         run: |
           rm -rf build/v1-gate && mkdir -p build/v1-gate
           javac -d build/v1-gate \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
@@ -86,20 +102,12 @@ jobs:
           device = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GitHubDeviceAuthClient.java').read_text()
           manifest = Path('android-bootstrap/app/src/main/AndroidManifest.xml').read_text()
           combined = activity + '\n' + device
-          required = [
-              'GITHUB_APP_CLIENT_ID',
-              'https://github.com/login/device/code',
-              'https://github.com/login/oauth/access_token',
-              'urn:ietf:params:oauth:grant-type:device_code',
-              'sessionToken',
-          ]
+          required = ['GITHUB_APP_CLIENT_ID','https://github.com/login/device/code','https://github.com/login/oauth/access_token','urn:ietf:params:oauth:grant-type:device_code','sessionToken']
           missing = [x for x in required if x not in combined]
-          if missing:
-              raise SystemExit('Missing GitHub App auth marker(s): ' + ', '.join(missing))
+          if missing: raise SystemExit('Missing GitHub App auth marker(s): ' + ', '.join(missing))
           forbidden = ['BEGIN RSA PRIVATE KEY','BEGIN PRIVATE KEY','client_secret=', 'github_pat_']
           exposed = [x for x in forbidden if x in combined or x in manifest]
-          if exposed:
-              raise SystemExit('Secret-bearing GitHub auth material must not be bundled: ' + ', '.join(exposed))
+          if exposed: raise SystemExit('Secret-bearing GitHub auth material must not be bundled: ' + ', '.join(exposed))
           match = re.search(r'GITHUB_APP_CLIENT_ID="([^"]+)"', activity)
           if not match or not re.fullmatch(r'Iv[0-9A-Za-z]{18}', match.group(1)):
               raise SystemExit('Configured public GitHub App Client ID is missing or malformed')
@@ -113,8 +121,7 @@ jobs:
           policy = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderEconomicsPolicy.java').read_text()
           registry = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderRegistry.java').read_text()
           for marker in ['zero-cost','BYOK']:
-              if marker.lower() not in (policy + registry).lower():
-                  raise SystemExit('Provider economics contract missing marker: ' + marker)
+              if marker.lower() not in (policy + registry).lower(): raise SystemExit('Provider economics contract missing marker: ' + marker)
           print('Zero-cost default / optional BYOK contract present')
           PY
 
@@ -124,36 +131,20 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import json, re, urllib.error, urllib.parse, urllib.request
-
           activity = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
           match = re.search(r'GITHUB_APP_CLIENT_ID="([^"]+)"', activity)
-          if not match:
-              raise SystemExit('No GitHub App Client ID configured in AIDaoActivityV6')
+          if not match: raise SystemExit('No GitHub App Client ID configured in AIDaoActivityV6')
           client_id = match.group(1)
           body = urllib.parse.urlencode({'client_id': client_id}).encode()
-          request = urllib.request.Request(
-              'https://github.com/login/device/code',
-              data=body,
-              headers={
-                  'Accept': 'application/json',
-                  'Content-Type': 'application/x-www-form-urlencoded',
-                  'User-Agent': 'AIDao-V1-Release-Gate'
-              },
-              method='POST')
+          request = urllib.request.Request('https://github.com/login/device/code', data=body, headers={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'AIDao-V1-Release-Gate'}, method='POST')
           try:
-              with urllib.request.urlopen(request, timeout=20) as response:
-                  payload = json.loads(response.read().decode())
+              with urllib.request.urlopen(request, timeout=20) as response: payload = json.loads(response.read().decode())
           except urllib.error.HTTPError as exc:
               detail = exc.read().decode(errors='replace')
-              raise SystemExit(
-                  f'LIVE DEVICE FLOW PREFLIGHT FAILED HTTP {exc.code}. '
-                  'Verify the public Client ID and enable Device Flow in the AIDao GitHub App registration. '
-                  f'GitHub response: {detail[:300]}')
+              raise SystemExit(f'LIVE DEVICE FLOW PREFLIGHT FAILED HTTP {exc.code}. Verify the public Client ID and enable Device Flow in the AIDao GitHub App registration. GitHub response: {detail[:300]}')
           required = ['device_code','user_code','verification_uri','expires_in','interval']
           missing = [key for key in required if not payload.get(key)]
-          if missing:
-              raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: GitHub response missing ' + ', '.join(missing))
-          if 'github.com/login/device' not in payload['verification_uri']:
-              raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: unexpected verification URI')
+          if missing: raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: GitHub response missing ' + ', '.join(missing))
+          if 'github.com/login/device' not in payload['verification_uri']: raise SystemExit('LIVE DEVICE FLOW PREFLIGHT FAILED: unexpected verification URI')
           print('STRICT V1 RELEASE PREFLIGHT PASSED: live GitHub App Device Flow issued a device code')
           PY
