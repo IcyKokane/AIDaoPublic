@@ -16,6 +16,7 @@ on:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
       - 'acceptance/GenerateFidelitySampleProject.java'
       - 'acceptance/GeneralRequestFidelityAcceptance.java'
+      - 'acceptance/GeneratedMutationPersistenceAcceptance.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
   workflow_dispatch:
 
@@ -52,10 +53,13 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GenerateFidelitySampleProject.java \
-            acceptance/GeneralRequestFidelityAcceptance.java
+            acceptance/GeneralRequestFidelityAcceptance.java \
+            acceptance/GeneratedMutationPersistenceAcceptance.java
 
       - name: Run real-device prompt fidelity regressions
-        run: java -cp build/fidelity-generator dev.thefoolish.aidao.GeneralRequestFidelityAcceptance
+        run: |
+          java -cp build/fidelity-generator dev.thefoolish.aidao.GeneralRequestFidelityAcceptance
+          java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedMutationPersistenceAcceptance
 
       - name: Generate fidelity acceptance Android project
         run: |
