@@ -28,9 +28,28 @@ final class GeneratedProject {
             if (path != null && path.endsWith("/LocalStore.java")) {
                 out = out.replace("public void text(String k,String v)", "public void putText(String k,String v)");
             }
-            out = out.replace("store.text(\"last_episode\"", "store.putText(\"last_episode\"");
-            out = out.replace("store.text(\"last_surface\"", "store.putText(\"last_surface\"");
+
+            // The generator historically exposed text(key, default) as the string getter
+            // and also emitted text(key, value) for mutations. Once the setter is normalized
+            // to putText, mutation call-sites must follow it or they compile as getter calls
+            // and silently discard user data. Keep these replacements narrow to known mutation
+            // keys so read paths continue using text(key, default).
+            String[] persistedTextKeys = {
+                    "last_episode", "last_surface", "documents", "active_note",
+                    "note_title_", "note_body_", "workout_history"
+            };
+            for (String key : persistedTextKeys) {
+                out = out.replace("store.text(\"" + key + "\"", "store.putText(\"" + key + "\"");
+            }
+            // Restore known getter expressions that share a mutation-key prefix.
             out = out.replace("String last=store.putText(\"last_episode\",\"\")", "String last=store.text(\"last_episode\",\"\")");
+            out = out.replace("String docs=store.putText(\"documents\",\"\")", "String docs=store.text(\"documents\",\"\")");
+            out = out.replace("String id=store.putText(\"active_note\",\"default\")", "String id=store.text(\"active_note\",\"default\")");
+            out = out.replace("title.setText(store.putText(\"note_title_\"+id,\"\"))", "title.setText(store.text(\"note_title_\"+id,\"\"))");
+            out = out.replace("content.setText(store.putText(\"note_body_\"+id,\"\"))", "content.setText(store.text(\"note_body_\"+id,\"\"))");
+            out = out.replace("String raw=store.putText(\"workout_history\",\"\")", "String raw=store.text(\"workout_history\",\"\")");
+            out = out.replace("String history=store.putText(\"workout_history\",\"\")", "String history=store.text(\"workout_history\",\"\")");
+
             String saveButton = "Button save=button(\"Save +60s test progress\")";
             if (!out.contains("android.widget." + saveButton)) {
                 out = out.replace(saveButton, "android.widget." + saveButton);
