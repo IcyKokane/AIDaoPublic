@@ -35,6 +35,9 @@ public final class GeneralRequestFidelityAcceptance {
         requireAny(all, new String[]{"android:icon=", "android:roundIcon="}, "launcher icon declaration");
         requireAny(all.toLowerCase(), new String[]{"purple", "violet", "#6", "#7", "#8"}, "purple theme marker");
         requireAny(all.toLowerCase(), new String[]{"red", "crimson", "#e", "#f"}, "red theme marker");
+        String appScreen = content(project, "/AppScreen.java");
+        require(appScreen, "root.addView(nav,new LinearLayout.LayoutParams(dp(104),-1))", "sidebar occupies a visible side rail");
+        verifyLocalStoreApiCompatibility(project, "notepad");
     }
 
     private static void verifyWorkoutPrompt() {
@@ -54,6 +57,18 @@ public final class GeneralRequestFidelityAcceptance {
         require(all, "weight", "workout weight field");
         require(all, "reps", "workout reps field");
         requireAny(all, new String[]{"xp", "level", "stat", "growth"}, "workout RPG progression marker");
+        String appScreen = content(project, "/AppScreen.java");
+        require(appScreen, "root.addView(main,new LinearLayout.LayoutParams(-1,0,1))", "non-sidebar main content receives visible width and weighted height");
+        verifyLocalStoreApiCompatibility(project, "workout");
+    }
+
+    private static void verifyLocalStoreApiCompatibility(GeneratedProject project, String label) {
+        String store = content(project, "/LocalStore.java");
+        String all = join(project);
+        if (all.contains("store.putText(") && !store.contains("putText("))
+            throw new IllegalStateException(label + " generated source calls LocalStore.putText but LocalStore does not declare putText");
+        if (all.contains("store.putNumber(") && !store.contains("putNumber("))
+            throw new IllegalStateException(label + " generated source calls LocalStore.putNumber but LocalStore does not declare putNumber");
     }
 
     private static void assertNoFailure(GeneratedProject project, String label) {
@@ -65,6 +80,11 @@ public final class GeneralRequestFidelityAcceptance {
         StringBuilder b = new StringBuilder();
         for (GeneratedProject.FileEntry f : project.files) if (f != null && f.content != null) b.append('\n').append(f.content);
         return b.toString();
+    }
+    private static String content(GeneratedProject project, String suffix) {
+        for (GeneratedProject.FileEntry f : project.files)
+            if (f != null && f.path != null && f.path.endsWith(suffix)) return f.content == null ? "" : f.content;
+        throw new IllegalStateException("Missing generated file " + suffix);
     }
     private static void require(String source, String token, String label) {
         if (!source.toLowerCase().contains(token.toLowerCase())) throw new IllegalStateException("Missing " + label + ": " + token);
