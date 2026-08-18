@@ -21,7 +21,10 @@ public final class GenerateFidelitySampleProject {
                 "Show extension states including available, installed, enabled, disabled, and failed.",
                 "Provide Browse, Detail, Library, History, Downloads, Extensions, Repositories, and Player surfaces.",
                 "Persist favorites, history, downloads metadata, repository configuration, extension state, and resume progress locally.",
-                "Use Android-native navigation and typography, expose accessible interaction labels, and clearly identify unsupported provider capabilities instead of faking them."
+                "Use Android-native navigation and typography, expose accessible interaction labels, and clearly identify unsupported provider capabilities instead of faking them.",
+                "A favorited title must render in Library after navigation and process restart, and removal must update Library.",
+                "Repository Sync/Remove and extension Enable/Disable controls must remain visibly labeled at phone density.",
+                "Episode playback must use an actual provider-declared HTTPS media resolver when supported and clearly disable playback for metadata-only providers."
         );
         List<String> tasks = Arrays.asList(
                 "Infer a concise product identity independently of the raw request.",
@@ -30,6 +33,7 @@ public final class GenerateFidelitySampleProject {
                 "Generate Android-native media navigation and persistence.",
                 "Generate repository and extension lifecycle components.",
                 "Generate provider failure isolation and honest incomplete states.",
+                "Generate favorites round-trip rendering and provider-aware playback handoff.",
                 "Run semantic fidelity validation and Android CI."
         );
 
@@ -75,7 +79,8 @@ public final class GenerateFidelitySampleProject {
         for (String forbidden : new String[]{
                 "DemoProvider", "Origin Path", "Sky Archive", "sample data only",
                 "android.widget.android.widget.", "android.graphics.android.graphics.",
-                "android.content.android.content.", "android.app.android.app."
+                "android.content.android.content.", "android.app.android.app.",
+                "Save +60s test progress", "Playback surface placeholder"
         }) if (source.contains(forbidden)) throw new IllegalStateException("Forbidden/corrupted generated executable content survived fidelity pass: " + forbidden);
         for (String marker : new String[]{
                 "ExtensionRepositoryClient", "RepositoryStore", "RepositoriesActivity", "ExtensionRecord.State.ENABLED",
@@ -84,8 +89,12 @@ public final class GenerateFidelitySampleProject {
                 "new ArrayList<>(BuiltInProviderCatalog.providers())",
                 "setOnApplyWindowInsetsListener", "Some sources could not be reached",
                 "setContentDescription(label)", "setContentDescription(\"Open \"+names[i])",
-                "query.setContentDescription(\"Search anime\")", "c.setContentDescription(\"Open \"+a.title)",
-                "LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class"
+                "query.setContentDescription(\"Search anime\")", "setContentDescription(\"Open \"+a.title)",
+                "LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class",
+                "store.set(\"favorites\"", "Open favorite ", "Remove from Library", "Add to Library",
+                "Sync repository", "Remove repository", "Enable extension", "Disable extension", "dp(52)",
+                "playbackUrl", "supportsPlayback()", "resolveMediaUrl", "Playback: compatible",
+                "new VideoView(this)", "setVideoURI", "getCurrentPosition()", "provider returned a non-HTTPS media URL"
         }) if (!source.contains(marker)) throw new IllegalStateException("Missing semantic fidelity marker: " + marker);
 
         System.out.println("Generated fidelity acceptance project: " + project.projectName + " / " + project.packageName + " / " + project.files.size() + " files");
