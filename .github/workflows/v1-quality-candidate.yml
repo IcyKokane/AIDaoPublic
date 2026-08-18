@@ -1,0 +1,174 @@
+name: AIDao V1 Quality Candidate
+
+on:
+  push:
+    paths:
+      - '.github/workflows/v1-quality-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  candidate-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Run planner acceptance
+        run: |
+          rm -rf build/v1-candidate && mkdir -p build/v1-candidate
+          javac -d build/v1-candidate \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectPlanner.java \
+            acceptance/PlannerBehaviorAcceptance.java
+          java -cp build/v1-candidate dev.thefoolish.aidao.PlannerBehaviorAcceptance
+
+      - name: Run generated project validation acceptance
+        run: |
+          rm -rf build/v1-candidate && mkdir -p build/v1-candidate
+          javac -d build/v1-candidate \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            acceptance/GeneratedProjectValidationAcceptance.java
+          java -cp build/v1-candidate dev.thefoolish.aidao.GeneratedProjectValidationAcceptance
+
+      - name: Run revision safety acceptance
+        run: |
+          rm -rf build/v1-candidate && mkdir -p build/v1-candidate
+          javac -d build/v1-candidate \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
+            acceptance/ProjectRevisionAcceptance.java
+          java -cp build/v1-candidate dev.thefoolish.aidao.ProjectRevisionAcceptance
+
+      - name: Run provider economics acceptance
+        run: |
+          rm -rf build/v1-candidate && mkdir -p build/v1-candidate
+          javac -d build/v1-candidate \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectPlanner.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ModelProvider.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalPlanningProvider.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderEconomicsPolicy.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderRegistry.java \
+            acceptance/ProviderEconomicsAcceptance.java
+          java -cp build/v1-candidate dev.thefoolish.aidao.ProviderEconomicsAcceptance
+
+      - name: Verify release-blocking source invariants
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files = list(Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao').glob('*.java'))
+          text = '\n'.join(p.read_text() for p in files)
+          forbidden = [
+              'android.widget.android.widget.',
+              'android.graphics.android.graphics.',
+              'android.content.android.content.',
+              'android.app.android.app.',
+              'BEGIN RSA PRIVATE KEY',
+              'BEGIN PRIVATE KEY',
+              'github_pat_',
+          ]
+          found = [x for x in forbidden if x in text]
+          if found:
+              raise SystemExit('Release-blocking source marker(s): ' + ', '.join(found))
+          activity = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
+          required = ['GITHUB_APP_CLIENT_ID','sessionToken','run_url','artifact_name','GeneratedProjectRepairer','BUILD BLOCKED','APK READY']
+          missing = [x for x in required if x not in activity]
+          if missing:
+              raise SystemExit('Missing V1 build-handoff marker(s): ' + ', '.join(missing))
+          print('Release-blocking source invariants passed')
+          PY
+
+      - name: Live GitHub Device Flow preflight
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re, urllib.parse, urllib.request
+          source = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
+          match = re.search(r'GITHUB_APP_CLIENT_ID="([^"]+)"', source)
+          if not match:
+              raise SystemExit('Public GitHub App Client ID missing')
+          req = urllib.request.Request(
+              'https://github.com/login/device/code',
+              data=urllib.parse.urlencode({'client_id': match.group(1)}).encode(),
+              headers={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'AIDao-V1-Quality-Candidate'},
+              method='POST')
+          with urllib.request.urlopen(req, timeout=20) as response:
+              payload = json.loads(response.read().decode())
+          for key in ['device_code','user_code','verification_uri','expires_in','interval']:
+              if not payload.get(key):
+                  raise SystemExit('Device Flow response missing ' + key)
+          print('Live GitHub Device Flow preflight passed')
+          PY
+
+      - name: Dispatch generated product quality matrix
+        id: matrix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          before=$(date -u +%s)
+          gh workflow run generated-quality-matrix.yml --ref "${GITHUB_SHA}"
+          run_id=''
+          for attempt in $(seq 1 60); do
+            runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/generated-quality-matrix.yml/runs?event=workflow_dispatch&per_page=20")
+            run_id=$(jq -r --arg sha "$GITHUB_SHA" '.workflow_runs[] | select(.head_sha==$sha) | .id' <<< "$runs" | head -n1)
+            [[ -n "$run_id" && "$run_id" != 'null' ]] && break
+            sleep 5
+          done
+          [[ -n "$run_id" && "$run_id" != 'null' ]] || { echo 'No quality-matrix workflow run appeared'; exit 1; }
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          conclusion=''
+          for attempt in $(seq 1 180); do
+            run=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")
+            status=$(jq -r '.status' <<< "$run")
+            conclusion=$(jq -r '.conclusion // ""' <<< "$run")
+            echo "quality matrix ${run_id}: ${status}${conclusion:+ / ${conclusion}}"
+            [[ "$status" == 'completed' ]] && break
+            sleep 5
+          done
+          [[ "$conclusion" == 'success' ]] || { echo "Quality matrix failed: ${conclusion:-unknown}"; exit 1; }
+          artifacts=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=20")
+          jq -e '.artifacts[] | select(.name=="generated-quality-matrix-apks")' <<< "$artifacts" >/dev/null || { echo 'Quality matrix did not publish its APK bundle'; exit 1; }
+
+      - name: Build AIDao V1 candidate APK
+        working-directory: android-bootstrap
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Mark validated candidate commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref='repos/'"${GITHUB_REPOSITORY}"'/git/refs/heads/aidao-v1-candidate-passed'
+          if gh api "$ref" >/dev/null 2>&1; then
+            gh api --method PATCH "$ref" -f sha="$GITHUB_SHA" -F force=true >/dev/null
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref='refs/heads/aidao-v1-candidate-passed' -f sha="$GITHUB_SHA" >/dev/null
+          fi
+          echo "Validated V1 candidate: $GITHUB_SHA"
+
+      - name: Upload V1 candidate APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidao-v1-quality-candidate
+          path: android-bootstrap/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
