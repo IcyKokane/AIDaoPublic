@@ -13,6 +13,7 @@ on:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ExplicitRequestFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ExplicitRequestCleanupPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
       - 'acceptance/GenerateFidelitySampleProject.java'
       - 'acceptance/GeneralRequestFidelityAcceptance.java'
@@ -21,6 +22,7 @@ on:
     paths:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ExplicitRequestFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ExplicitRequestCleanupPostProcessor.java'
       - 'acceptance/GeneralRequestFidelityAcceptance.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
   workflow_dispatch:
@@ -56,6 +58,7 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ExplicitRequestFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ExplicitRequestCleanupPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GenerateFidelitySampleProject.java \
             acceptance/GeneralRequestFidelityAcceptance.java
