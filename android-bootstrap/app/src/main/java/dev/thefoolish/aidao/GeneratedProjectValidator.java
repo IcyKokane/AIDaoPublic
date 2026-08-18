@@ -9,10 +9,7 @@ import java.util.regex.Pattern;
 
 /**
  * Deterministic release-oriented validation for generated Android source trees.
- *
- * This validator inspects source text only. It never executes generated content.
- * Semantic/fake-completion checks live in the fidelity validators after optional
- * post-processing; this structural layer stays safe for legacy generation harnesses.
+ * Structural safety and basic semantic honesty are enforced before trusted CI.
  */
 final class GeneratedProjectValidator {
     private static final int MAX_FILE_COUNT = 400;
@@ -32,6 +29,14 @@ final class GeneratedProjectValidator {
             "android.graphics.android.graphics.",
             "android.content.android.content.",
             "android.app.android.app."
+    };
+
+    private static final String[] PLACEHOLDER_COMPLETION_MARKERS = {
+            "Save local sample state",
+            "placeholder data",
+            "sample data only",
+            "Playback surface placeholder",
+            "DemoProvider"
     };
 
     static final class Result {
@@ -65,6 +70,7 @@ final class GeneratedProjectValidator {
         Set<String> seen = new HashSet<>();
         long totalChars = 0L;
         boolean corruptJava = false;
+        boolean placeholderCompletion = false;
         for (GeneratedProject.FileEntry file : files) {
             if (file == null || file.path == null || file.path.trim().isEmpty()) { notes.add("FAIL generated file has an empty path"); ok = false; continue; }
             if (unsafePath(file.path)) { notes.add("FAIL unsafe generated path: " + file.path); ok = false; }
@@ -72,14 +78,21 @@ final class GeneratedProjectValidator {
             if (file.content == null) { notes.add("FAIL null generated content: " + file.path); ok = false; continue; }
             if (file.content.indexOf('\u0000') >= 0) { notes.add("FAIL NUL byte marker in generated text: " + file.path); ok = false; }
             if (file.content.length() > MAX_FILE_CHARS) { notes.add("FAIL generated file exceeds bounded text size: " + file.path); ok = false; }
-            if (file.path.endsWith(".java")) for (String marker : CORRUPTED_JAVA_MARKERS) if (file.content.contains(marker)) {
-                notes.add("FAIL corrupted Java package qualifier '" + marker + "' in " + file.path); ok = false; corruptJava = true;
+            if (file.path.endsWith(".java")) {
+                for (String marker : CORRUPTED_JAVA_MARKERS) if (file.content.contains(marker)) {
+                    notes.add("FAIL corrupted Java package qualifier '" + marker + "' in " + file.path); ok = false; corruptJava = true;
+                }
+                if (file.path.startsWith("app/src/main/java/")) for (String marker : PLACEHOLDER_COMPLETION_MARKERS) if (file.content.contains(marker)) {
+                    notes.add("FAIL executable generated source still contains placeholder completion marker '" + marker + "' in " + file.path);
+                    ok = false; placeholderCompletion = true;
+                }
             }
             totalChars += file.content.length();
         }
         if (totalChars > MAX_TOTAL_CHARS) { notes.add("FAIL generated tree exceeds bounded total text size: " + totalChars + " characters"); ok = false; }
         else notes.add("PASS bounded generated source size");
         if (!corruptJava) notes.add("PASS generated Java package-qualifier hygiene");
+        if (!placeholderCompletion) notes.add("PASS executable source contains no fake-completion placeholders");
 
         String[] required = {"settings.gradle.kts","build.gradle.kts","app/build.gradle.kts","app/src/main/AndroidManifest.xml","app/src/main/res/values/strings.xml","app/src/main/res/values/styles.xml"};
         for (String path : required) {
