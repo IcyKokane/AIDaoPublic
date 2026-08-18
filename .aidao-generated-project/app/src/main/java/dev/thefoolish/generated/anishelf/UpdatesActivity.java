@@ -1,0 +1,2 @@
+package dev.thefoolish.generated.anishelf;
+public final class UpdatesActivity extends AppScreen{protected void render(){title("Updates");subtitle("Recent episode and catalog changes from enabled sources appear here after items are added to your library.");section("Library updates");body.addView(card("Nothing new yet","Add titles to Library, then refresh their enabled providers to track newly reported episodes."));}}
