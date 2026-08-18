@@ -101,10 +101,13 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import json, re, urllib.error, urllib.parse, urllib.request
-          source = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
-          match = re.search(r'GITHUB_APP_CLIENT_ID="([^"]+)"', source)
+          # GitHubDeviceAuthClient is the runtime source of truth. AIDaoActivityV6
+          # passes a legacy argument for API compatibility, but begin()/pollOnce()
+          # deliberately use AIDAO_GITHUB_APP_CLIENT_ID internally.
+          source = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GitHubDeviceAuthClient.java').read_text()
+          match = re.search(r'AIDAO_GITHUB_APP_CLIENT_ID\s*=\s*"([^"]+)"', source)
           if not match:
-              raise SystemExit('Public GitHub App Client ID missing')
+              raise SystemExit('Canonical public GitHub App Client ID missing')
           client_id = match.group(1)
           req = urllib.request.Request(
               'https://github.com/login/device/code',
@@ -116,11 +119,11 @@ jobs:
                   payload = json.loads(response.read().decode())
           except urllib.error.HTTPError as exc:
               detail = exc.read().decode(errors='replace')
-              raise SystemExit(f'LIVE DEVICE FLOW PREFLIGHT FAILED HTTP {exc.code} for Client ID {client_id}: {detail[:300]}')
+              raise SystemExit(f'LIVE DEVICE FLOW PREFLIGHT FAILED HTTP {exc.code} for canonical Client ID {client_id}: {detail[:300]}')
           for key in ['device_code','user_code','verification_uri','expires_in','interval']:
               if not payload.get(key):
                   raise SystemExit('Device Flow response missing ' + key)
-          print('Live GitHub Device Flow preflight passed')
+          print('Live GitHub Device Flow preflight passed using canonical runtime Client ID')
           PY
 
       - name: Dispatch generated product quality matrix
@@ -191,8 +194,8 @@ jobs:
         if: always() && steps.matrix.outcome == 'success' && steps.fidelity.outcome == 'success'
         run: |
           if [[ "${{ steps.device_flow.outcome }}" != "success" ]]; then
-            echo "All local/generated quality gates passed, but live GitHub Device Flow is not issuing device codes."
-            echo "The GitHub App Device Flow setting or embedded public Client ID must be corrected before V1 can be marked validated."
+            echo "All local/generated quality gates passed, but live GitHub Device Flow is not issuing device codes from the canonical runtime Client ID."
+            echo "The GitHub App Device Flow setting or canonical embedded public Client ID must be corrected before V1 can be marked validated."
             exit 1
           fi
 
