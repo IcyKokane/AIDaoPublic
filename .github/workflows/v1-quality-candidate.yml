@@ -95,21 +95,28 @@ jobs:
         run: python3 acceptance/release_source_invariants.py
 
       - name: Live GitHub Device Flow preflight
+        id: device_flow
+        continue-on-error: true
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import json, re, urllib.parse, urllib.request
+          import json, re, urllib.error, urllib.parse, urllib.request
           source = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
           match = re.search(r'GITHUB_APP_CLIENT_ID="([^"]+)"', source)
           if not match:
               raise SystemExit('Public GitHub App Client ID missing')
+          client_id = match.group(1)
           req = urllib.request.Request(
               'https://github.com/login/device/code',
-              data=urllib.parse.urlencode({'client_id': match.group(1)}).encode(),
+              data=urllib.parse.urlencode({'client_id': client_id}).encode(),
               headers={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'AIDao-V1-Quality-Candidate'},
               method='POST')
-          with urllib.request.urlopen(req, timeout=20) as response:
-              payload = json.loads(response.read().decode())
+          try:
+              with urllib.request.urlopen(req, timeout=20) as response:
+                  payload = json.loads(response.read().decode())
+          except urllib.error.HTTPError as exc:
+              detail = exc.read().decode(errors='replace')
+              raise SystemExit(f'LIVE DEVICE FLOW PREFLIGHT FAILED HTTP {exc.code} for Client ID {client_id}: {detail[:300]}')
           for key in ['device_code','user_code','verification_uri','expires_in','interval']:
               if not payload.get(key):
                   raise SystemExit('Device Flow response missing ' + key)
@@ -180,7 +187,17 @@ jobs:
         working-directory: android-bootstrap
         run: gradle :app:assembleDebug --stacktrace
 
+      - name: Enforce live Device Flow gate
+        if: always() && steps.matrix.outcome == 'success' && steps.fidelity.outcome == 'success'
+        run: |
+          if [[ "${{ steps.device_flow.outcome }}" != "success" ]]; then
+            echo "All local/generated quality gates passed, but live GitHub Device Flow is not issuing device codes."
+            echo "The GitHub App Device Flow setting or embedded public Client ID must be corrected before V1 can be marked validated."
+            exit 1
+          fi
+
       - name: Mark validated candidate commit
+        if: success()
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -198,6 +215,7 @@ jobs:
           echo "Validated V1 candidate: $GITHUB_SHA / run $GITHUB_RUN_ID"
 
       - name: Upload V1 candidate APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: aidao-v1-quality-candidate
