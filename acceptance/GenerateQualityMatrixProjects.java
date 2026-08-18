@@ -54,8 +54,8 @@ public final class GenerateQualityMatrixProjects {
                 ),
                 new Sample(
                         "commerce", "Counter Cart",
-                        "Build an offline product catalog and cart for planning items. Let me add products with positive prices, add them to a cart, and explicitly confirm a local test order. Do not claim payment when no payment provider is connected.",
-                        Arrays.asList("Persist products locally", "Validate positive prices", "Persist cart state", "Require explicit order confirmation", "Do not claim payment without a provider"),
+                        "Build an offline product catalog and cart for planning purchases. Let me add products with positive prices, add them to a cart, and explicitly confirm a local test order. Do not claim payment or spending when no payment provider is connected.",
+                        Arrays.asList("Persist products locally", "Validate positive prices", "Persist cart state", "Require explicit order confirmation", "Do not claim payment or spending without a provider"),
                         "Add product", "catalog_items", "Add to cart", "cart_items", "Place local test order", "No payment provider is connected", "OrdersActivity.class"
                 )
         );
