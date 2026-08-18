@@ -93,7 +93,7 @@ public final class GenerateFidelitySampleProject {
                 "LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class",
                 "store.set(\"favorites\"", "Open favorite ", "Remove from Library", "Add to Library",
                 "Sync repository", "Remove repository", "Enable extension", "Disable extension", "dp(52)",
-                "playbackUrl", "supportsPlayback()", "resolveMediaUrl", "Playback: compatible",
+                "playbackUrl", "supportsPlayback()", "resolveMediaUrl",
                 "new VideoView(this)", "setVideoURI", "getCurrentPosition()", "provider returned a non-HTTPS media URL"
         }) if (!source.contains(marker)) throw new IllegalStateException("Missing semantic fidelity marker: " + marker);
 

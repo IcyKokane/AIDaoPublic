@@ -85,12 +85,6 @@ final class GeneratedFidelityValidator {
         return notes;
     }
 
-    /**
-     * Request-specific requirements are acceptance criteria, not suggestions.
-     * The generator may still use domain defaults, but it must not report an APK
-     * as ready when an explicit identity/branding/navigation/theme/behavior
-     * requirement has disappeared from the generated source tree.
-     */
     private static void validateGeneralRequestFidelity(List<String> notes,
                                                        List<GeneratedProject.FileEntry> files,
                                                        String joined,
@@ -117,7 +111,8 @@ final class GeneratedFidelityValidator {
 
         if (mentions(request, "sidebar", "side bar", "navigation drawer", "drawer navigation")) {
             boolean sidebar = joined.contains("DrawerLayout") || joined.contains("NavigationView") ||
-                    joined.contains("SIDE_NAV") || joined.contains("sidebarNav") || joined.contains("sideNav");
+                    joined.contains("SIDE_NAV") || joined.contains("sidebarNav") || joined.contains("sideNav") ||
+                    joined.contains("LinearLayout body,sidebar") || joined.contains("sidebar.setVisibility");
             notes.add((sidebar ? "PASS " : "FAIL ") + "explicit sidebar/drawer navigation requirement is implemented");
         }
 

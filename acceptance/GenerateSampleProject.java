@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/** CI-only acceptance harness for the deterministic local source generator. */
+/** CI-only acceptance harness for the production generated-source pipeline. */
 public final class GenerateSampleProject {
     public static void main(String[] args) throws Exception {
         if (args.length != 1) throw new IllegalArgumentException("Expected output directory");
@@ -19,20 +19,21 @@ public final class GenerateSampleProject {
                 "Provide a searchable anime catalog and separate detail pages with episode navigation.",
                 "Persist favorites, watch history, and per-episode resume progress locally.",
                 "Keep media providers behind replaceable interfaces with visible health/failure states.",
-                "Provide separate Catalog, Detail, Library, History, Providers, and Player screens.",
+                "Provide separate Browse, Detail, Library, History, Downloads, Extensions, Repositories, and Player screens.",
+                "Use reviewed catalog providers plus compatible repository providers and never substitute fabricated sample entries.",
                 "Generate reusable Android UI/data architecture, resources, and manifest navigation."
         );
         List<String> tasks = Arrays.asList(
                 "Create the Android application shell and reusable screen architecture.",
-                "Define anime, episode, provider, library, and watch-progress models.",
-                "Build catalog, detail, library, history, provider, and player flows.",
+                "Define anime, provider, library, extension, and watch-progress models.",
+                "Build browse, detail, library, history, download, extension, repository, and player flows.",
                 "Persist favorites and watch progress locally.",
-                "Run Android CI and verify the debug APK."
+                "Run semantic fidelity validation and Android CI."
         );
 
         GeneratedProject project = new LocalSourceGenerator().generate(
                 "AIDao V1 Acceptance Anime App",
-                "Build a nontrivial Android anime browsing app with search, detail pages, episode buttons, favorites, history, provider isolation and resumable playback state. This proves AIDao-generated multi-screen source compiles into a real APK.",
+                "Build a nontrivial Android anime browsing app with search, detail pages, episode buttons, favorites, history, provider isolation and resumable playback. Use repository based providers where compatible. This proves AIDao-generated multi-screen source compiles into a real APK.",
                 requirements,
                 tasks
         );
@@ -45,22 +46,26 @@ public final class GenerateSampleProject {
         }
 
         requireVerified(project, "media acceptance");
-        if (project.files.size() < 16) throw new IllegalStateException("Expected a nontrivial generated source tree, got " + project.files.size());
+        if (project.files.size() < 20) throw new IllegalStateException("Expected a nontrivial production generated source tree, got " + project.files.size());
         String root = "app/src/main/java/" + project.packageName.replace('.', '/') + "/";
         String[] requiredFiles = {
-                root + "GeneratedScreen.java", root + "LocalStore.java", root + "AppNavigator.java",
+                root + "AppScreen.java", root + "LocalStore.java", root + "AppNavigator.java",
                 root + "MainActivity.java", root + "DetailActivity.java", root + "LibraryActivity.java",
-                root + "HistoryActivity.java", root + "ProvidersActivity.java", root + "PlayerActivity.java",
-                root + "MediaProvider.java", root + "DemoProvider.java",
+                root + "HistoryActivity.java", root + "DownloadsActivity.java", root + "ProvidersActivity.java",
+                root + "RepositoriesActivity.java", root + "PlayerActivity.java", root + "MediaProvider.java",
+                root + "ExtensionRecord.java", root + "ExtensionRepositoryClient.java", root + "ExtensionManager.java",
+                root + "RepositoryMediaProvider.java", root + "BuiltInProviderCatalog.java",
+                root + "JikanCatalogProvider.java", root + "AniListCatalogProvider.java",
                 "app/src/main/res/values/colors.xml", "app/src/main/res/values/strings.xml"
         };
         for (String path : requiredFiles) if (!project.hasPath(path)) throw new IllegalStateException("Missing v1 acceptance file: " + path);
+        if (project.hasPath(root + "DemoProvider.java")) throw new IllegalStateException("Production media output must not retain DemoProvider.java");
         String manifest = project.find("app/src/main/AndroidManifest.xml").content;
-        for (String activity : new String[]{"MainActivity","DetailActivity","LibraryActivity","HistoryActivity","ProvidersActivity","PlayerActivity"})
+        for (String activity : new String[]{"MainActivity","DetailActivity","LibraryActivity","HistoryActivity","DownloadsActivity","ProvidersActivity","RepositoriesActivity","PlayerActivity"})
             if (!manifest.contains("." + activity)) throw new IllegalStateException("Manifest missing activity " + activity);
 
         verifyDomainMatrix();
-        System.out.println("Generated " + project.files.size() + " files for " + project.packageName + " with six-screen media navigation and local persistence");
+        System.out.println("Generated " + project.files.size() + " production files for " + project.packageName + " with provider-backed media navigation and local persistence");
         System.out.println("Cross-domain source-generation acceptance matrix passed");
     }
 
@@ -107,7 +112,8 @@ public final class GenerateSampleProject {
         requireVerified(project, name);
         String root = "app/src/main/java/" + project.packageName.replace('.', '/') + "/";
         if (!project.hasPath(root + "MainActivity.java")) throw new IllegalStateException(name + " missing MainActivity.java");
-        if (!project.hasPath(root + "GeneratedScreen.java")) throw new IllegalStateException(name + " missing reusable GeneratedScreen.java");
+        if (!project.hasPath(root + "AppScreen.java") && !project.hasPath(root + "GeneratedScreen.java"))
+            throw new IllegalStateException(name + " missing reusable screen architecture");
         if (!project.hasPath(root + "LocalStore.java")) throw new IllegalStateException(name + " missing LocalStore.java");
         if (!project.hasPath(root + "AppNavigator.java")) throw new IllegalStateException(name + " missing AppNavigator.java");
         for (String screen : expectedScreens) {

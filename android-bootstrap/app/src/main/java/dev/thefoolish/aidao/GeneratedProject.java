@@ -63,18 +63,17 @@ final class GeneratedProject {
     GeneratedProject(String projectName, String packageName, List<FileEntry> files, List<String> verificationNotes) {
         List<FileEntry> raw = new ArrayList<>(files == null ? Collections.emptyList() : files);
         FidelityResult fidelity = applyFidelityIfAvailable(projectName, packageName, raw);
-        FidelityResult capability = applyProviderCapabilityIntegrationIfAvailable(
-                fidelity.projectName, fidelity.packageName, fidelity.files);
-        FidelityResult nativeFidelity = applyNativeFidelityIfAvailable(
-                capability.projectName, capability.packageName, capability.files);
-        FidelityResult referenceBehavior = applyMihonBehaviorIfAvailable(
-                nativeFidelity.projectName, nativeFidelity.packageName, nativeFidelity.files);
-        FidelityResult generalProduct = applyGeneralProductIfAvailable(
-                referenceBehavior.projectName, referenceBehavior.packageName, referenceBehavior.files);
+        FidelityResult capability = applyProviderCapabilityIntegrationIfAvailable(fidelity.projectName, fidelity.packageName, fidelity.files);
+        FidelityResult nativeFidelity = applyNativeFidelityIfAvailable(capability.projectName, capability.packageName, capability.files);
+        FidelityResult referenceBehavior = applyMihonBehaviorIfAvailable(nativeFidelity.projectName, nativeFidelity.packageName, nativeFidelity.files);
+        FidelityResult generalProduct = applyGeneralProductIfAvailable(referenceBehavior.projectName, referenceBehavior.packageName, referenceBehavior.files);
+        FidelityResult explicitRequest = applyExplicitRequestFidelityIfAvailable(generalProduct.projectName, generalProduct.packageName, generalProduct.files);
+        FidelityResult cleanup = applyExplicitRequestCleanupIfAvailable(explicitRequest.projectName, explicitRequest.packageName, explicitRequest.files);
+        FidelityResult compatibility = applyCompileCompatibilityIfAvailable(cleanup.projectName, cleanup.packageName, cleanup.files);
 
-        this.projectName = generalProduct.projectName;
-        this.packageName = generalProduct.packageName;
-        List<FileEntry> immutableSource = new ArrayList<>(generalProduct.files == null ? Collections.emptyList() : generalProduct.files);
+        this.projectName = compatibility.projectName;
+        this.packageName = compatibility.packageName;
+        List<FileEntry> immutableSource = new ArrayList<>(compatibility.files == null ? Collections.emptyList() : compatibility.files);
         this.files = Collections.unmodifiableList(immutableSource);
 
         List<String> notes = new ArrayList<>();
@@ -84,6 +83,9 @@ final class GeneratedProject {
         if (nativeFidelity.notes != null) notes.addAll(nativeFidelity.notes);
         if (referenceBehavior.notes != null) notes.addAll(referenceBehavior.notes);
         if (generalProduct.notes != null) notes.addAll(generalProduct.notes);
+        if (explicitRequest.notes != null) notes.addAll(explicitRequest.notes);
+        if (cleanup.notes != null) notes.addAll(cleanup.notes);
+        if (compatibility.notes != null) notes.addAll(compatibility.notes);
 
         GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(this.packageName, immutableSource);
         notes.addAll(structural.notes);
@@ -91,11 +93,6 @@ final class GeneratedProject {
         this.verificationNotes = Collections.unmodifiableList(notes);
     }
 
-    /**
-     * Wrap an already-transformed/resolved source tree without running product
-     * post-processors a second time. This is required after user overrides or
-     * bounded CI repairs so unrelated transformations cannot overwrite edits.
-     */
     static GeneratedProject resolved(String projectName, String packageName, List<FileEntry> files, List<String> verificationNotes) {
         return new GeneratedProject(projectName, packageName, files, verificationNotes, true);
     }
@@ -114,85 +111,44 @@ final class GeneratedProject {
         this.verificationNotes = Collections.unmodifiableList(notes);
     }
 
-    @SuppressWarnings("unchecked")
+    private static FidelityResult invokeOptional(String className, String failureLabel, String projectName, String packageName, List<FileEntry> raw) {
+        try {
+            Class<?> type = Class.forName(className);
+            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
+            process.setAccessible(true);
+            return readResult(process.invoke(null, projectName, packageName, raw));
+        } catch (ClassNotFoundException unavailableInLegacyHarness) {
+            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
+        } catch (Exception brokenModule) {
+            List<String> notes = new ArrayList<>();
+            notes.add("FAIL " + failureLabel + ": " + brokenModule.getClass().getSimpleName());
+            return new FidelityResult(projectName, packageName, raw, notes);
+        }
+    }
+
     private static FidelityResult applyFidelityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
-        try {
-            Class<?> type = Class.forName("dev.thefoolish.aidao.GeneratedProjectFidelityPostProcessor");
-            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
-            process.setAccessible(true);
-            Object result = process.invoke(null, projectName, packageName, raw);
-            return readResult(result);
-        } catch (ClassNotFoundException unavailableInLegacyHarness) {
-            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
-        } catch (Exception brokenFidelityModule) {
-            List<String> notes = new ArrayList<>();
-            notes.add("FAIL generated-app fidelity transformation failed: " + brokenFidelityModule.getClass().getSimpleName());
-            return new FidelityResult(projectName, packageName, raw, notes);
-        }
+        return invokeOptional("dev.thefoolish.aidao.GeneratedProjectFidelityPostProcessor", "generated-app fidelity transformation failed", projectName, packageName, raw);
     }
-
     private static FidelityResult applyProviderCapabilityIntegrationIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
-        try {
-            Class<?> type = Class.forName("dev.thefoolish.aidao.ProviderCapabilityIntegrator");
-            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
-            process.setAccessible(true);
-            Object result = process.invoke(null, projectName, packageName, raw);
-            return readResult(result);
-        } catch (ClassNotFoundException unavailableInLegacyHarness) {
-            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
-        } catch (Exception brokenCapabilityModule) {
-            List<String> notes = new ArrayList<>();
-            notes.add("FAIL provider capability integration failed: " + brokenCapabilityModule.getClass().getSimpleName());
-            return new FidelityResult(projectName, packageName, raw, notes);
-        }
+        return invokeOptional("dev.thefoolish.aidao.ProviderCapabilityIntegrator", "provider capability integration failed", projectName, packageName, raw);
     }
-
     private static FidelityResult applyNativeFidelityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
-        try {
-            Class<?> type = Class.forName("dev.thefoolish.aidao.NativeFidelityPostProcessor");
-            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
-            process.setAccessible(true);
-            Object result = process.invoke(null, projectName, packageName, raw);
-            return readResult(result);
-        } catch (ClassNotFoundException unavailableInLegacyHarness) {
-            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
-        } catch (Exception brokenNativeFidelityModule) {
-            List<String> notes = new ArrayList<>();
-            notes.add("FAIL native Android fidelity transformation failed: " + brokenNativeFidelityModule.getClass().getSimpleName());
-            return new FidelityResult(projectName, packageName, raw, notes);
-        }
+        return invokeOptional("dev.thefoolish.aidao.NativeFidelityPostProcessor", "native Android fidelity transformation failed", projectName, packageName, raw);
     }
-
     private static FidelityResult applyMihonBehaviorIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
-        try {
-            Class<?> type = Class.forName("dev.thefoolish.aidao.MihonBehaviorPostProcessor");
-            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
-            process.setAccessible(true);
-            Object result = process.invoke(null, projectName, packageName, raw);
-            return readResult(result);
-        } catch (ClassNotFoundException unavailableInLegacyHarness) {
-            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
-        } catch (Exception brokenReferenceProfile) {
-            List<String> notes = new ArrayList<>();
-            notes.add("FAIL reference-app behavior transformation failed: " + brokenReferenceProfile.getClass().getSimpleName());
-            return new FidelityResult(projectName, packageName, raw, notes);
-        }
+        return invokeOptional("dev.thefoolish.aidao.MihonBehaviorPostProcessor", "reference-app behavior transformation failed", projectName, packageName, raw);
     }
-
     private static FidelityResult applyGeneralProductIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
-        try {
-            Class<?> type = Class.forName("dev.thefoolish.aidao.GeneralProductPostProcessor");
-            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
-            process.setAccessible(true);
-            Object result = process.invoke(null, projectName, packageName, raw);
-            return readResult(result);
-        } catch (ClassNotFoundException unavailableInLegacyHarness) {
-            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
-        } catch (Exception brokenProductPass) {
-            List<String> notes = new ArrayList<>();
-            notes.add("FAIL general product fidelity transformation failed: " + brokenProductPass.getClass().getSimpleName());
-            return new FidelityResult(projectName, packageName, raw, notes);
-        }
+        return invokeOptional("dev.thefoolish.aidao.GeneralProductPostProcessor", "general product fidelity transformation failed", projectName, packageName, raw);
+    }
+    private static FidelityResult applyExplicitRequestFidelityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
+        return invokeOptional("dev.thefoolish.aidao.ExplicitRequestFidelityPostProcessor", "explicit request fidelity transformation failed", projectName, packageName, raw);
+    }
+    private static FidelityResult applyExplicitRequestCleanupIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
+        return invokeOptional("dev.thefoolish.aidao.ExplicitRequestCleanupPostProcessor", "explicit request cleanup failed", projectName, packageName, raw);
+    }
+    private static FidelityResult applyCompileCompatibilityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
+        return invokeOptional("dev.thefoolish.aidao.GeneratedCompileCompatibilityPostProcessor", "generated compile compatibility pass failed", projectName, packageName, raw);
     }
 
     @SuppressWarnings("unchecked")
