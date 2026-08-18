@@ -25,8 +25,8 @@ final class RequestFidelityPostProcessor {
         boolean workout = any(request, "workout", "exercise", "reps", "weight tracking", "rpg stats");
         boolean logo = any(request, "app logo", "app icon", "launcher icon", " logo", " icon");
         boolean sidebar = any(request, "sidebar", "side bar", "navigation drawer", "drawer navigation", "side navigation");
-        boolean purple = request.contains("purple") || request.contains("violet");
-        boolean red = request.contains("red") || request.contains("crimson");
+        boolean purple = word(request, "purple") || word(request, "violet");
+        boolean red = word(request, "red") || word(request, "crimson");
         boolean lock = any(request, "lock notes", "lock note", "can't be edited", "cannot be edited", "read-only", "read only");
         if (!note && !workout && !logo && !sidebar && !purple && !red && !lock)
             return new Result(projectName, packageName, source, new ArrayList<>());
@@ -103,6 +103,7 @@ final class RequestFidelityPostProcessor {
     private static boolean hasSuffix(List<GeneratedProject.FileEntry> f, String s) { for (GeneratedProject.FileEntry x : f) if (x != null && x.path != null && x.path.endsWith(s)) return true; return false; }
     private static boolean hasPath(List<GeneratedProject.FileEntry> f, String p) { for (GeneratedProject.FileEntry x : f) if (x != null && p.equals(x.path)) return true; return false; }
     private static boolean any(String s, String... t) { for (String x : t) if (s.contains(x)) return true; return false; }
+    private static boolean word(String source, String token) { String normalized = " " + source.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", " ").trim() + " "; return normalized.contains(" " + token.toLowerCase(Locale.US) + " "); }
     private static String content(List<GeneratedProject.FileEntry> f, String p) { for (GeneratedProject.FileEntry x : f) if (x != null && p.equals(x.path) && x.content != null) return x.content; return ""; }
     private static String requestText(List<GeneratedProject.FileEntry> f) { String r = content(f, "README.md"); if (!r.isEmpty()) return r; return join(f); }
     private static String join(List<GeneratedProject.FileEntry> f) { StringBuilder b = new StringBuilder(); for (GeneratedProject.FileEntry x : f) if (x != null && x.content != null) b.append('\n').append(x.content); return b.toString(); }
