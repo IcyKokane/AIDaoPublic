@@ -87,11 +87,20 @@ jobs:
           found = [x for x in forbidden if x in text]
           if found:
               raise SystemExit('Release-blocking source marker(s): ' + ', '.join(found))
-          activity = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
-          required = ['GITHUB_APP_CLIENT_ID','sessionToken','run_url','artifact_name','GeneratedProjectRepairer','BUILD BLOCKED','APK READY']
-          missing = [x for x in required if x not in activity]
-          if missing:
-              raise SystemExit('Missing V1 build-handoff marker(s): ' + ', '.join(missing))
+          activity6 = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
+          required6 = ['GITHUB_APP_CLIENT_ID','sessionToken','run_url','artifact_name','GeneratedProjectRepairer','BUILD BLOCKED','APK READY','GeneratedProjectOverrideResolver','Manual source edits conflict with regenerated source']
+          missing6 = [x for x in required6 if x not in activity6]
+          if missing6:
+              raise SystemExit('Missing V1 build-handoff/revision marker(s): ' + ', '.join(missing6))
+          activity5 = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV5.java').read_text()
+          required5 = ['override-base::','ProjectRevisionLedger.hash','GeneratedProjectOverrideResolver','SOURCE MODIFIED']
+          missing5 = [x for x in required5 if x not in activity5]
+          if missing5:
+              raise SystemExit('Missing V1 workspace revision marker(s): ' + ', '.join(missing5))
+          validator = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java').read_text()
+          for marker in ['PLACEHOLDER_COMPLETION_MARKERS','Save local sample state','DemoProvider']:
+              if marker not in validator:
+                  raise SystemExit('Generated completion honesty gate missing: ' + marker)
           print('Release-blocking source invariants passed')
           PY
 
@@ -135,10 +144,10 @@ jobs:
           [[ -n "$run_id" && "$run_id" != 'null' ]] || { echo 'No quality-matrix workflow run appeared'; exit 1; }
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
           conclusion=''
-          # Three trusted repository_dispatch builds run sequentially. Give the
+          # Five trusted repository_dispatch builds run sequentially. Give the
           # matrix enough time to exercise real CI rather than treating a slow
           # but healthy build as a release failure.
-          for attempt in $(seq 1 720); do
+          for attempt in $(seq 1 900); do
             run=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")
             status=$(jq -r '.status' <<< "$run")
             conclusion=$(jq -r '.conclusion // ""' <<< "$run")
