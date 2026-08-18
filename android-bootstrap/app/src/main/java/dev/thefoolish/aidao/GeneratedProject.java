@@ -69,10 +69,12 @@ final class GeneratedProject {
                 capability.projectName, capability.packageName, capability.files);
         FidelityResult referenceBehavior = applyMihonBehaviorIfAvailable(
                 nativeFidelity.projectName, nativeFidelity.packageName, nativeFidelity.files);
+        FidelityResult generalProduct = applyGeneralProductIfAvailable(
+                referenceBehavior.projectName, referenceBehavior.packageName, referenceBehavior.files);
 
-        this.projectName = referenceBehavior.projectName;
-        this.packageName = referenceBehavior.packageName;
-        List<FileEntry> immutableSource = new ArrayList<>(referenceBehavior.files == null ? Collections.emptyList() : referenceBehavior.files);
+        this.projectName = generalProduct.projectName;
+        this.packageName = generalProduct.packageName;
+        List<FileEntry> immutableSource = new ArrayList<>(generalProduct.files == null ? Collections.emptyList() : generalProduct.files);
         this.files = Collections.unmodifiableList(immutableSource);
 
         List<String> notes = new ArrayList<>();
@@ -81,6 +83,7 @@ final class GeneratedProject {
         if (capability.notes != null) notes.addAll(capability.notes);
         if (nativeFidelity.notes != null) notes.addAll(nativeFidelity.notes);
         if (referenceBehavior.notes != null) notes.addAll(referenceBehavior.notes);
+        if (generalProduct.notes != null) notes.addAll(generalProduct.notes);
 
         GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(this.packageName, immutableSource);
         notes.addAll(structural.notes);
@@ -149,6 +152,22 @@ final class GeneratedProject {
         } catch (Exception brokenReferenceProfile) {
             List<String> notes = new ArrayList<>();
             notes.add("FAIL reference-app behavior transformation failed: " + brokenReferenceProfile.getClass().getSimpleName());
+            return new FidelityResult(projectName, packageName, raw, notes);
+        }
+    }
+
+    private static FidelityResult applyGeneralProductIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
+        try {
+            Class<?> type = Class.forName("dev.thefoolish.aidao.GeneralProductPostProcessor");
+            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
+            process.setAccessible(true);
+            Object result = process.invoke(null, projectName, packageName, raw);
+            return readResult(result);
+        } catch (ClassNotFoundException unavailableInLegacyHarness) {
+            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
+        } catch (Exception brokenProductPass) {
+            List<String> notes = new ArrayList<>();
+            notes.add("FAIL general product fidelity transformation failed: " + brokenProductPass.getClass().getSimpleName());
             return new FidelityResult(projectName, packageName, raw, notes);
         }
     }
