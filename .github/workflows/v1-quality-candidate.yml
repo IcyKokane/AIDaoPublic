@@ -124,8 +124,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          before=$(date -u +%s)
-          gh workflow run generated-quality-matrix.yml --ref "${GITHUB_SHA}"
+          gh workflow run generated-quality-matrix.yml --ref main
           run_id=''
           for attempt in $(seq 1 60); do
             runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/generated-quality-matrix.yml/runs?event=workflow_dispatch&per_page=20")
