@@ -1,0 +1,45 @@
+name: Apply Resolved Tree Preservation
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-resolved-tree-preservation.yml'
+      - 'scripts/apply_resolved_tree_preservation.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python scripts/apply_resolved_tree_preservation.py
+      - name: Compile preservation path
+        run: |
+          rm -rf build/resolved-tree && mkdir -p build/resolved-tree
+          javac -d build/resolved-tree \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectRepairer.java
+      - name: Commit preservation source
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectRepairer.java; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectRepairer.java
+          git commit -m 'Preserve resolved edits through bounded repair'
+          git push origin HEAD:main
