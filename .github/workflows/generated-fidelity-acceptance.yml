@@ -13,6 +13,7 @@ on:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
       - 'acceptance/GenerateFidelitySampleProject.java'
+      - 'acceptance/GeneralRequestFidelityAcceptance.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
   workflow_dispatch:
 
@@ -32,7 +33,7 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
-      - name: Generate fidelity acceptance Android project
+      - name: Compile generated-app acceptance harnesses
         run: |
           rm -rf build/fidelity-generator generated-fidelity
           mkdir -p build/fidelity-generator generated-fidelity
@@ -45,8 +46,16 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
-            acceptance/GenerateFidelitySampleProject.java
+            acceptance/GenerateFidelitySampleProject.java \
+            acceptance/GeneralRequestFidelityAcceptance.java
+
+      - name: Run real-device prompt fidelity regressions
+        run: java -cp build/fidelity-generator dev.thefoolish.aidao.GeneralRequestFidelityAcceptance
+
+      - name: Generate fidelity acceptance Android project
+        run: |
           java -cp build/fidelity-generator dev.thefoolish.aidao.GenerateFidelitySampleProject "$PWD/generated-fidelity"
           test -f generated-fidelity/app/src/main/AndroidManifest.xml
           test "$(find generated-fidelity/app/src/main/java -type f | wc -l)" -ge 21
