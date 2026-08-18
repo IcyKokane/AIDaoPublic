@@ -11,8 +11,8 @@ import java.util.regex.Pattern;
  * Deterministic release-oriented validation for generated Android source trees.
  *
  * This validator inspects source text only. It never executes generated content.
- * The goal is to reject malformed, unexpectedly privileged, or structurally
- * inconsistent source before a user can explicitly authorize a remote build.
+ * The goal is to reject malformed, unexpectedly privileged, semantically fake,
+ * or structurally inconsistent source before a user can explicitly authorize a remote build.
  */
 final class GeneratedProjectValidator {
     private static final int MAX_FILE_COUNT = 400;
@@ -25,6 +25,15 @@ final class GeneratedProjectValidator {
             "android.permission.WRITE_SECURE_SETTINGS",
             "android.permission.BIND_DEVICE_ADMIN",
             "android.permission.BIND_ACCESSIBILITY_SERVICE"
+    };
+
+    private static final String[] FORBIDDEN_GENERATED_JAVA_MARKERS = {
+            "android.widget.android.widget.",
+            "android.graphics.android.graphics.",
+            "android.content.android.content.",
+            "android.app.android.app.",
+            "Save local sample state",
+            "placeholder data"
     };
 
     static final class Result {
@@ -98,6 +107,14 @@ final class GeneratedProjectValidator {
                 notes.add("FAIL generated file exceeds bounded text size: " + file.path);
                 ok = false;
             }
+            if (file.path.endsWith(".java")) {
+                for (String marker : FORBIDDEN_GENERATED_JAVA_MARKERS) {
+                    if (file.content.contains(marker)) {
+                        notes.add("FAIL corrupted/placeholder Java marker '" + marker + "' in " + file.path);
+                        ok = false;
+                    }
+                }
+            }
             totalChars += file.content.length();
         }
         if (totalChars > MAX_TOTAL_CHARS) {
@@ -106,6 +123,7 @@ final class GeneratedProjectValidator {
         } else {
             notes.add("PASS bounded generated source size");
         }
+        if (ok || !containsForbiddenJavaMarker(files)) notes.add("PASS generated Java source hygiene markers");
 
         String[] required = {
                 "settings.gradle.kts",
@@ -218,6 +236,14 @@ final class GeneratedProjectValidator {
         }
 
         return new Result(notes, ok);
+    }
+
+    private static boolean containsForbiddenJavaMarker(List<GeneratedProject.FileEntry> files) {
+        for (GeneratedProject.FileEntry file : files) {
+            if (file == null || file.path == null || file.content == null || !file.path.endsWith(".java")) continue;
+            for (String marker : FORBIDDEN_GENERATED_JAVA_MARKERS) if (file.content.contains(marker)) return true;
+        }
+        return false;
     }
 
     private static boolean unsafePath(String path) {
