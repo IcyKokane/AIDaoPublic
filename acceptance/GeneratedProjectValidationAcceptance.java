@@ -6,9 +6,13 @@ import java.util.List;
 /** CI-only acceptance coverage for structural validation of generated projects. */
 public final class GeneratedProjectValidationAcceptance {
     public static void main(String[] args) {
+        // Keep this acceptance focused on the structural validator itself. Media
+        // capability/fidelity modules have their own end-to-end acceptance workflow;
+        // using a non-media product here makes missing optional reflective modules
+        // impossible to mask or misdiagnose as a structural-validation failure.
         List<String> requirements = Arrays.asList(
-                "Provide a searchable anime catalog, detail pages, favorites, history, providers, and playback.",
-                "Persist watch progress locally and isolate provider failures.",
+                "Provide local transactions, monthly budgeting, and reports.",
+                "Persist finance state locally and validate user-entered amounts.",
                 "Generate multiple Android screens, resources, manifest declarations, and reusable navigation."
         );
         List<String> tasks = Arrays.asList(
@@ -19,7 +23,7 @@ public final class GeneratedProjectValidationAcceptance {
 
         GeneratedProject good = new LocalSourceGenerator().generate(
                 "AIDao V1 Validation Sample",
-                "Create a multi-screen anime app with search, detail, favorites, watch history, provider isolation and playback.",
+                "Create a multi-screen offline expense and budget app with transactions, budget controls, reports, persistence, and input validation.",
                 requirements,
                 tasks
         );
