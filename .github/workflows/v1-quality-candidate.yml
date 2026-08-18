@@ -135,7 +135,10 @@ jobs:
           [[ -n "$run_id" && "$run_id" != 'null' ]] || { echo 'No quality-matrix workflow run appeared'; exit 1; }
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
           conclusion=''
-          for attempt in $(seq 1 180); do
+          # Three trusted repository_dispatch builds run sequentially. Give the
+          # matrix enough time to exercise real CI rather than treating a slow
+          # but healthy build as a release failure.
+          for attempt in $(seq 1 720); do
             run=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")
             status=$(jq -r '.status' <<< "$run")
             conclusion=$(jq -r '.conclusion // ""' <<< "$run")
@@ -146,6 +149,36 @@ jobs:
           [[ "$conclusion" == 'success' ]] || { echo "Quality matrix failed: ${conclusion:-unknown}"; exit 1; }
           artifacts=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=20")
           jq -e '.artifacts[] | select(.name=="generated-quality-matrix-apks")' <<< "$artifacts" >/dev/null || { echo 'Quality matrix did not publish its APK bundle'; exit 1; }
+
+      - name: Dispatch provider-backed media fidelity acceptance
+        id: fidelity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run generated-fidelity-acceptance.yml --ref main
+          run_id=''
+          for attempt in $(seq 1 60); do
+            runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/generated-fidelity-acceptance.yml/runs?event=workflow_dispatch&per_page=20")
+            run_id=$(jq -r --arg sha "$GITHUB_SHA" '.workflow_runs[] | select(.head_sha==$sha) | .id' <<< "$runs" | head -n1)
+            [[ -n "$run_id" && "$run_id" != 'null' ]] && break
+            sleep 5
+          done
+          [[ -n "$run_id" && "$run_id" != 'null' ]] || { echo 'No fidelity workflow run appeared'; exit 1; }
+          conclusion=''
+          for attempt in $(seq 1 360); do
+            run=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")
+            status=$(jq -r '.status' <<< "$run")
+            conclusion=$(jq -r '.conclusion // ""' <<< "$run")
+            echo "fidelity ${run_id}: ${status}${conclusion:+ / ${conclusion}}"
+            [[ "$status" == 'completed' ]] && break
+            sleep 5
+          done
+          [[ "$conclusion" == 'success' ]] || { echo "Fidelity acceptance failed: ${conclusion:-unknown}"; exit 1; }
+          artifacts=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=20")
+          jq -e '.artifacts[] | select(.name=="aidao-generated-fidelity-anishelf-apk")' <<< "$artifacts" >/dev/null || { echo 'Fidelity acceptance did not publish its generated APK'; exit 1; }
+          jq -e '.artifacts[] | select(.name=="aidao-fidelity-generator-apk")' <<< "$artifacts" >/dev/null || { echo 'Fidelity acceptance did not publish its AIDao APK'; exit 1; }
 
       - name: Build AIDao V1 candidate APK
         working-directory: android-bootstrap
