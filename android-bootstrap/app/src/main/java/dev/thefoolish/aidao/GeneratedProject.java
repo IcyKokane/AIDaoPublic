@@ -35,6 +35,22 @@ final class GeneratedProject {
             if (!out.contains("android.widget." + saveButton)) {
                 out = out.replace(saveButton, "android.widget." + saveButton);
             }
+            // Generated activities may use the simple Android Button type while a
+            // provider-specific pass only imported Intent/Base64/collections. Keep
+            // this idempotent and narrow: add the import only to Java sources that
+            // actually use an unqualified Button declaration and lack widget imports.
+            if (path != null && path.endsWith(".java")
+                    && out.contains("Button ")
+                    && !out.contains("import android.widget.Button;")
+                    && !out.contains("import android.widget.*;")
+                    && !out.contains("class Button")) {
+                int packageEnd = out.indexOf(';');
+                if (packageEnd >= 0) {
+                    out = out.substring(0, packageEnd + 1)
+                            + "\nimport android.widget.Button;"
+                            + out.substring(packageEnd + 1);
+                }
+            }
             while (out.contains("android.widget.android.widget.")) {
                 out = out.replace("android.widget.android.widget.", "android.widget.");
             }
