@@ -92,39 +92,7 @@ jobs:
           java -cp build/v1-candidate dev.thefoolish.aidao.ProviderEconomicsAcceptance
 
       - name: Verify release-blocking source invariants
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          files = list(Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao').glob('*.java'))
-          text = '\n'.join(p.read_text() for p in files)
-          forbidden = [
-              'android.widget.android.widget.',
-              'android.graphics.android.graphics.',
-              'android.content.android.content.',
-              'android.app.android.app.',
-              'BEGIN RSA PRIVATE KEY',
-              'BEGIN PRIVATE KEY',
-              'github_pat_',
-          ]
-          found = [x for x in forbidden if x in text]
-          if found:
-              raise SystemExit('Release-blocking source marker(s): ' + ', '.join(found))
-          activity6 = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java').read_text()
-          required6 = ['GITHUB_APP_CLIENT_ID','sessionToken','run_url','artifact_name','GeneratedProjectRepairer','BUILD BLOCKED','APK READY','GeneratedProjectOverrideResolver','Manual source edits conflict with regenerated source']
-          missing6 = [x for x in required6 if x not in activity6]
-          if missing6:
-              raise SystemExit('Missing V1 build-handoff/revision marker(s): ' + ', '.join(missing6))
-          activity5 = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV5.java').read_text()
-          required5 = ['override-base::','ProjectRevisionLedger.hash','GeneratedProjectOverrideResolver','SOURCE MODIFIED']
-          missing5 = [x for x in required5 if x not in activity5]
-          if missing5:
-              raise SystemExit('Missing V1 workspace revision marker(s): ' + ', '.join(missing5))
-          validator = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java').read_text()
-          for marker in ['PLACEHOLDER_COMPLETION_MARKERS','Save local sample state','DemoProvider']:
-              if marker not in validator:
-                  raise SystemExit('Generated completion honesty gate missing: ' + marker)
-          print('Release-blocking source invariants passed')
-          PY
+        run: python3 acceptance/release_source_invariants.py
 
       - name: Live GitHub Device Flow preflight
         run: |
