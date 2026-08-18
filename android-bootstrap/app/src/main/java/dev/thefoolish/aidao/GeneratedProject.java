@@ -71,10 +71,12 @@ final class GeneratedProject {
                 nativeFidelity.projectName, nativeFidelity.packageName, nativeFidelity.files);
         FidelityResult generalProduct = applyGeneralProductIfAvailable(
                 referenceBehavior.projectName, referenceBehavior.packageName, referenceBehavior.files);
+        FidelityResult explicitRequest = applyExplicitRequestFidelityIfAvailable(
+                generalProduct.projectName, generalProduct.packageName, generalProduct.files);
 
-        this.projectName = generalProduct.projectName;
-        this.packageName = generalProduct.packageName;
-        List<FileEntry> immutableSource = new ArrayList<>(generalProduct.files == null ? Collections.emptyList() : generalProduct.files);
+        this.projectName = explicitRequest.projectName;
+        this.packageName = explicitRequest.packageName;
+        List<FileEntry> immutableSource = new ArrayList<>(explicitRequest.files == null ? Collections.emptyList() : explicitRequest.files);
         this.files = Collections.unmodifiableList(immutableSource);
 
         List<String> notes = new ArrayList<>();
@@ -84,6 +86,7 @@ final class GeneratedProject {
         if (nativeFidelity.notes != null) notes.addAll(nativeFidelity.notes);
         if (referenceBehavior.notes != null) notes.addAll(referenceBehavior.notes);
         if (generalProduct.notes != null) notes.addAll(generalProduct.notes);
+        if (explicitRequest.notes != null) notes.addAll(explicitRequest.notes);
 
         GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(this.packageName, immutableSource);
         notes.addAll(structural.notes);
@@ -191,6 +194,22 @@ final class GeneratedProject {
         } catch (Exception brokenProductPass) {
             List<String> notes = new ArrayList<>();
             notes.add("FAIL general product fidelity transformation failed: " + brokenProductPass.getClass().getSimpleName());
+            return new FidelityResult(projectName, packageName, raw, notes);
+        }
+    }
+
+    private static FidelityResult applyExplicitRequestFidelityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
+        try {
+            Class<?> type = Class.forName("dev.thefoolish.aidao.ExplicitRequestFidelityPostProcessor");
+            Method process = type.getDeclaredMethod("process", String.class, String.class, List.class);
+            process.setAccessible(true);
+            Object result = process.invoke(null, projectName, packageName, raw);
+            return readResult(result);
+        } catch (ClassNotFoundException unavailableInLegacyHarness) {
+            return new FidelityResult(projectName, packageName, raw, Collections.emptyList());
+        } catch (Exception brokenExplicitRequestPass) {
+            List<String> notes = new ArrayList<>();
+            notes.add("FAIL explicit request fidelity transformation failed: " + brokenExplicitRequestPass.getClass().getSimpleName());
             return new FidelityResult(projectName, packageName, raw, notes);
         }
     }
