@@ -1,6 +1,7 @@
 name: Generated App Fidelity Acceptance
 
 on:
+  pull_request:
   push:
     paths:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java'
@@ -16,6 +17,7 @@ on:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
       - 'acceptance/GenerateFidelitySampleProject.java'
       - 'acceptance/GeneralRequestFidelityAcceptance.java'
+      - 'acceptance/GenerateGeneralRequestProjects.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
   workflow_dispatch:
 
@@ -37,8 +39,8 @@ jobs:
 
       - name: Compile generated-app acceptance harnesses
         run: |
-          rm -rf build/fidelity-generator generated-fidelity
-          mkdir -p build/fidelity-generator generated-fidelity
+          rm -rf build/fidelity-generator generated-fidelity generated-request-regressions
+          mkdir -p build/fidelity-generator generated-fidelity generated-request-regressions
           javac -d build/fidelity-generator \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
@@ -52,10 +54,33 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GenerateFidelitySampleProject.java \
-            acceptance/GeneralRequestFidelityAcceptance.java
+            acceptance/GeneralRequestFidelityAcceptance.java \
+            acceptance/GenerateGeneralRequestProjects.java
 
       - name: Run real-device prompt fidelity regressions
         run: java -cp build/fidelity-generator dev.thefoolish.aidao.GeneralRequestFidelityAcceptance
+
+      - name: Generate real-device request projects
+        run: |
+          java -cp build/fidelity-generator dev.thefoolish.aidao.GenerateGeneralRequestProjects "$PWD/generated-request-regressions"
+          test -f generated-request-regressions/notepad/app/src/main/res/drawable/ic_generated_app.xml
+          grep -R -q 'android:icon="@drawable/ic_generated_app"' generated-request-regressions/notepad/app/src/main/AndroidManifest.xml
+          grep -R -q '#7C3AED' generated-request-regressions/notepad/app/src/main/res/values/colors.xml
+          grep -R -q '#EF4444' generated-request-regressions/notepad/app/src/main/res/values/colors.xml
+          grep -R -q 'note_lock_' generated-request-regressions/notepad/app/src/main/java
+          grep -R -q 'setEnabled(!locked)' generated-request-regressions/notepad/app/src/main/java
+          grep -R -q 'root.addView(nav,new LinearLayout.LayoutParams(dp(112),-1))' generated-request-regressions/notepad/app/src/main/java
+          grep -R -q 'workout_xp' generated-request-regressions/workout/app/src/main/java
+          grep -R -q 'stat_strength' generated-request-regressions/workout/app/src/main/java
+          grep -R -q 'stat_endurance' generated-request-regressions/workout/app/src/main/java
+
+      - name: Build notepad regression APK
+        working-directory: generated-request-regressions/notepad
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Build workout regression APK
+        working-directory: generated-request-regressions/workout
+        run: gradle :app:assembleDebug --stacktrace
 
       - name: Generate fidelity acceptance Android project
         run: |
@@ -78,9 +103,18 @@ jobs:
           grep -R -q 'MoreActivity' generated-fidelity/app/src/main/java
           grep -R -q 'LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class' generated-fidelity/app/src/main/java
 
-      - name: Build materially improved generated APK
+      - name: Build materially improved generated media APK
         working-directory: generated-fidelity
         run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload regression APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidao-general-request-regression-apks
+          path: |
+            generated-request-regressions/notepad/app/build/outputs/apk/debug/app-debug.apk
+            generated-request-regressions/workout/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
 
       - name: Upload fidelity APK
         uses: actions/upload-artifact@v4

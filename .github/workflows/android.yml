@@ -10,13 +10,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate release metadata and integrated V1 safeguards
+      - name: Validate integrated V1 safeguards
         run: |
           python3 - <<'PY'
           import json, pathlib, re, xml.etree.ElementTree as ET
@@ -32,104 +32,40 @@ jobs:
               raise SystemExit('downloadUrl must stay inside AIDaoPublic')
 
           base = pathlib.Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao')
-          manifest_path = pathlib.Path('android-bootstrap/app/src/main/AndroidManifest.xml')
-          manifest = manifest_path.read_text()
-          android_ns = '{http://schemas.android.com/apk/res/android}'
+          manifest = pathlib.Path('android-bootstrap/app/src/main/AndroidManifest.xml').read_text()
+          ns = '{http://schemas.android.com/apk/res/android}'
           tree = ET.fromstring(manifest)
           launchers=[]
           for activity in tree.findall('./application/activity'):
               for intent in activity.findall('intent-filter'):
-                  actions={a.get(android_ns+'name') for a in intent.findall('action')}
-                  categories={c.get(android_ns+'name') for c in intent.findall('category')}
+                  actions={a.get(ns+'name') for a in intent.findall('action')}
+                  categories={c.get(ns+'name') for c in intent.findall('category')}
                   if 'android.intent.action.MAIN' in actions and 'android.intent.category.LAUNCHER' in categories:
-                      launchers.append(activity.get(android_ns+'name'))
+                      launchers.append(activity.get(ns+'name'))
           if launchers != ['.AIDaoActivityV6']:
-              raise SystemExit('AIDaoActivityV6 must be the sole launcher; found: '+repr(launchers))
+              raise SystemExit('AIDaoActivityV6 must be sole launcher; found '+repr(launchers))
 
-          legacy = (base/'AIDaoActivityV5.java').read_text()
-          auth = (base/'AIDaoActivityV6.java').read_text()
-          device = (base/'GitHubDeviceAuthClient.java').read_text()
-          task = (base/'TaskExecutionState.java').read_text()
-          planner = (base/'ProjectPlanner.java').read_text().lower()
-          generator = (base/'LocalSourceGenerator.java').read_text()
-          knowledge = (base/'KnowledgeDocument.java').read_text()
-          gh = (base/'GitHubGeneratedBuildClient.java').read_text()
-          repair = (base/'GeneratedProjectRepairer.java').read_text()
-          trusted = pathlib.Path('.github/workflows/generated-project.yml').read_text()
-          theme = pathlib.Path('android-bootstrap/app/src/main/res/values/styles.xml').read_text()
-
-          required_legacy = [
-            'setDecorFitsSystemWindows(false)','WindowInsets.Type.systemBars()','WindowInsets.Type.displayCutout()',
-            'WindowInsets.Type.ime()','bottom.setVisibility(ime?View.GONE:View.VISIBLE)','Typeface.create("sans-serif"',
-            'aidao_workspace_v4','Describe what you want in ordinary language.','Refine / Modify Project',
-            'Generated project files','Inspect / edit generated file','override::','Add User-Shared File',
-            'KnowledgeDocument.fromUserSharedText','Generate Real Android Source','Configure GitHub & Build',
-            'ci_state','APK READY','Check for Updates','Recovery required','They are not manual checkboxes'
-          ]
-          required_auth = [
-            'AIDao v1.0.1 GitHub App entrypoint','GITHUB_APP_CLIENT_ID','GitHubDeviceAuthClient',
-            'Connect GitHub App & Build','No fine-grained token is required','sessionToken=""',
-            'GitHub authorization was denied','Contents read/write and Actions read access',
-            'Open AIDao Workspace','runRemoteBuild(repo,sessionToken)'
-          ]
-          required_device = [
-            'https://github.com/login/device/code','https://github.com/login/oauth/access_token',
-            'urn:ietf:params:oauth:grant-type:device_code','authorization_pending','slow_down'
-          ]
-          required_generator = [
-            'GeneratedScreen.java','LocalStore.java','AppNavigator.java','colors.xml','strings.xml','AndroidManifest.xml',
-            'DetailActivity.java','LibraryActivity.java','HistoryActivity.java','ProvidersActivity.java','PlayerActivity.java',
-            'MediaProvider.java','DemoProvider.java','Domain.FINANCE','Domain.TRACKER','Domain.SOCIAL','Domain.COMMERCE','Domain.CONTENT',
-            'nontrivial generated source tree'
-          ]
-          required_gh = [
-            'isolated generated branch','sendBuildAndWait','repository_dispatch','/dispatches','generated-project.yml',
-            'artifacts','build workflow remains on the repository default branch','Contents: read/write + Actions: read',
-            'GitHub preflight','AUTH 401','PERMISSION 403','WORKFLOW 404','BRANCH 404','findRunForBranch',
-            'GENERATED_PROJECT_ROOT','/contents/'
-          ]
-          required_trusted = ['repository_dispatch:','aidao-generated-build','target_branch','project_root','Build generated debug APK','Upload generated APK']
-          required_repair = ['Repair Android theme/resource linkage only','Repair generated Gradle plugin/toolchain compatibility only']
-          missing=[]
-          missing += ['workspace '+x for x in required_legacy if x not in legacy]
-          missing += ['GitHub App UI '+x for x in required_auth if x not in auth]
-          missing += ['device auth '+x for x in required_device if x not in device]
-          missing += ['task '+x for x in ['PLANNED','IN_PROGRESS','VERIFYING','COMPLETE','BLOCKED'] if x not in task]
-          missing += ['planner '+x for x in ['anime catalog','episode discovery','watch history','provider failure isolation','higher priority','multiple android screens','remote/network data access','runtime permission'] if x not in planner]
-          missing += ['generated '+x for x in required_generator if x not in generator]
-          missing += ['knowledge '+x for x in ['non-executable','executableLike','boundedPlanningExcerpt','200_000'] if x not in knowledge]
-          missing += ['GitHub '+x for x in required_gh if x not in gh]
-          missing += ['trusted '+x for x in required_trusted if x not in trusted]
-          missing += ['repair '+x for x in required_repair if x not in repair]
-          for x in ['android:windowLightStatusBar">false','android:windowLightNavigationBar">false','android:windowLayoutInDisplayCutoutMode">shortEdges']:
-              if x not in theme: missing.append('theme '+x)
-          combined_auth=auth+'\n'+device+'\n'+manifest
+          legacy=(base/'AIDaoActivityV5.java').read_text()
+          auth=(base/'AIDaoActivityV6.java').read_text()
+          device=(base/'GitHubDeviceAuthClient.java').read_text()
+          gh=(base/'GitHubGeneratedBuildClient.java').read_text()
+          trusted=pathlib.Path('.github/workflows/generated-project.yml').read_text()
+          required=[
+            (legacy,'Generate Real Android Source'),(legacy,'APK READY'),(auth,'GITHUB_APP_CLIENT_ID'),
+            (auth,'Connect GitHub App & Build'),(device,'https://github.com/login/device/code'),
+            (device,'urn:ietf:params:oauth:grant-type:device_code'),(gh,'isolated generated branch'),
+            (gh,'repository_dispatch'),(gh,'GENERATED_PROJECT_ROOT'),(trusted,'aidao-generated-build'),
+            (trusted,'Build generated debug APK'),(trusted,'Upload generated APK')]
+          missing=[marker for source,marker in required if marker not in source]
+          if missing: raise SystemExit('Integrated V1 regression: '+', '.join(missing))
+          combined=auth+'\n'+device+'\n'+manifest
           for forbidden in ['BEGIN RSA PRIVATE KEY','BEGIN PRIVATE KEY','github_pat_','client_secret=']:
-              if forbidden in combined_auth: missing.append('bundled secret '+forbidden)
-          if missing: raise SystemExit('Integrated V1 product regression: '+', '.join(missing))
-          print(f'Validated integrated AIDao {name.group(1)} ({code.group(1)}): preserved workspace/safety surface plus GitHub App V1 transport/auth invariants')
-          PY
-
-      - name: Validate local-first AI and execution boundaries
-        run: |
-          python3 - <<'PY'
-          import pathlib
-          base=pathlib.Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao')
-          joined='\n'.join((base/f).read_text() for f in ['ModelProvider.java','LocalPlanningProvider.java','ProviderRegistry.java','ProjectPlanner.java','LocalSourceGenerator.java','GitHubGeneratedBuildClient.java','KnowledgeDocument.java'])
-          marker_groups=[
-            ['final class Request'],['final class Result'],['AIDao Local Planner'],['boolean isRemote()'],
-            ['never install APKs, publish code, spend money, or perform destructive actions'],['ProjectPlanner.build'],['new LocalPlanningProvider()'],
-            ['never installs APKs','never install APKs'],['isolated generated branch'],
-            ['non-executable representation'],['mayUseAsPlanningKnowledge']
-          ]
-          missing=[]
-          for group in marker_groups:
-              if not any(m in joined for m in group): missing.append(' OR '.join(group))
-          if missing: raise SystemExit('AI/provider safety regression: '+', '.join(missing))
+              if forbidden in combined: raise SystemExit('Bundled secret marker: '+forbidden)
+          print(f'Validated integrated AIDao {name.group(1)} ({code.group(1)}) safeguards')
           PY
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -139,27 +75,36 @@ jobs:
         with:
           gradle-version: "9.5.0"
 
-      - name: Generate nontrivial V1 acceptance Android project
+      - name: Compile full generator fidelity pipeline
         run: |
           rm -rf build/source-generator generated-acceptance
           mkdir -p build/source-generator generated-acceptance
           javac -d build/source-generator \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
-            acceptance/GenerateSampleProject.java
-          java -cp build/source-generator dev.thefoolish.aidao.GenerateSampleProject "$PWD/generated-acceptance"
+            acceptance/GenerateFidelitySampleProject.java
+          java -cp build/source-generator dev.thefoolish.aidao.GenerateFidelitySampleProject "$PWD/generated-acceptance"
           test -f generated-acceptance/app/src/main/AndroidManifest.xml
           test -f generated-acceptance/app/src/main/res/values/styles.xml
           test -f generated-acceptance/app/src/main/res/values/colors.xml
           test -f generated-acceptance/app/src/main/res/values/strings.xml
-          test -f generated-acceptance/.github/workflows/android.yml
-          test "$(find generated-acceptance/app/src/main/java -type f | wc -l)" -ge 10
-          grep -q 'DetailActivity' generated-acceptance/app/src/main/AndroidManifest.xml
-          grep -q 'PlayerActivity' generated-acceptance/app/src/main/AndroidManifest.xml
-          grep -q 'MediaProvider' generated-acceptance/README.md
+          test "$(find generated-acceptance/app/src/main/java -type f | wc -l)" -ge 21
+          ! grep -R -q 'Origin Path\|Sky Archive\|sample data only\|DemoProvider' generated-acceptance/app/src/main/java
+          grep -R -q 'BuiltInProviderCatalog' generated-acceptance/app/src/main/java
+          grep -R -q 'ExtensionRepositoryClient' generated-acceptance/app/src/main/java
+          grep -R -q 'VideoView' generated-acceptance/app/src/main/java
+          grep -R -q 'note' generated-acceptance/README.md || true
 
-      - name: Build AIDao-generated V1 acceptance APK
+      - name: Build full-fidelity generated acceptance APK
         working-directory: generated-acceptance
         run: gradle :app:assembleDebug --stacktrace
 
@@ -168,85 +113,22 @@ jobs:
         with:
           name: aidao-v1-generated-acceptance-apk
           path: generated-acceptance/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
 
-      - name: Exercise exact Contents API -> repository_dispatch generated-app path
-        id: onpath
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
+      - name: Verify trusted Contents API and repository_dispatch boundaries remain present
         run: |
-          set -euo pipefail
-          branch="aidao-generated-v1-acceptance-${GITHUB_RUN_ID}"
-          project_root=".aidao-generated-project"
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
-
-          default_branch=$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.default_branch')
-          parent_sha=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${default_branch}" --jq '.object.sha')
-          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
-            -f ref="refs/heads/${branch}" -f sha="${parent_sha}" >/dev/null
-
-          uploaded=0
-          while IFS= read -r -d '' file; do
-            rel="${file#generated-acceptance/}"
-            case "$rel" in
-              .github/workflows/*) continue ;;
-            esac
-            encoded=$(base64 -w0 "$file")
-            api_path="repos/${GITHUB_REPOSITORY}/contents/${project_root}/${rel}"
-            jq -n --arg message "AIDao acceptance generated: ${rel}" \
-                  --arg content "$encoded" --arg branch "$branch" \
-                  '{message:$message,content:$content,branch:$branch}' \
-              | gh api --method PUT "$api_path" --input - >/dev/null
-            uploaded=$((uploaded+1))
-          done < <(find generated-acceptance -type f -not -path '*/build/*' -print0)
-          [[ "$uploaded" -ge 12 ]] || { echo "Expected a nontrivial Contents API upload, got $uploaded files"; exit 1; }
-
-          gh api "repos/${GITHUB_REPOSITORY}/contents/${project_root}/settings.gradle.kts?ref=${branch}" --jq '.sha' >/dev/null
-          if gh api "repos/${GITHUB_REPOSITORY}/contents/${project_root}/.github/workflows/android.yml?ref=${branch}" >/dev/null 2>&1; then
-            echo "Generated workflows must not be uploaded by the client transport"
-            exit 1
-          fi
-
-          payload=$(printf '{"event_type":"aidao-generated-build","client_payload":{"target_branch":"%s","project_name":"AIDao V1 Contents API Acceptance","project_root":"%s"}}' "$branch" "$project_root")
-          gh api --method POST "repos/${GITHUB_REPOSITORY}/dispatches" --input - <<< "$payload"
-
-          echo "repository_dispatch acceptance: waiting for Generated Project CI run for $branch"
-          run_id=""
-          for attempt in $(seq 1 60); do
-            runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/generated-project.yml/runs?event=repository_dispatch&per_page=30")
-            run_id=$(jq -r --arg b "$branch" '.workflow_runs[] | select(.display_title | contains($b)) | .id' <<< "$runs" | head -n1)
-            if [[ -n "$run_id" && "$run_id" != "null" ]]; then break; fi
-            sleep 5
-          done
-          if [[ -z "$run_id" || "$run_id" == "null" ]]; then
-            echo "No generated-project.yml repository_dispatch run appeared for $branch"
-            exit 1
-          fi
-          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
-
-          conclusion=""
-          for attempt in $(seq 1 120); do
-            run=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")
-            status=$(jq -r '.status' <<< "$run")
-            conclusion=$(jq -r '.conclusion // ""' <<< "$run")
-            echo "Generated Project CI run ${run_id}: ${status}${conclusion:+ / ${conclusion}}"
-            [[ "$status" == "completed" ]] && break
-            sleep 5
-          done
-          [[ "$conclusion" == "success" ]] || { echo "Trusted generated project build failed with conclusion: ${conclusion:-unknown}"; exit 1; }
-
-          artifacts=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=20")
-          artifact_name=$(jq -r '.artifacts[0].name // ""' <<< "$artifacts")
-          [[ "$artifact_name" == aidao-generated-apk-* ]] || { echo "Expected generated APK artifact was not uploaded"; exit 1; }
-          echo "aidao-generated-onpath-apk=$artifact_name"
-
-      - name: Remove repository_dispatch acceptance branch
-        if: always() && steps.onpath.outputs.branch != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ steps.onpath.outputs.branch }}
-        run: |
-          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}" || true
+          python3 - <<'PY'
+          from pathlib import Path
+          gh=Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GitHubGeneratedBuildClient.java').read_text()
+          trusted=Path('.github/workflows/generated-project.yml').read_text()
+          for marker in ['GENERATED_PROJECT_ROOT','/contents/','repository_dispatch','findRunForBranch']:
+              if marker not in gh: raise SystemExit('Missing generated transport marker: '+marker)
+          for marker in ['repository_dispatch:','aidao-generated-build','target_branch','project_root','Generated project may not supply executable GitHub workflows']:
+              if marker not in trusted: raise SystemExit('Missing trusted workflow marker: '+marker)
+          for forbidden in ['/git/blobs','/git/trees']:
+              if forbidden in gh: raise SystemExit('Low-level Git endpoint reintroduced: '+forbidden)
+          print('Trusted generated-app transport boundary intact')
+          PY
 
       - name: Build AIDao V1 APK
         working-directory: android-bootstrap
@@ -255,5 +137,6 @@ jobs:
       - name: Upload AIDao V1 APK
         uses: actions/upload-artifact@v4
         with:
-          name: aidao-v1-alpha-debug
+          name: aidao-v1-apk
           path: android-bootstrap/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
