@@ -62,6 +62,7 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectRepairer.java \
             acceptance/ProjectRevisionAcceptance.java
           java -cp build/v1-gate dev.thefoolish.aidao.ProjectRevisionAcceptance
 
