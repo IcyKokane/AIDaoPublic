@@ -190,11 +190,14 @@ public class AIDaoActivityV6 extends Activity {
     private GeneratedProject regenerateWithOverrides(){
         String project=prefs.getString("project_name","Project");
         GeneratedProject base=new LocalSourceGenerator().generate(project,prefs.getString("brief",""),decode(prefs.getString("requirements","")),decode(prefs.getString("tasks","")));
-        List<GeneratedProject.FileEntry> files=new ArrayList<>();
-        int edited=0;
-        for(GeneratedProject.FileEntry f:base.files){String override=prefs.getString("override::"+f.path,null);if(override!=null)edited++;files.add(new GeneratedProject.FileEntry(f.path,override==null?f.content:override,f.taskHint));}
-        List<String> notes=new ArrayList<>(base.verificationNotes);if(edited>0)notes.add("PASS "+edited+" user-controlled source override(s) included; trusted CI remains authoritative verification");
-        return new GeneratedProject(base.projectName,base.packageName,files,notes);
+        java.util.Map<String,String> overrides=new java.util.HashMap<>(),bases=new java.util.HashMap<>();
+        for(String k:new java.util.HashSet<>(prefs.getAll().keySet())){
+            if(k.startsWith("override::")){String v=prefs.getString(k,null);if(v!=null)overrides.put(k.substring("override::".length()),v);}
+            else if(k.startsWith("override-base::")){String v=prefs.getString(k,null);if(v!=null)bases.put(k.substring("override-base::".length()),v);}
+        }
+        GeneratedProjectOverrideResolver.Resolution resolution=new GeneratedProjectOverrideResolver().resolve(base,overrides,bases);
+        if(!resolution.canBuild())throw new IllegalStateException("Manual source edits conflict with regenerated source. Open Files and reset or reapply the affected edits before building.");
+        return resolution.project;
     }
 
     private void setCi(String state){prefs.edit().putString("ci_state",state).apply();runOnUiThread(()->{if(!isFinishing())render();});}
