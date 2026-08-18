@@ -45,6 +45,18 @@ public final class GenerateQualityMatrixProjects {
                         "Build an offline writing app with a document editor, local library and search. Recover an unfinished draft after an Android lifecycle interruption so writing is not lost.",
                         Arrays.asList("Persist saved documents", "Search local documents", "Recover unsaved editor draft after restart", "Validate title and content before save"),
                         "Save document", "draft_title", "draft_body", "onPause", "Search documents", "LibraryActivity.class"
+                ),
+                new Sample(
+                        "social", "Quiet Circle",
+                        "Build a private social workspace with a saved local profile and inbox-style draft/history screen. If no remote messaging backend is configured, say so explicitly instead of pretending messages were delivered, and let me clear local message history deliberately.",
+                        Arrays.asList("Persist profile fields locally", "Validate profile name", "Persist local message drafts/history", "Never fake remote delivery without a backend", "Require confirmation before clearing message history"),
+                        "Save profile", "profile_name", "Add local message", "message_log", "No remote delivery backend is configured", "SettingsActivity.class"
+                ),
+                new Sample(
+                        "commerce", "Counter Cart",
+                        "Build an offline product catalog and cart for planning purchases. Let me add products with positive prices, add them to a cart, and explicitly confirm a local test order. Do not claim payment or spending when no payment provider is connected.",
+                        Arrays.asList("Persist products locally", "Validate positive prices", "Persist cart state", "Require explicit order confirmation", "Do not claim payment or spending without a provider"),
+                        "Add product", "catalog_items", "Add to cart", "cart_items", "Place local test order", "No payment provider is connected", "OrdersActivity.class"
                 )
         );
 
