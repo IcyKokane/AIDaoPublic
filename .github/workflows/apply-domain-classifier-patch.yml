@@ -1,0 +1,38 @@
+name: Apply Domain Classifier Patch
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-domain-classifier-patch.yml'
+      - 'scripts/apply_domain_classifier_patch.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python scripts/apply_domain_classifier_patch.py
+      - name: Verify classifier source compiles
+        run: |
+          rm -rf build/domain-patch && mkdir -p build/domain-patch
+          javac -d build/domain-patch \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java
+      - name: Commit patched classifier
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java
+          git commit -m 'Use scored domain inference for mixed Android prompts'
+          git push origin HEAD:main
