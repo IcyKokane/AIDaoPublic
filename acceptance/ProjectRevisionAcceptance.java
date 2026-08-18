@@ -57,6 +57,35 @@ public final class ProjectRevisionAcceptance {
         require(userEdit.equals(refinedResolution.project.find(target).content),
                 "unrelated refinement did not preserve the user edit");
 
+        // Product post-processing must not run again after an override is resolved.
+        // Otherwise an edit to a real generated screen can be silently replaced by
+        // the deterministic product transformer before CI sees it.
+        GeneratedProject finance = new LocalSourceGenerator().generate(
+                "Revision Product Acceptance",
+                "Build an offline expense and budget app with transactions and reports.",
+                Collections.singletonList("Persist transactions and a monthly budget."),
+                Collections.singletonList("Generate and verify source."));
+        String financePath = "app/src/main/java/dev/thefoolish/generated/revisionproductacceptance/MainActivity.java";
+        GeneratedProject.FileEntry financeMain = finance.find(financePath);
+        require(financeMain != null, "missing post-processed finance main screen");
+        String productEdit = financeMain.content.replace("Overview", "Personal Overview");
+        require(!productEdit.equals(financeMain.content), "finance edit marker was not found");
+        Map<String,String> productOverrides = new HashMap<>();
+        Map<String,String> productBases = new HashMap<>();
+        productOverrides.put(financePath, productEdit);
+        productBases.put(financePath, ProjectRevisionLedger.hash(financeMain.content));
+        GeneratedProjectOverrideResolver.Resolution productResolution = resolver.resolve(finance, productOverrides, productBases);
+        require(productResolution.canBuild(), "clean product-screen override should be buildable");
+        require(productEdit.equals(productResolution.project.find(financePath).content),
+                "post-processing replaced a clean product-screen override");
+
+        GeneratedProjectRepairer.RepairResult repaired = new GeneratedProjectRepairer().repair(
+                productResolution.project,
+                "compileDebugJavaWithJavac failed while validating generated Java");
+        require(repaired.project != null, "bounded repair returned no project");
+        require(productEdit.equals(repaired.project.find(financePath).content),
+                "bounded repair destroyed an unrelated clean product-screen override");
+
         Map<String,String> staleBases = new HashMap<>(bases);
         staleBases.put(target, "0000000000000000000000000000000000000000000000000000000000000000");
         ProjectRevisionLedger.Snapshot stale = ledger.inspect(second, overrides, staleBases);
@@ -82,7 +111,7 @@ public final class ProjectRevisionAcceptance {
         }
         require(orphanSeen, "orphaned override was not surfaced in resolver conflicts");
 
-        System.out.println("Project revision acceptance passed: clean edits survive unrelated refinement; stale/orphaned edits block silent regeneration.");
+        System.out.println("Project revision acceptance passed: clean product edits survive refinement and bounded repair; stale/orphaned edits block silent regeneration.");
     }
 
     private static void require(boolean value, String message) {
