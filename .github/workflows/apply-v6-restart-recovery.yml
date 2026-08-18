@@ -1,0 +1,36 @@
+name: Apply V6 Restart Recovery
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v6-restart-recovery.yml'
+      - 'scripts/apply_v6_restart_recovery.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python scripts/apply_v6_restart_recovery.py
+      - name: Verify recovery wiring
+        run: |
+          set -euo pipefail
+          grep -q 'recoverInterruptedBuild' android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java
+          grep -q 'BUILD RECOVERY' android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java
+          grep -q 'session credentials were not stored' android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java
+      - name: Commit recovery source
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AIDaoActivityV6.java
+          git commit -m 'Recover interrupted phone build sessions safely'
+          git push origin HEAD:main
