@@ -17,6 +17,7 @@ on:
       - 'acceptance/GenerateFidelitySampleProject.java'
       - 'acceptance/GeneralRequestFidelityAcceptance.java'
       - 'acceptance/GeneratedMutationPersistenceAcceptance.java'
+      - 'acceptance/GenerateGeneralFidelityProjects.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
   workflow_dispatch:
 
@@ -38,8 +39,8 @@ jobs:
 
       - name: Compile generated-app acceptance harnesses
         run: |
-          rm -rf build/fidelity-generator generated-fidelity
-          mkdir -p build/fidelity-generator generated-fidelity
+          rm -rf build/fidelity-generator generated-fidelity generated-notepad generated-workout
+          mkdir -p build/fidelity-generator generated-fidelity generated-notepad generated-workout
           javac -d build/fidelity-generator \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
@@ -54,12 +55,38 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GenerateFidelitySampleProject.java \
             acceptance/GeneralRequestFidelityAcceptance.java \
-            acceptance/GeneratedMutationPersistenceAcceptance.java
+            acceptance/GeneratedMutationPersistenceAcceptance.java \
+            acceptance/GenerateGeneralFidelityProjects.java
 
       - name: Run real-device prompt fidelity regressions
         run: |
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneralRequestFidelityAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedMutationPersistenceAcceptance
+
+      - name: Generate real-device non-media Android projects
+        run: |
+          java -cp build/fidelity-generator dev.thefoolish.aidao.GenerateGeneralFidelityProjects "$PWD/generated-notepad" "$PWD/generated-workout"
+          test -f generated-notepad/app/src/main/AndroidManifest.xml
+          test -f generated-workout/app/src/main/AndroidManifest.xml
+          grep -R -q 'android:icon="@drawable/ic_generated_app"' generated-notepad/app/src/main/AndroidManifest.xml
+          grep -R -q 'root.addView(nav,new LinearLayout.LayoutParams(dp(104),-1))' generated-notepad/app/src/main/java
+          grep -R -q 'note_lock_' generated-notepad/app/src/main/java
+          grep -R -q 'setEnabled(false)' generated-notepad/app/src/main/java
+          grep -R -q '#7C3AED' generated-notepad/app/src/main/res generated-notepad/app/src/main/java
+          grep -R -q '#EF4444' generated-notepad/app/src/main/res generated-notepad/app/src/main/java
+          grep -R -q 'Exercise' generated-workout/app/src/main/java
+          grep -R -q 'Weight' generated-workout/app/src/main/java
+          grep -R -q 'Reps' generated-workout/app/src/main/java
+          grep -R -q 'workout_xp' generated-workout/app/src/main/java
+          grep -R -q 'store.putText("workouts"' generated-workout/app/src/main/java
+
+      - name: Build notepad real-device regression APK
+        working-directory: generated-notepad
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Build workout real-device regression APK
+        working-directory: generated-workout
+        run: gradle :app:assembleDebug --stacktrace
 
       - name: Generate fidelity acceptance Android project
         run: |
@@ -91,6 +118,15 @@ jobs:
         with:
           name: aidao-generated-fidelity-anishelf-apk
           path: generated-fidelity/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload general-fidelity regression APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidao-general-fidelity-regression-apks
+          path: |
+            generated-notepad/app/build/outputs/apk/debug/app-debug.apk
+            generated-workout/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       - name: Build AIDao APK containing fidelity generator
