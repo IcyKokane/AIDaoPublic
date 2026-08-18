@@ -63,22 +63,17 @@ final class GeneratedProject {
     GeneratedProject(String projectName, String packageName, List<FileEntry> files, List<String> verificationNotes) {
         List<FileEntry> raw = new ArrayList<>(files == null ? Collections.emptyList() : files);
         FidelityResult fidelity = applyFidelityIfAvailable(projectName, packageName, raw);
-        FidelityResult capability = applyProviderCapabilityIntegrationIfAvailable(
-                fidelity.projectName, fidelity.packageName, fidelity.files);
-        FidelityResult nativeFidelity = applyNativeFidelityIfAvailable(
-                capability.projectName, capability.packageName, capability.files);
-        FidelityResult referenceBehavior = applyMihonBehaviorIfAvailable(
-                nativeFidelity.projectName, nativeFidelity.packageName, nativeFidelity.files);
-        FidelityResult generalProduct = applyGeneralProductIfAvailable(
-                referenceBehavior.projectName, referenceBehavior.packageName, referenceBehavior.files);
-        FidelityResult explicitRequest = applyExplicitRequestFidelityIfAvailable(
-                generalProduct.projectName, generalProduct.packageName, generalProduct.files);
-        FidelityResult cleanup = applyExplicitRequestCleanupIfAvailable(
-                explicitRequest.projectName, explicitRequest.packageName, explicitRequest.files);
+        FidelityResult capability = applyProviderCapabilityIntegrationIfAvailable(fidelity.projectName, fidelity.packageName, fidelity.files);
+        FidelityResult nativeFidelity = applyNativeFidelityIfAvailable(capability.projectName, capability.packageName, capability.files);
+        FidelityResult referenceBehavior = applyMihonBehaviorIfAvailable(nativeFidelity.projectName, nativeFidelity.packageName, nativeFidelity.files);
+        FidelityResult generalProduct = applyGeneralProductIfAvailable(referenceBehavior.projectName, referenceBehavior.packageName, referenceBehavior.files);
+        FidelityResult explicitRequest = applyExplicitRequestFidelityIfAvailable(generalProduct.projectName, generalProduct.packageName, generalProduct.files);
+        FidelityResult cleanup = applyExplicitRequestCleanupIfAvailable(explicitRequest.projectName, explicitRequest.packageName, explicitRequest.files);
+        FidelityResult compatibility = applyCompileCompatibilityIfAvailable(cleanup.projectName, cleanup.packageName, cleanup.files);
 
-        this.projectName = cleanup.projectName;
-        this.packageName = cleanup.packageName;
-        List<FileEntry> immutableSource = new ArrayList<>(cleanup.files == null ? Collections.emptyList() : cleanup.files);
+        this.projectName = compatibility.projectName;
+        this.packageName = compatibility.packageName;
+        List<FileEntry> immutableSource = new ArrayList<>(compatibility.files == null ? Collections.emptyList() : compatibility.files);
         this.files = Collections.unmodifiableList(immutableSource);
 
         List<String> notes = new ArrayList<>();
@@ -90,6 +85,7 @@ final class GeneratedProject {
         if (generalProduct.notes != null) notes.addAll(generalProduct.notes);
         if (explicitRequest.notes != null) notes.addAll(explicitRequest.notes);
         if (cleanup.notes != null) notes.addAll(cleanup.notes);
+        if (compatibility.notes != null) notes.addAll(compatibility.notes);
 
         GeneratedProjectValidator.Result structural = GeneratedProjectValidator.validateRaw(this.packageName, immutableSource);
         notes.addAll(structural.notes);
@@ -150,6 +146,9 @@ final class GeneratedProject {
     }
     private static FidelityResult applyExplicitRequestCleanupIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
         return invokeOptional("dev.thefoolish.aidao.ExplicitRequestCleanupPostProcessor", "explicit request cleanup failed", projectName, packageName, raw);
+    }
+    private static FidelityResult applyCompileCompatibilityIfAvailable(String projectName, String packageName, List<FileEntry> raw) {
+        return invokeOptional("dev.thefoolish.aidao.GeneratedCompileCompatibilityPostProcessor", "generated compile compatibility pass failed", projectName, packageName, raw);
     }
 
     @SuppressWarnings("unchecked")
