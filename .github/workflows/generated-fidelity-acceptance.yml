@@ -23,6 +23,7 @@ on:
       - 'acceptance/RepositoryPlaybackHttpsAcceptance.java'
       - 'acceptance/ExplicitRequirementGateAcceptance.java'
       - 'acceptance/GeneratedHomeButtonCompilationAcceptance.java'
+      - 'acceptance/GeneratedIdentityInferenceAcceptance.java'
       - 'acceptance/GenerateGeneralFidelityProjects.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
   workflow_dispatch:
@@ -68,6 +69,7 @@ jobs:
             acceptance/RepositoryPlaybackHttpsAcceptance.java \
             acceptance/ExplicitRequirementGateAcceptance.java \
             acceptance/GeneratedHomeButtonCompilationAcceptance.java \
+            acceptance/GeneratedIdentityInferenceAcceptance.java \
             acceptance/GenerateGeneralFidelityProjects.java
 
       - name: Run real-device prompt fidelity regressions
@@ -80,6 +82,7 @@ jobs:
           java -cp build/fidelity-generator dev.thefoolish.aidao.RepositoryPlaybackHttpsAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.ExplicitRequirementGateAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedHomeButtonCompilationAcceptance
+          java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedIdentityInferenceAcceptance
 
       - name: Generate real-device non-media Android projects
         run: |
