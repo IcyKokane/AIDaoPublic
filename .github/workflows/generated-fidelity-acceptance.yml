@@ -17,6 +17,7 @@ on:
       - 'acceptance/GenerateFidelitySampleProject.java'
       - 'acceptance/GeneralRequestFidelityAcceptance.java'
       - 'acceptance/GeneratedMutationPersistenceAcceptance.java'
+      - 'acceptance/SourceGenerationHandoffAcceptance.java'
       - 'acceptance/MihonExtensionCompatibilityAcceptance.java'
       - 'acceptance/RepositoryPlaybackContractAcceptance.java'
       - 'acceptance/RepositoryPlaybackHttpsAcceptance.java'
@@ -59,6 +60,7 @@ jobs:
             acceptance/GenerateFidelitySampleProject.java \
             acceptance/GeneralRequestFidelityAcceptance.java \
             acceptance/GeneratedMutationPersistenceAcceptance.java \
+            acceptance/SourceGenerationHandoffAcceptance.java \
             acceptance/MihonExtensionCompatibilityAcceptance.java \
             acceptance/RepositoryPlaybackContractAcceptance.java \
             acceptance/RepositoryPlaybackHttpsAcceptance.java \
@@ -68,6 +70,7 @@ jobs:
         run: |
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneralRequestFidelityAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedMutationPersistenceAcceptance
+          java -cp build/fidelity-generator dev.thefoolish.aidao.SourceGenerationHandoffAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.MihonExtensionCompatibilityAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.RepositoryPlaybackContractAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.RepositoryPlaybackHttpsAcceptance
