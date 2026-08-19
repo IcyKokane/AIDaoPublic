@@ -17,6 +17,7 @@ on:
       - 'acceptance/GenerateFidelitySampleProject.java'
       - 'acceptance/GeneralRequestFidelityAcceptance.java'
       - 'acceptance/GeneratedMutationPersistenceAcceptance.java'
+      - 'acceptance/MihonExtensionCompatibilityAcceptance.java'
       - 'acceptance/GenerateGeneralFidelityProjects.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
   workflow_dispatch:
@@ -56,12 +57,14 @@ jobs:
             acceptance/GenerateFidelitySampleProject.java \
             acceptance/GeneralRequestFidelityAcceptance.java \
             acceptance/GeneratedMutationPersistenceAcceptance.java \
+            acceptance/MihonExtensionCompatibilityAcceptance.java \
             acceptance/GenerateGeneralFidelityProjects.java
 
       - name: Run real-device prompt fidelity regressions
         run: |
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneralRequestFidelityAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedMutationPersistenceAcceptance
+          java -cp build/fidelity-generator dev.thefoolish.aidao.MihonExtensionCompatibilityAcceptance
 
       - name: Generate real-device non-media Android projects
         run: |
@@ -108,6 +111,8 @@ jobs:
           grep -R -q 'UpdatesActivity' generated-fidelity/app/src/main/java
           grep -R -q 'MoreActivity' generated-fidelity/app/src/main/java
           grep -R -q 'LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class' generated-fidelity/app/src/main/java
+          grep -R -q 'Unsupported repository metadata' generated-fidelity/app/src/main/java
+          grep -R -q 'toggle.setEnabled(compatible)' generated-fidelity/app/src/main/java
 
       - name: Build materially improved generated APK
         working-directory: generated-fidelity
