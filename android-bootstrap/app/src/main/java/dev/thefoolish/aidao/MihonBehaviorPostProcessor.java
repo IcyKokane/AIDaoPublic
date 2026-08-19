@@ -47,6 +47,10 @@ final class MihonBehaviorPostProcessor {
                 content = content.replace("Search across installed sources. Built-in providers are ready immediately; repository sources stay optional and user-controlled.",
                         "Browse installed sources and search their catalogs. Built-in providers are ready immediately; additional repositories remain optional and user-controlled.");
                 content = content.replace("section(\"Results\")", "section(\"Search results\")");
+            } else if (f.path.equals(root + "ProvidersActivity.java")) {
+                String oldToggle = "Button toggle=button(x.state==ExtensionRecord.State.ENABLED?\"Disable extension\":\"Enable extension\");toggle.setMinHeight(dp(52));toggle.setContentDescription(toggle.getText());toggle.setOnClickListener(v->{ExtensionRecord.State next=x.state==ExtensionRecord.State.ENABLED?ExtensionRecord.State.DISABLED:ExtensionRecord.State.ENABLED;m.setState(x.id,next);recreate();});body.addView(toggle);";
+                String safeToggle = "boolean compatible=x.searchable();Button toggle=button(!compatible?\"Unsupported repository metadata\":x.state==ExtensionRecord.State.ENABLED?\"Disable extension\":\"Enable extension\");toggle.setMinHeight(dp(52));toggle.setContentDescription(toggle.getText());toggle.setEnabled(compatible);if(compatible)toggle.setOnClickListener(v->{ExtensionRecord.State next=x.state==ExtensionRecord.State.ENABLED?ExtensionRecord.State.DISABLED:ExtensionRecord.State.ENABLED;m.setState(x.id,next);recreate();});body.addView(toggle);if(!compatible)subtitle(\"This repository entry is visible for provenance only. AIDao cannot execute arbitrary extension APKs; add a provider with a declared HTTPS search contract to enable it.\");";
+                content = content.replace(oldToggle, safeToggle);
             }
             // Keep generated Java type names idempotent across repeated fidelity passes.
             // A prior compatibility rewrite may already qualify Button; never double-qualify it.
@@ -65,6 +69,7 @@ final class MihonBehaviorPostProcessor {
         notes.add("PASS Mihon reference intent activated behavior profile without copying Mihon branding or source code");
         notes.add("PASS bottom information architecture uses Library / Updates / History / Browse / More");
         notes.add("PASS extension and repository management moves under More instead of consuming primary navigation slots");
+        notes.add("PASS incompatible repository metadata remains visible but cannot be falsely enabled as a working extension");
         notes.add("PASS downloads remain available as a secondary surface under More");
         return new Result(projectName, packageName, out, notes);
     }
