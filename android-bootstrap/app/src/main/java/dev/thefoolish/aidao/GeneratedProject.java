@@ -28,6 +28,11 @@ final class GeneratedProject {
             if (path != null && path.endsWith("/LocalStore.java")) {
                 out = out.replace("public void text(String k,String v)", "public void putText(String k,String v)");
             }
+            if (path != null && path.endsWith("/RepositoryMediaProvider.java")) {
+                out = out.replace(
+                        "String target=expand(ext.playbackUrl,\"\",itemId,episode);if(target.endsWith(\".mp4\")",
+                        "String target=expand(ext.playbackUrl,\"\",itemId,episode);if(!target.startsWith(\"https://\"))throw new IOException(\"Playback contract must resolve to HTTPS\");if(target.endsWith(\".mp4\")");
+            }
 
             // The generator historically exposed text(key, default) as the string getter
             // and also emitted text(key, value) for mutations. Once the setter is normalized
