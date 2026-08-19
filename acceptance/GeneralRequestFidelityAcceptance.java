@@ -32,11 +32,11 @@ public final class GeneralRequestFidelityAcceptance {
         if ("Create A Notepad App That Uses A Sidebar To Navigate Different Screens".equalsIgnoreCase(identity))
             throw new IllegalStateException("Raw prompt title was reused as notepad product identity");
 
-        String all = join(project);
         String manifest = content(project, "app/src/main/AndroidManifest.xml");
         String colors = content(project, "app/src/main/res/values/colors.xml");
         String icon = content(project, "/ic_generated_app.xml");
         String appScreen = content(project, "/AppScreen.java");
+        String home = content(project, "/MainActivity.java");
         String editor = content(project, "/EditorActivity.java");
         String library = content(project, "/LibraryActivity.java");
 
@@ -48,7 +48,11 @@ public final class GeneralRequestFidelityAcceptance {
         require(colors.toUpperCase(), "#EF4444", "explicit red theme accent");
         require(appScreen, "root.setOrientation(LinearLayout.HORIZONTAL)", "sidebar root orientation");
         require(appScreen, "root.addView(nav,new LinearLayout.LayoutParams(dp(104),-1))", "sidebar occupies a visible side rail");
+        require(appScreen, "q.setBackground(round(ACCENT,14))", "requested purple accent is materially applied to primary actions");
+        require(appScreen, "brand.setTextColor(SECONDARY)", "requested secondary red accent is materially applied to branding");
         requireAny(appScreen, new String[]{"Writing", "Editor", "Search", "Library"}, "requested notepad navigation destinations");
+        require(home, "System.currentTimeMillis()", "new-note identity generation");
+        require(home, "store.putText(\"active_note\"", "new-note active identity persistence");
         requireAny(editor, new String[]{"note_lock_", "locked"}, "notepad lock-state marker");
         requireAny(editor, new String[]{"setEnabled(false)", "setFocusable(false)", "setInputType(0)"}, "locked-note edit prevention");
         require(editor, "store.putText(\"note_title_\"", "note title persistence mutation");
