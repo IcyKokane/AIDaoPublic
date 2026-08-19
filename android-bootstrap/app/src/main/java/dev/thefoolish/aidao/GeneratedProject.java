@@ -56,6 +56,21 @@ final class GeneratedProject {
             out = out.replace("String history=store.putText(\"workout_history\",\"\")", "String history=store.text(\"workout_history\",\"\")");
             out = out.replace("String old=store.putText(\"workouts\",\"\")", "String old=store.text(\"workouts\",\"\")");
 
+            // When the workout request says exercises should already be in the app,
+            // convert the legacy free-text exercise field into a concrete preset catalog.
+            // Weight and reps remain user-entered measurements and the existing persistence
+            // and RPG progression paths are preserved unchanged.
+            if (path != null && path.endsWith("/TimelineActivity.java")
+                    && out.contains("EditText exercise=field(\"Exercise\")")
+                    && out.contains("workout_xp") && out.contains("Complete set")) {
+                out = out.replace(
+                        "EditText exercise=field(\"Exercise\");EditText weight=field(\"Weight\");",
+                        "String[] exercises={\"Squat\",\"Bench Press\",\"Deadlift\",\"Push Up\",\"Pull Up\",\"Overhead Press\",\"Barbell Row\",\"Lunge\",\"Plank\"};Spinner exercise=new Spinner(this);ArrayAdapter<String> exerciseAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,exercises);exerciseAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);exercise.setAdapter(exerciseAdapter);EditText weight=field(\"Weight\");");
+                out = out.replace(
+                        "String ex=exercise.getText().toString().trim();if(ex.isEmpty()){exercise.setError(\"Enter exercise\");return;}",
+                        "String ex=String.valueOf(exercise.getSelectedItem());if(ex.trim().isEmpty())return;");
+            }
+
             // Request-specific compact home screens may use Button locals without importing
             // android.widget.Button. Imports are not inherited from AppScreen, so qualify the
             // type here before any generated project reaches the Gradle build gate.
