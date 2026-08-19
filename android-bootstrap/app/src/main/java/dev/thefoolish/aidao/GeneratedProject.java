@@ -46,9 +46,15 @@ final class GeneratedProject {
             for (String key : persistedTextKeys) {
                 out = out.replace("store.text(\"" + key + "\"", "store.putText(\"" + key + "\"");
             }
-            // Restore known getter expressions that share a mutation-key prefix.
+            // Restore known getter expressions that share a mutation-key prefix. Content
+            // products use several local variable names for the same documents collection,
+            // so keep each read form explicit instead of letting the mutation normalization
+            // turn a String getter into the void putText setter.
             out = out.replace("String last=store.putText(\"last_episode\",\"\")", "String last=store.text(\"last_episode\",\"\")");
             out = out.replace("String docs=store.putText(\"documents\",\"\")", "String docs=store.text(\"documents\",\"\")");
+            out = out.replace("String raw=store.putText(\"documents\",\"\")", "String raw=store.text(\"documents\",\"\")");
+            out = out.replace("String s=store.putText(\"documents\",\"\")", "String s=store.text(\"documents\",\"\")");
+            out = out.replace("String old=store.putText(\"documents\",\"\")", "String old=store.text(\"documents\",\"\")");
             out = out.replace("String id=store.putText(\"active_note\",\"default\")", "String id=store.text(\"active_note\",\"default\")");
             out = out.replace("title.setText(store.putText(\"note_title_\"+id,\"\"))", "title.setText(store.text(\"note_title_\"+id,\"\"))");
             out = out.replace("content.setText(store.putText(\"note_body_\"+id,\"\"))", "content.setText(store.text(\"note_body_\"+id,\"\"))");
