@@ -44,7 +44,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.5.0'
+          gradle-version: '8.9'
 
       - name: Run planner acceptance
         run: |
@@ -184,6 +184,7 @@ jobs:
           [[ "$conclusion" == 'success' ]] || { echo "Fidelity acceptance failed: ${conclusion:-unknown}"; exit 1; }
           artifacts=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=20")
           jq -e '.artifacts[] | select(.name=="aidao-generated-fidelity-anishelf-apk")' <<< "$artifacts" >/dev/null || { echo 'Fidelity acceptance did not publish its generated APK'; exit 1; }
+          jq -e '.artifacts[] | select(.name=="aidao-general-fidelity-regression-apks")' <<< "$artifacts" >/dev/null || { echo 'Fidelity acceptance did not publish its notepad/workout regression APK bundle'; exit 1; }
           jq -e '.artifacts[] | select(.name=="aidao-fidelity-generator-apk")' <<< "$artifacts" >/dev/null || { echo 'Fidelity acceptance did not publish its AIDao APK'; exit 1; }
 
       - name: Build AIDao V1 candidate APK
