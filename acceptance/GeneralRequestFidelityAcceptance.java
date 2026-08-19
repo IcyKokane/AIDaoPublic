@@ -26,17 +26,35 @@ public final class GeneralRequestFidelityAcceptance {
                 Arrays.asList("Generate identity", "Generate UI", "Generate note persistence", "Validate fidelity")
         );
         assertNoFailure(project, "notepad");
-        if (project.projectName.length() > 40 || project.projectName.toLowerCase().startsWith("create "))
-            throw new IllegalStateException("Notepad request leaked into app identity: " + project.projectName);
+        String identity = project.projectName == null ? "" : project.projectName.trim();
+        if (identity.length() < 2 || identity.length() > 32 || identity.toLowerCase().startsWith("create ") || identity.toLowerCase().contains(" should "))
+            throw new IllegalStateException("Notepad request leaked into app identity: " + identity);
+        if ("Create A Notepad App That Uses A Sidebar To Navigate Different Screens".equalsIgnoreCase(identity))
+            throw new IllegalStateException("Raw prompt title was reused as notepad product identity");
+
         String all = join(project);
-        require(all, "sidebar", "notepad sidebar navigation marker");
-        requireAny(all, new String[]{"locked", "isLocked", "note_lock"}, "notepad lock-state marker");
-        requireAny(all, new String[]{"setEnabled(false)", "setFocusable(false)", "setInputType(0)", "read-only", "read only"}, "locked-note edit prevention");
-        requireAny(all, new String[]{"android:icon=", "android:roundIcon="}, "launcher icon declaration");
-        requireAny(all.toLowerCase(), new String[]{"purple", "violet", "#6", "#7", "#8"}, "purple theme marker");
-        requireAny(all.toLowerCase(), new String[]{"red", "crimson", "#e", "#f"}, "red theme marker");
+        String manifest = content(project, "app/src/main/AndroidManifest.xml");
+        String colors = content(project, "app/src/main/res/values/colors.xml");
+        String icon = content(project, "/ic_generated_app.xml");
         String appScreen = content(project, "/AppScreen.java");
+        String editor = content(project, "/EditorActivity.java");
+        String library = content(project, "/LibraryActivity.java");
+
+        require(manifest, "android:icon=\"@drawable/ic_generated_app\"", "launcher icon declaration");
+        require(manifest, "android:roundIcon=\"@drawable/ic_generated_app\"", "round launcher icon declaration");
+        require(icon, "<vector", "generated launcher vector");
+        require(icon, "<path", "non-empty generated launcher artwork");
+        require(colors.toUpperCase(), "#7C3AED", "explicit purple theme accent");
+        require(colors.toUpperCase(), "#EF4444", "explicit red theme accent");
+        require(appScreen, "root.setOrientation(LinearLayout.HORIZONTAL)", "sidebar root orientation");
         require(appScreen, "root.addView(nav,new LinearLayout.LayoutParams(dp(104),-1))", "sidebar occupies a visible side rail");
+        requireAny(appScreen, new String[]{"Writing", "Editor", "Search", "Library"}, "requested notepad navigation destinations");
+        requireAny(editor, new String[]{"note_lock_", "locked"}, "notepad lock-state marker");
+        requireAny(editor, new String[]{"setEnabled(false)", "setFocusable(false)", "setInputType(0)"}, "locked-note edit prevention");
+        require(editor, "store.putText(\"note_title_\"", "note title persistence mutation");
+        require(editor, "store.putText(\"note_body_\"", "note body persistence mutation");
+        require(editor, "store.putText(\"documents\"", "note library persistence mutation");
+        require(library, "store.putText(\"active_note\"", "saved-note reopen persistence mutation");
         verifyLocalStoreApiCompatibility(project, "notepad");
     }
 
@@ -56,9 +74,16 @@ public final class GeneralRequestFidelityAcceptance {
         require(all, "exercise", "workout exercise field");
         require(all, "weight", "workout weight field");
         require(all, "reps", "workout reps field");
-        requireAny(all, new String[]{"xp", "level", "stat", "growth"}, "workout RPG progression marker");
+        require(all, "workout_xp", "workout XP progression state");
+        require(all, "stat_strength", "workout strength progression state");
+        require(all, "stat_endurance", "workout endurance progression state");
+        requireAny(all, new String[]{"complete set", "completed set", "save workout"}, "completed workout mutation action");
         String appScreen = content(project, "/AppScreen.java");
+        String log = content(project, "/TimelineActivity.java");
         require(appScreen, "root.addView(main,new LinearLayout.LayoutParams(-1,0,1))", "non-sidebar main content receives visible width and weighted height");
+        require(log, "store.putText(\"workouts\"", "completed workout history persistence");
+        requireAny(log, new String[]{"store.number(\"workout_xp\"", "workout_xp"}, "automatic XP mutation from workout completion");
+        requireAny(log, new String[]{"stat_strength", "stat_endurance"}, "automatic RPG stat mutation from workout completion");
         verifyLocalStoreApiCompatibility(project, "workout");
     }
 
@@ -83,7 +108,7 @@ public final class GeneralRequestFidelityAcceptance {
     }
     private static String content(GeneratedProject project, String suffix) {
         for (GeneratedProject.FileEntry f : project.files)
-            if (f != null && f.path != null && f.path.endsWith(suffix)) return f.content == null ? "" : f.content;
+            if (f != null && f.path != null && (f.path.equals(suffix) || f.path.endsWith(suffix))) return f.content == null ? "" : f.content;
         throw new IllegalStateException("Missing generated file " + suffix);
     }
     private static void require(String source, String token, String label) {
