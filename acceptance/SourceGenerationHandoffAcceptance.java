@@ -33,7 +33,7 @@ public final class SourceGenerationHandoffAcceptance {
         require(all, "workout_xp", "workout XP state before SOURCE READY");
         require(all, "stat_strength", "workout strength state before SOURCE READY");
         require(all, "stat_endurance", "workout endurance state before SOURCE READY");
-        require(all, "store.text(\"workouts\"", "persisted workout mutation before SOURCE READY");
+        require(all, "store.puttext(\"workouts\"", "persisted workout mutation before SOURCE READY");
     }
 
     private static void verifyNotepadCanAdvanceToSourceReady() {
@@ -54,8 +54,8 @@ public final class SourceGenerationHandoffAcceptance {
         require(all, "android:icon=\"@drawable/ic_generated_app\"", "notepad launcher icon before SOURCE READY");
         require(all, "root.setorientation(linearlayout.horizontal)", "notepad sidebar layout before SOURCE READY");
         require(all, "note_lock_", "notepad lock state before SOURCE READY");
-        require(all, "store.text(\"note_title_\"", "persisted note title before SOURCE READY");
-        require(all, "store.text(\"note_body_\"", "persisted note body before SOURCE READY");
+        require(all, "store.puttext(\"note_title_\"", "persisted note title before SOURCE READY");
+        require(all, "store.puttext(\"note_body_\"", "persisted note body before SOURCE READY");
     }
 
     private static void requireSourceReady(GeneratedProject project, String label) {
