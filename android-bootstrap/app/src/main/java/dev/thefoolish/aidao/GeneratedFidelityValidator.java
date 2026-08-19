@@ -132,6 +132,7 @@ final class GeneratedFidelityValidator {
             notes.add((red ? "PASS " : "FAIL ") + "requested red visual direction is represented in generated resources/source");
         }
 
+        boolean noteRequest = mentions(request, "notepad", "notes", "note app", "document editor");
         if (mentions(request, "lock notes", "lock note", "notes so they can't be edited", "notes so they cannot be edited", "read-only", "read only")) {
             String lower = joined.toLowerCase(Locale.US);
             boolean lockState = lower.contains("locked") || lower.contains("islocked") || lower.contains("note_lock");
@@ -140,11 +141,26 @@ final class GeneratedFidelityValidator {
             notes.add((lockState && readOnlyEnforced ? "PASS " : "FAIL ") +
                     "requested note-lock behavior persists state and prevents editing");
         }
+        if (noteRequest) {
+            boolean noteMutationsPersist = joined.contains("store.putText(\"note_title_\"") &&
+                    joined.contains("store.putText(\"note_body_\"") &&
+                    joined.contains("store.putText(\"documents\"") &&
+                    joined.contains("store.putText(\"active_note\"");
+            notes.add((noteMutationsPersist ? "PASS " : "FAIL ") +
+                    "note save/open mutations use persisted string setters rather than getter-shaped no-ops");
+        }
 
+        boolean workoutRequest = mentions(request, "workout", "track the exercise", "track exercise", "weight and reps", "weight", "reps");
         if (mentions(request, "track the exercise", "track exercise", "weight and reps", "weight", "reps")) {
             String lower = joined.toLowerCase(Locale.US);
             boolean workoutFields = lower.contains("exercise") && lower.contains("weight") && lower.contains("reps");
             notes.add((workoutFields ? "PASS " : "FAIL ") + "workout request retains exercise / weight / reps data model");
+        }
+        if (workoutRequest) {
+            boolean workoutMutationsPersist = joined.contains("store.putText(\"workouts\"") ||
+                    joined.contains("store.putText(\"workout_history\"");
+            notes.add((workoutMutationsPersist ? "PASS " : "FAIL ") +
+                    "workout completed-set history uses a persisted string setter");
         }
         if (mentions(request, "rpg", "stats", "growth")) {
             String lower = joined.toLowerCase(Locale.US);
