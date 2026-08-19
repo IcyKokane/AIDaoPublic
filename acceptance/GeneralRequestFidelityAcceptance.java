@@ -51,10 +51,10 @@ public final class GeneralRequestFidelityAcceptance {
         requireAny(appScreen, new String[]{"Writing", "Editor", "Search", "Library"}, "requested notepad navigation destinations");
         requireAny(editor, new String[]{"note_lock_", "locked"}, "notepad lock-state marker");
         requireAny(editor, new String[]{"setEnabled(false)", "setFocusable(false)", "setInputType(0)"}, "locked-note edit prevention");
-        require(editor, "store.putText(\"note_title_\"", "note title persistence mutation");
-        require(editor, "store.putText(\"note_body_\"", "note body persistence mutation");
-        require(editor, "store.putText(\"documents\"", "note library persistence mutation");
-        require(library, "store.putText(\"active_note\"", "saved-note reopen persistence mutation");
+        require(editor, "store.text(\"note_title_\"", "note title persistence mutation");
+        require(editor, "store.text(\"note_body_\"", "note body persistence mutation");
+        require(editor, "store.text(\"documents\"", "note library persistence mutation");
+        require(library, "store.text(\"active_note\"", "saved-note reopen persistence mutation");
         verifyLocalStoreApiCompatibility(project, "notepad");
     }
 
@@ -81,7 +81,7 @@ public final class GeneralRequestFidelityAcceptance {
         String appScreen = content(project, "/AppScreen.java");
         String log = content(project, "/TimelineActivity.java");
         require(appScreen, "root.addView(main,new LinearLayout.LayoutParams(-1,0,1))", "non-sidebar main content receives visible width and weighted height");
-        require(log, "store.putText(\"workouts\"", "completed workout history persistence");
+        require(log, "store.text(\"workouts\"", "completed workout history persistence");
         requireAny(log, new String[]{"store.number(\"workout_xp\"", "workout_xp"}, "automatic XP mutation from workout completion");
         requireAny(log, new String[]{"stat_strength", "stat_endurance"}, "automatic RPG stat mutation from workout completion");
         verifyLocalStoreApiCompatibility(project, "workout");
