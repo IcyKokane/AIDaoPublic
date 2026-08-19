@@ -19,6 +19,7 @@ on:
       - 'acceptance/GeneratedMutationPersistenceAcceptance.java'
       - 'acceptance/MihonExtensionCompatibilityAcceptance.java'
       - 'acceptance/RepositoryPlaybackContractAcceptance.java'
+      - 'acceptance/RepositoryPlaybackHttpsAcceptance.java'
       - 'acceptance/GenerateGeneralFidelityProjects.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
   workflow_dispatch:
@@ -60,6 +61,7 @@ jobs:
             acceptance/GeneratedMutationPersistenceAcceptance.java \
             acceptance/MihonExtensionCompatibilityAcceptance.java \
             acceptance/RepositoryPlaybackContractAcceptance.java \
+            acceptance/RepositoryPlaybackHttpsAcceptance.java \
             acceptance/GenerateGeneralFidelityProjects.java
 
       - name: Run real-device prompt fidelity regressions
@@ -68,6 +70,7 @@ jobs:
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedMutationPersistenceAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.MihonExtensionCompatibilityAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.RepositoryPlaybackContractAcceptance
+          java -cp build/fidelity-generator dev.thefoolish.aidao.RepositoryPlaybackHttpsAcceptance
 
       - name: Generate real-device non-media Android projects
         run: |
