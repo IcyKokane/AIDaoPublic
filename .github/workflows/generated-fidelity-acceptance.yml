@@ -99,7 +99,7 @@ jobs:
           grep -R -q 'Weight' generated-workout/app/src/main/java
           grep -R -q 'Reps' generated-workout/app/src/main/java
           grep -R -q 'workout_xp' generated-workout/app/src/main/java
-          grep -R -q 'store.putText("workouts"' generated-workout/app/src/main/java
+          grep -R -q 'store.text("workouts"' generated-workout/app/src/main/java
 
       - name: Build notepad real-device regression APK
         working-directory: generated-notepad
