@@ -56,6 +56,16 @@ final class GeneratedProject {
             out = out.replace("String history=store.putText(\"workout_history\",\"\")", "String history=store.text(\"workout_history\",\"\")");
             out = out.replace("String old=store.putText(\"workouts\",\"\")", "String old=store.text(\"workouts\",\"\")");
 
+            // Request-specific compact home screens may use Button locals without importing
+            // android.widget.Button. Imports are not inherited from AppScreen, so qualify the
+            // type here before any generated project reaches the Gradle build gate.
+            if (path != null && path.endsWith("/MainActivity.java")
+                    && out.contains("Button ")
+                    && !out.contains("import android.widget.Button;")
+                    && !out.contains("import android.widget.*;")) {
+                out = out.replace("Button ", "android.widget.Button ");
+            }
+
             String saveButton = "Button save=button(\"Save +60s test progress\")";
             if (!out.contains("android.widget." + saveButton)) {
                 out = out.replace(saveButton, "android.widget." + saveButton);
