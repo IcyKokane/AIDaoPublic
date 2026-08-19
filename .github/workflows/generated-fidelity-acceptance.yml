@@ -24,6 +24,7 @@ on:
       - 'acceptance/ExplicitRequirementGateAcceptance.java'
       - 'acceptance/GeneratedHomeButtonCompilationAcceptance.java'
       - 'acceptance/GeneratedIdentityInferenceAcceptance.java'
+      - 'acceptance/WorkoutPresetCatalogAcceptance.java'
       - 'acceptance/GenerateGeneralFidelityProjects.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
   workflow_dispatch:
@@ -70,6 +71,7 @@ jobs:
             acceptance/ExplicitRequirementGateAcceptance.java \
             acceptance/GeneratedHomeButtonCompilationAcceptance.java \
             acceptance/GeneratedIdentityInferenceAcceptance.java \
+            acceptance/WorkoutPresetCatalogAcceptance.java \
             acceptance/GenerateGeneralFidelityProjects.java
 
       - name: Run real-device prompt fidelity regressions
@@ -83,6 +85,7 @@ jobs:
           java -cp build/fidelity-generator dev.thefoolish.aidao.ExplicitRequirementGateAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedHomeButtonCompilationAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedIdentityInferenceAcceptance
+          java -cp build/fidelity-generator dev.thefoolish.aidao.WorkoutPresetCatalogAcceptance
 
       - name: Generate real-device non-media Android projects
         run: |
@@ -95,7 +98,10 @@ jobs:
           grep -R -q 'setEnabled(false)' generated-notepad/app/src/main/java
           grep -R -q '#7C3AED' generated-notepad/app/src/main/res generated-notepad/app/src/main/java
           grep -R -q '#EF4444' generated-notepad/app/src/main/res generated-notepad/app/src/main/java
-          grep -R -q 'Exercise' generated-workout/app/src/main/java
+          grep -R -q 'Spinner' generated-workout/app/src/main/java
+          grep -R -q 'ArrayAdapter' generated-workout/app/src/main/java
+          grep -R -q 'Squat\|Bench Press\|Deadlift\|Push Up\|Pull Up' generated-workout/app/src/main/java
+          ! grep -R -q 'EditText exercise=field("Exercise")' generated-workout/app/src/main/java || exit 1
           grep -R -q 'Weight' generated-workout/app/src/main/java
           grep -R -q 'Reps' generated-workout/app/src/main/java
           grep -R -q 'workout_xp' generated-workout/app/src/main/java
