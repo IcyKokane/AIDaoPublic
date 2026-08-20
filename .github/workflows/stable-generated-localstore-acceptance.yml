@@ -1,0 +1,45 @@
+name: Stable Generated LocalStore Acceptance
+
+on:
+  push:
+    paths:
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
+      - 'acceptance/StableGeneratedLocalStoreContractAcceptance.java'
+      - '.github/workflows/stable-generated-localstore-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile LocalStore contract regression
+        run: |
+          rm -rf build/stable-localstore
+          mkdir -p build/stable-localstore
+          javac -d build/stable-localstore \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            acceptance/StableGeneratedLocalStoreContractAcceptance.java
+      - name: Run stable LocalStore contract regression
+        run: java -cp build/stable-localstore dev.thefoolish.aidao.StableGeneratedLocalStoreContractAcceptance
