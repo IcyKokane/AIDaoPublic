@@ -29,6 +29,15 @@ public final class StableGeneratedLocalStoreContractAcceptance {
                 Arrays.asList("Generate pantry app")),
                 new String[]{"pantry_inventory"});
 
+        GeneratedProject generic = new LocalSourceGenerator().generate(
+                "Create A Simple Grocery List App",
+                "Create a simple grocery list app that works offline. Let me add and edit items and keep the list after restarting the app.",
+                Arrays.asList("Offline grocery list", "Add and edit items", "Persist data after restart"),
+                Arrays.asList("Generate grocery list app"));
+        verify("generic-offline", generic, new String[]{"last_surface"});
+        if (!"Grocery List".equals(generic.projectName))
+            throw new IllegalStateException("generic offline identity was not normalized: " + generic.projectName);
+
         System.out.println("PASS stable generated LocalStore contract");
     }
 
