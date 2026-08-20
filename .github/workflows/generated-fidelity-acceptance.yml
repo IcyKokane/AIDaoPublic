@@ -16,6 +16,8 @@ on:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
       - 'acceptance/GenerateFidelitySampleProject.java'
       - 'acceptance/GeneralRequestFidelityAcceptance.java'
+      - 'acceptance/RealDeviceGeneralFidelityAcceptance.java'
+      - 'acceptance/GeneralizedRequestExtractionAcceptance.java'
       - 'acceptance/GeneratedMutationPersistenceAcceptance.java'
       - 'acceptance/SourceGenerationHandoffAcceptance.java'
       - 'acceptance/MihonExtensionCompatibilityAcceptance.java'
@@ -48,8 +50,8 @@ jobs:
 
       - name: Compile generated-app acceptance harnesses
         run: |
-          rm -rf build/fidelity-generator generated-fidelity generated-notepad generated-workout
-          mkdir -p build/fidelity-generator generated-fidelity generated-notepad generated-workout
+          rm -rf build/fidelity-generator generated-fidelity generated-notepad generated-workout generated-pantry
+          mkdir -p build/fidelity-generator generated-fidelity generated-notepad generated-workout generated-pantry
           javac -d build/fidelity-generator \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
@@ -64,6 +66,8 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GenerateFidelitySampleProject.java \
             acceptance/GeneralRequestFidelityAcceptance.java \
+            acceptance/RealDeviceGeneralFidelityAcceptance.java \
+            acceptance/GeneralizedRequestExtractionAcceptance.java \
             acceptance/GeneratedMutationPersistenceAcceptance.java \
             acceptance/SourceGenerationHandoffAcceptance.java \
             acceptance/MihonExtensionCompatibilityAcceptance.java \
@@ -79,6 +83,8 @@ jobs:
       - name: Run real-device prompt fidelity regressions
         run: |
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneralRequestFidelityAcceptance
+          java -cp build/fidelity-generator dev.thefoolish.aidao.RealDeviceGeneralFidelityAcceptance
+          java -cp build/fidelity-generator dev.thefoolish.aidao.GeneralizedRequestExtractionAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedMutationPersistenceAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.SourceGenerationHandoffAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.MihonExtensionCompatibilityAcceptance
@@ -92,9 +98,10 @@ jobs:
 
       - name: Generate real-device non-media Android projects
         run: |
-          java -cp build/fidelity-generator dev.thefoolish.aidao.GenerateGeneralFidelityProjects "$PWD/generated-notepad" "$PWD/generated-workout"
+          java -cp build/fidelity-generator dev.thefoolish.aidao.GenerateGeneralFidelityProjects "$PWD/generated-notepad" "$PWD/generated-workout" "$PWD/generated-pantry"
           test -f generated-notepad/app/src/main/AndroidManifest.xml
           test -f generated-workout/app/src/main/AndroidManifest.xml
+          test -f generated-pantry/app/src/main/AndroidManifest.xml
           grep -R -q 'android:icon="@drawable/ic_generated_app"' generated-notepad/app/src/main/AndroidManifest.xml
           grep -R -q 'root.addView(nav,new LinearLayout.LayoutParams(dp(104),-1))' generated-notepad/app/src/main/java
           grep -R -q 'note_lock_' generated-notepad/app/src/main/java
@@ -109,6 +116,13 @@ jobs:
           grep -R -q 'Reps' generated-workout/app/src/main/java
           grep -R -q 'workout_xp' generated-workout/app/src/main/java
           grep -R -q 'store.putText("workouts"' generated-workout/app/src/main/java
+          grep -R -q '>PantryQuest</string>' generated-pantry/app/src/main/res/values/strings.xml
+          grep -R -q 'android:label="PantryQuest"' generated-pantry/app/src/main/AndroidManifest.xml
+          grep -R -q '#0D9488' generated-pantry/app/src/main/res generated-pantry/app/src/main/java
+          grep -R -q '#F97316' generated-pantry/app/src/main/res generated-pantry/app/src/main/java
+          grep -R -q 'topNav\|top tabs\|top_tabs' generated-pantry/app/src/main/java
+          grep -R -q 'quantity' generated-pantry/app/src/main/java
+          grep -R -q 'store.putText("pantry_items"\|store.text("pantry_items"' generated-pantry/app/src/main/java
 
       - name: Build notepad real-device regression APK
         working-directory: generated-notepad
@@ -116,6 +130,10 @@ jobs:
 
       - name: Build workout real-device regression APK
         working-directory: generated-workout
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Build pantry generalized-fidelity regression APK
+        working-directory: generated-pantry
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Generate fidelity acceptance Android project
@@ -159,6 +177,7 @@ jobs:
           path: |
             generated-notepad/app/build/outputs/apk/debug/app-debug.apk
             generated-workout/app/build/outputs/apk/debug/app-debug.apk
+            generated-pantry/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       - name: Build AIDao APK containing fidelity generator
