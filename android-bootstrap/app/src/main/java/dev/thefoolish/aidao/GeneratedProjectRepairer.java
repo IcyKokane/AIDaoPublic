@@ -14,8 +14,11 @@ final class GeneratedProjectRepairer {
         if(original==null)return new RepairResult(null,"No generated project was available to repair.",false);
         String f=failureSummary==null?"":failureSummary.toLowerCase();
         List<GeneratedProject.FileEntry> out=new ArrayList<>();boolean changed=false;String action;
-        if(f.contains("android.widget")||f.contains("javac")||f.contains("compiledebugjava")||f.contains("package android.widget")){
-            action="Repair generated Java type qualification and reject repeated Android package prefixes.";
+        if(f.contains("puttext")||f.contains("cannot find symbol")&&f.contains("localstore")){
+            action="Repair generated persistence setter calls to the stable LocalStore API.";
+            for(GeneratedProject.FileEntry e:original.files){String c=e.content;String n=sanitizeJava(e.path,c);changed|=!n.equals(c);out.add(new GeneratedProject.FileEntry(e.path,n,e.taskHint));}
+        }else if(f.contains("android.widget")||f.contains("javac")||f.contains("compiledebugjava")||f.contains("package android.widget")){
+            action="Repair generated Java type qualification and persistence API compatibility.";
             for(GeneratedProject.FileEntry e:original.files){String c=e.content;String n=sanitizeJava(e.path,c);changed|=!n.equals(c);out.add(new GeneratedProject.FileEntry(e.path,n,e.taskHint));}
         }else if(f.contains("resource")||f.contains("style")||f.contains("manifest")){
             action="Repair Android theme/resource linkage only.";
@@ -42,6 +45,9 @@ final class GeneratedProjectRepairer {
         while(out.contains("android.graphics.android.graphics."))out=out.replace("android.graphics.android.graphics.","android.graphics.");
         while(out.contains("android.content.android.content."))out=out.replace("android.content.android.content.","android.content.");
         while(out.contains("android.app.android.app."))out=out.replace("android.app.android.app.","android.app.");
+        // Request-fidelity profiles may emit the clearer putText name; the generated
+        // LocalStore contract intentionally keeps text(key,value) as its stable setter.
+        out=out.replace("store.putText(","store.text(");
         return out;
     }
 }
