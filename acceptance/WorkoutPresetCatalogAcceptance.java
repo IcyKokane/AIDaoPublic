@@ -6,7 +6,9 @@ import java.util.Arrays;
  * Regression for the real-device workout prompt. The user explicitly asked for
  * workouts/exercises to already exist in the app rather than requiring manual
  * exercise-name entry. Weight and reps remain user-entered measurements, while
- * exercise selection must come from a generated built-in catalog.
+ * exercise selection must come from a generated built-in catalog. Tracking also
+ * requires persisted workout rows to be rendered back to the user after restart;
+ * silently storing the records is not sufficient product behavior.
  */
 public final class WorkoutPresetCatalogAcceptance {
     public static void main(String[] args) {
@@ -36,10 +38,15 @@ public final class WorkoutPresetCatalogAcceptance {
                 "manual exercise-name entry when the prompt requests built-in workouts");
         require(log, "Weight", "weight input");
         require(log, "Reps", "reps input");
-        require(log, "store.putText(\"workouts\"", "persisted workout history");
+        require(log, "store.putText(\"workouts\"", "persisted workout history mutation");
+        require(log, "store.text(\"workouts\"", "persisted workout history readback");
+        requireAny(log, new String[]{"Recent workouts", "Workout history", "Recent sets", "History"},
+                "visible workout history section");
+        requireAny(log, new String[]{"split(\"\\n\")", "split(\"\\\\n\")"},
+                "saved workout row iteration");
         require(log, "workout_xp", "automatic RPG progression");
 
-        System.out.println("PASS preset workout catalog request fidelity");
+        System.out.println("PASS preset workout catalog and visible persisted history fidelity");
     }
 
     private static String content(GeneratedProject project, String suffix) {
