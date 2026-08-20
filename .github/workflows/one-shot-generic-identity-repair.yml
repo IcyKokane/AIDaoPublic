@@ -47,3 +47,5 @@ jobs:
           git add android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java
           git commit -m "Normalize generic prompt identity before source handoff"
           git push
+
+# one-shot trigger refresh
