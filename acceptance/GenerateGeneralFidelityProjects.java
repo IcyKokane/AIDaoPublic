@@ -5,12 +5,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.List;
 
-/** Writes the two real-device non-media regression projects so CI can compile their actual Android source. */
+/** Writes real-device non-media regression projects so CI can compile their actual Android source. */
 public final class GenerateGeneralFidelityProjects {
     public static void main(String[] args) throws Exception {
-        if (args.length != 2) throw new IllegalArgumentException("Expected notepad and workout output directories");
+        if (args.length != 3) throw new IllegalArgumentException("Expected notepad, workout, and pantry output directories");
 
         GeneratedProject notepad = new LocalSourceGenerator().generate(
                 "Create A Notepad App That Uses A Sidebar To Navigate Different Screens",
@@ -27,17 +26,34 @@ public final class GenerateGeneralFidelityProjects {
 
         GeneratedProject workout = new LocalSourceGenerator().generate(
                 "Simple Workout Tracker",
-                "Create a simple workout tracking app. It should track exercise, weight and reps. It should have an RPG type of UI and automatically show growth in the form of RPG stats; growth should be calculated by the app rather than manually entered.",
+                "Create a simple workout tracking app. It should track exercise, weight and reps. It should have an RPG type of UI and automatically show growth in the form of RPG stats; growth should be calculated by the app rather than manually entered. Exercises should already be in the app rather than typed manually.",
                 Arrays.asList(
-                        "Track exercise name, weight, and reps locally.",
+                        "Track exercise, weight, and reps locally.",
+                        "Use a built-in exercise catalog rather than free-text exercise names.",
                         "Calculate progression automatically from completed workouts.",
-                        "Display RPG-style stats and growth without manual stat input."
+                        "Display RPG-style stats and growth without manual stat input.",
+                        "Show persisted recent workout history after restart."
                 ),
-                Arrays.asList("Generate workout model", "Generate tracker UI", "Calculate progression", "Validate source")
+                Arrays.asList("Generate workout model", "Generate preset exercise tracker UI", "Calculate progression", "Validate source")
+        );
+
+        GeneratedProject pantry = new LocalSourceGenerator().generate(
+                "Create A Pantry Inventory App Called PantryQuest",
+                "Create a pantry inventory app called PantryQuest. Use top tab navigation. Use a modern teal and orange theme. Let me add pantry items with a quantity, change the quantity later, and keep the inventory after restarting the app.",
+                Arrays.asList(
+                        "App name is PantryQuest.",
+                        "Use top tab navigation.",
+                        "Use a teal and orange modern theme.",
+                        "Add pantry items with quantity.",
+                        "Allow quantity edits.",
+                        "Persist inventory across restart."
+                ),
+                Arrays.asList("Generate identity", "Generate inventory UI", "Persist inventory", "Validate explicit request fidelity")
         );
 
         write(Paths.get(args[0]), notepad, "notepad");
         write(Paths.get(args[1]), workout, "workout");
+        write(Paths.get(args[2]), pantry, "pantry");
     }
 
     private static void write(Path rawOutput, GeneratedProject project, String label) throws Exception {
