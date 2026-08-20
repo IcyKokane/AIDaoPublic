@@ -19,6 +19,7 @@ on:
       - 'acceptance/RealDeviceGeneralFidelityAcceptance.java'
       - 'acceptance/GeneralizedRequestExtractionAcceptance.java'
       - 'acceptance/GeneratedMutationPersistenceAcceptance.java'
+      - 'acceptance/StableGeneratedLocalStoreContractAcceptance.java'
       - 'acceptance/SourceGenerationHandoffAcceptance.java'
       - 'acceptance/MihonExtensionCompatibilityAcceptance.java'
       - 'acceptance/RepositoryPlaybackContractAcceptance.java'
@@ -69,6 +70,7 @@ jobs:
             acceptance/RealDeviceGeneralFidelityAcceptance.java \
             acceptance/GeneralizedRequestExtractionAcceptance.java \
             acceptance/GeneratedMutationPersistenceAcceptance.java \
+            acceptance/StableGeneratedLocalStoreContractAcceptance.java \
             acceptance/SourceGenerationHandoffAcceptance.java \
             acceptance/MihonExtensionCompatibilityAcceptance.java \
             acceptance/RepositoryPlaybackContractAcceptance.java \
@@ -86,6 +88,7 @@ jobs:
           java -cp build/fidelity-generator dev.thefoolish.aidao.RealDeviceGeneralFidelityAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneralizedRequestExtractionAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedMutationPersistenceAcceptance
+          java -cp build/fidelity-generator dev.thefoolish.aidao.StableGeneratedLocalStoreContractAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.SourceGenerationHandoffAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.MihonExtensionCompatibilityAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.RepositoryPlaybackContractAcceptance
