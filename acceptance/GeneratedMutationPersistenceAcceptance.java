@@ -5,7 +5,8 @@ import java.util.Arrays;
 /**
  * Guards against a subtle generated-app failure where mutating UI paths call the
  * LocalStore text getter with a value-shaped default instead of the persisted
- * string setter. Such source compiles but silently loses user data.
+ * string setter. It also protects the inverse failure: broad mutation-key
+ * normalization must never turn read expressions into void putText(...) calls.
  */
 public final class GeneratedMutationPersistenceAcceptance {
     public static void main(String[] args) {
@@ -30,12 +31,26 @@ public final class GeneratedMutationPersistenceAcceptance {
         assertNoFailure(project, "notepad");
         String store = content(project, "/LocalStore.java");
         require(store, "putText(String k,String v)", "LocalStore persisted string setter");
+        String home = content(project, "/MainActivity.java");
         String editor = content(project, "/EditorActivity.java");
         String library = content(project, "/LibraryActivity.java");
         require(editor, "store.putText(\"note_title_\"+id", "note title persistence mutation");
         require(editor, "store.putText(\"note_body_\"+id", "note body persistence mutation");
         require(editor, "store.putText(\"documents\"", "note index persistence mutation");
         require(library, "store.putText(\"active_note\"", "active-note persistence mutation");
+
+        // Read paths must remain getters after setter normalization. These exact
+        // aliases previously regressed into putText(...) and produced invalid or
+        // semantically broken generated source.
+        require(home, "String docs=store.text(\"documents\",\"\")", "home document-index read");
+        require(editor, "String id=store.text(\"active_note\",\"default\")", "active-note read");
+        require(editor, "title.setText(store.text(\"note_title_\"+id,\"\"))", "note-title read");
+        require(editor, "content.setText(store.text(\"note_body_\"+id,\"\"))", "note-body read");
+        require(editor, "String docs=store.text(\"documents\",\"\")", "editor document-index read");
+        require(library, "String raw=store.text(\"documents\",\"\")", "library document-index read");
+        reject(home, "String docs=store.putText(\"documents\",\"\")", "home getter rewritten as setter");
+        reject(editor, "String id=store.putText(\"active_note\",\"default\")", "active-note getter rewritten as setter");
+        reject(library, "String raw=store.putText(\"documents\",\"\")", "library getter rewritten as setter");
     }
 
     private static void verifyWorkoutMutationsPersist() {
@@ -55,6 +70,8 @@ public final class GeneratedMutationPersistenceAcceptance {
         require(log, "store.number(\"workout_xp\"", "workout XP mutation");
         require(log, "store.number(\"stat_strength\"", "strength-stat mutation");
         require(log, "store.number(\"stat_endurance\"", "endurance-stat mutation");
+        require(log, "String old=store.text(\"workouts\",\"\")", "workout history read before append");
+        reject(log, "String old=store.putText(\"workouts\",\"\")", "workout getter rewritten as setter");
     }
 
     private static void assertNoFailure(GeneratedProject project, String label) {
@@ -71,5 +88,10 @@ public final class GeneratedMutationPersistenceAcceptance {
     private static void require(String source, String token, String label) {
         if (source == null || !source.contains(token))
             throw new IllegalStateException("Missing " + label + ": " + token);
+    }
+
+    private static void reject(String source, String token, String label) {
+        if (source != null && source.contains(token))
+            throw new IllegalStateException("Found " + label + ": " + token);
     }
 }
