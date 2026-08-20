@@ -24,6 +24,7 @@ on:
       - 'acceptance/ExplicitRequirementGateAcceptance.java'
       - 'acceptance/GeneratedHomeButtonCompilationAcceptance.java'
       - 'acceptance/GeneratedIdentityInferenceAcceptance.java'
+      - 'acceptance/GenericIdentityHandoffAcceptance.java'
       - 'acceptance/WorkoutPresetCatalogAcceptance.java'
       - 'acceptance/GenerateGeneralFidelityProjects.java'
       - '.github/workflows/generated-fidelity-acceptance.yml'
@@ -71,6 +72,7 @@ jobs:
             acceptance/ExplicitRequirementGateAcceptance.java \
             acceptance/GeneratedHomeButtonCompilationAcceptance.java \
             acceptance/GeneratedIdentityInferenceAcceptance.java \
+            acceptance/GenericIdentityHandoffAcceptance.java \
             acceptance/WorkoutPresetCatalogAcceptance.java \
             acceptance/GenerateGeneralFidelityProjects.java
 
@@ -85,6 +87,7 @@ jobs:
           java -cp build/fidelity-generator dev.thefoolish.aidao.ExplicitRequirementGateAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedHomeButtonCompilationAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.GeneratedIdentityInferenceAcceptance
+          java -cp build/fidelity-generator dev.thefoolish.aidao.GenericIdentityHandoffAcceptance
           java -cp build/fidelity-generator dev.thefoolish.aidao.WorkoutPresetCatalogAcceptance
 
       - name: Generate real-device non-media Android projects
