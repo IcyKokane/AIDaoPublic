@@ -26,7 +26,8 @@ final class RequestFidelityPostProcessor {
         if (hasSuffix(source, "/MediaProvider.java") || hasSuffix(source, "/AnimeItem.java"))
             return new Result(projectName, packageName, source, new ArrayList<>());
 
-        String request = requestText(source).toLowerCase(Locale.US);
+        String rawRequest = requestText(source);
+        String request = rawRequest.toLowerCase(Locale.US);
         boolean note = any(request, "notepad", "note app", "notes", "document editor");
         boolean workout = any(request, "workout", "exercise", "weight and reps", "rpg stats");
         boolean pantry = any(request, "pantry", "inventory") && any(request, "quantity", "stock", "items");
@@ -39,7 +40,7 @@ final class RequestFidelityPostProcessor {
         boolean orange = request.contains("orange");
         boolean lock = any(request, "lock notes", "lock note", "can't be edited", "cannot be edited", "read-only", "read only");
 
-        String name = inferName(projectName, request, note, workout, pantry);
+        String name = inferName(projectName, rawRequest, note, workout, pantry);
         if (!note && !workout && !pantry && !logo && !sidebar && !topTabs && !purple && !red && !teal && !orange) {
             if (name.equals(projectName)) return new Result(projectName, packageName, source, new ArrayList<>());
             List<GeneratedProject.FileEntry> out = new ArrayList<>();
