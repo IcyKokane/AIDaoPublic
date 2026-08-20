@@ -113,7 +113,7 @@ final class RequestFidelityPostProcessor {
     private static String requestText(List<GeneratedProject.FileEntry> f) { for (GeneratedProject.FileEntry x : f) if (x != null && "README.md".equals(x.path) && x.content != null) return x.content; StringBuilder b = new StringBuilder(); for (GeneratedProject.FileEntry x : f) if (x != null && x.content != null) b.append('\n').append(x.content); return b.toString(); }
 
     private static String inferName(String p, String request, boolean note, boolean workout, boolean pantry) {
-        String explicit = explicitName(request);
+        String explicit = explicitName((p == null ? "" : p) + " " + request);
         if (!explicit.isEmpty()) return explicit;
         String x = p == null ? "" : p.trim();
         String low = x.toLowerCase(Locale.US);
