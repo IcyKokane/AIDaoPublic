@@ -20,7 +20,7 @@ public final class StableGeneratedLocalStoreContractAcceptance {
                 "Create a simple workout tracking app. Track exercise, weight and reps. Use an RPG type UI and show automatic RPG stats. Workouts should already be in the app, not something that needs to be input.",
                 Arrays.asList("Track exercise weight reps", "RPG stats", "Built-in workouts"),
                 Arrays.asList("Generate workout app")),
-                new String[]{"workouts"});
+                new String[]{"workout_history"});
 
         verify("pantry", new LocalSourceGenerator().generate(
                 "Create A Pantry Inventory App Called PantryQuest",
