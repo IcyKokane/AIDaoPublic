@@ -122,7 +122,7 @@ jobs:
           grep -R -q '#F97316' generated-pantry/app/src/main/res generated-pantry/app/src/main/java
           grep -R -q 'topNav\|top tabs\|top_tabs' generated-pantry/app/src/main/java
           grep -R -q 'quantity' generated-pantry/app/src/main/java
-          grep -R -q 'store.putText("pantry_items"\|store.text("pantry_items"' generated-pantry/app/src/main/java
+          grep -R -q 'store.putText("pantry_inventory"\|store.text("pantry_inventory"' generated-pantry/app/src/main/java
 
       - name: Build notepad real-device regression APK
         working-directory: generated-notepad
