@@ -44,7 +44,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '9.5.0'
 
       - name: Run planner acceptance
         run: |
