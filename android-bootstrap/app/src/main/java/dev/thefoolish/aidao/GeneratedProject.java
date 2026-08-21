@@ -60,6 +60,7 @@ final class GeneratedProject {
             out = out.replace("content.setText(store.putText(\"note_body_\"+id,\"\"))", "content.setText(store.text(\"note_body_\"+id,\"\"))");
             out = out.replace("String raw=store.putText(\"workout_history\",\"\")", "String raw=store.text(\"workout_history\",\"\")");
             out = out.replace("String history=store.putText(\"workout_history\",\"\")", "String history=store.text(\"workout_history\",\"\")");
+            out = out.replace("String old=store.putText(\"workout_history\",\"\")", "String old=store.text(\"workout_history\",\"\")");
             out = out.replace("String old=store.putText(\"workouts\",\"\")", "String old=store.text(\"workouts\",\"\")");
 
             // When the workout request says exercises should already be in the app,
