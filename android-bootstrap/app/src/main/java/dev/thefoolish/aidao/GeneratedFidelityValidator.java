@@ -107,8 +107,7 @@ final class GeneratedFidelityValidator {
                     manifest.contains("android:roundIcon=\"@drawable/ic_generated_app\"");
             boolean generatedVector = generatedIcon.contains("<vector") && generatedIcon.contains("<path") &&
                     generatedIcon.contains("android:pathData=");
-            boolean fallbackLauncher = hasResourceSuffix(files, "/ic_launcher.xml") || hasRasterLauncher(files);
-            notes.add((iconDeclared && (generatedVector || fallbackLauncher) ? "PASS " : "FAIL ") +
+            notes.add((iconDeclared && generatedVector ? "PASS " : "FAIL ") +
                     "explicit app-logo request produces distinct non-empty artwork and wires launcher/round icon resources");
         }
 
@@ -206,19 +205,6 @@ final class GeneratedFidelityValidator {
         if (a < 0) return "";
         int b = xml.indexOf("</string>", a + open.length());
         return b < 0 ? "" : xml.substring(a + open.length(), b).trim();
-    }
-    private static boolean hasResourceSuffix(List<GeneratedProject.FileEntry> files, String suffix) {
-        for (GeneratedProject.FileEntry f : files)
-            if (f != null && f.path != null && f.path.startsWith("app/src/main/res/") && f.path.endsWith(suffix)) return true;
-        return false;
-    }
-    private static boolean hasRasterLauncher(List<GeneratedProject.FileEntry> files) {
-        for (GeneratedProject.FileEntry f : files) {
-            if (f == null || f.path == null || !f.path.startsWith("app/src/main/res/")) continue;
-            String p = f.path.toLowerCase(Locale.US);
-            if ((p.contains("ic_launcher") || p.contains("ic_app")) && (p.endsWith(".png") || p.endsWith(".webp"))) return true;
-        }
-        return false;
     }
     private static String joinResources(List<GeneratedProject.FileEntry> files) {
         StringBuilder b = new StringBuilder();
