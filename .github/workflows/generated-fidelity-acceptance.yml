@@ -118,7 +118,7 @@ jobs:
           grep -R -q 'Weight' generated-workout/app/src/main/java
           grep -R -q 'Reps' generated-workout/app/src/main/java
           grep -R -q 'workout_xp' generated-workout/app/src/main/java
-          grep -R -q 'store.putText("workouts"' generated-workout/app/src/main/java
+          grep -R -q 'store.putText("workout_history"' generated-workout/app/src/main/java
           grep -R -q '>PantryQuest</string>' generated-pantry/app/src/main/res/values/strings.xml
           grep -R -q 'android:label="PantryQuest"' generated-pantry/app/src/main/AndroidManifest.xml
           grep -R -q '#0D9488' generated-pantry/app/src/main/res generated-pantry/app/src/main/java
