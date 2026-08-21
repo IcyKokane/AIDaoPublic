@@ -33,7 +33,7 @@ public final class SourceGenerationHandoffAcceptance {
         require(all, "workout_xp", "workout XP state before SOURCE READY");
         require(all, "stat_strength", "workout strength state before SOURCE READY");
         require(all, "stat_endurance", "workout endurance state before SOURCE READY");
-        require(all, "store.puttext(\"workouts\"", "persisted workout mutation before SOURCE READY");
+        require(all, "store.puttext(\"workout_history\"", "persisted workout mutation before SOURCE READY");
     }
 
     private static void verifyNotepadCanAdvanceToSourceReady() {
