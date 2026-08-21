@@ -3,6 +3,7 @@ package dev.thefoolish.aidao;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /** Semantic acceptance gate for generated source. Compilation alone is insufficient. */
 final class GeneratedFidelityValidator {
@@ -119,14 +120,14 @@ final class GeneratedFidelityValidator {
                     "explicit sidebar/drawer requirement materially changes generated layout rather than only renaming navigation helpers");
         }
 
-        if (request.contains("purple")) {
+        if (containsWord(request, "purple")) {
             boolean purpleResource = containsAny(resources.toUpperCase(Locale.US), "#7C3AED", "#8B5CF6", "#9333EA", "#A855F7");
             boolean purpleUsed = joined.contains("ACCENT") &&
                     (joined.contains("round(ACCENT") || joined.contains("setBackgroundColor(ACCENT") || joined.contains("setTextColor(ACCENT"));
             notes.add((purpleResource && purpleUsed ? "PASS " : "FAIL ") +
                     "requested purple direction is both defined and materially applied to generated UI");
         }
-        if (request.contains("red")) {
+        if (containsWord(request, "red")) {
             boolean redResource = containsAny(resources.toUpperCase(Locale.US), "#EF4444", "#DC2626", "#F43F5E", "#E11D48");
             boolean redUsed = joined.contains("SECONDARY") &&
                     (joined.contains("setTextColor(SECONDARY)") || joined.contains("round(SECONDARY") || joined.contains("setBackgroundColor(SECONDARY"));
@@ -137,21 +138,17 @@ final class GeneratedFidelityValidator {
         boolean noteRequest = mentions(request, "notepad", "notes", "note app", "document editor");
         if (mentions(request, "lock notes", "lock note", "notes so they can't be edited", "notes so they cannot be edited", "read-only", "read only")) {
             boolean lockState = lowerJoined.contains("note_lock_") && joined.contains("store.flag(");
-            boolean readOnlyEnforced = joined.contains("setEnabled(false)") || joined.contains("setFocusable(false)") ||
-                    joined.contains("setInputType(0)");
+            boolean readOnlyEnforced = joined.contains("setEnabled(false)") || joined.contains("setFocusable(false)") || joined.contains("setInputType(0)");
             boolean lockToggle = lowerJoined.contains("unlock note") && lowerJoined.contains("lock note");
             notes.add((lockState && readOnlyEnforced && lockToggle ? "PASS " : "FAIL ") +
                     "requested note-lock behavior persists lock state, supports explicit unlock, and prevents editing while locked");
         }
         if (noteRequest) {
-            boolean newNoteIdentity = joined.contains("System.currentTimeMillis()") &&
-                    joined.contains("store.putText(\"active_note\"");
+            boolean newNoteIdentity = joined.contains("System.currentTimeMillis()") && joined.contains("store.putText(\"active_note\"");
             boolean noteMutationsPersist = joined.contains("store.putText(\"note_title_\"") &&
-                    joined.contains("store.putText(\"note_body_\"") &&
-                    joined.contains("store.putText(\"documents\"") &&
+                    joined.contains("store.putText(\"note_body_\"") && joined.contains("store.putText(\"documents\"") &&
                     joined.contains("store.putText(\"active_note\"");
-            boolean reopenSavedNote = joined.contains("AppNavigator.open(this,EditorActivity.class)") &&
-                    lowerJoined.contains("documents");
+            boolean reopenSavedNote = joined.contains("AppNavigator.open(this,EditorActivity.class)") && lowerJoined.contains("documents");
             notes.add((newNoteIdentity && noteMutationsPersist && reopenSavedNote ? "PASS " : "FAIL ") +
                     "notepad supports multiple persisted notes, save/load round trip, and deterministic reopen behavior");
         }
@@ -159,8 +156,7 @@ final class GeneratedFidelityValidator {
         boolean workoutRequest = mentions(request, "workout", "track the exercise", "track exercise", "weight and reps", "weight", "reps");
         if (workoutRequest) {
             boolean workoutFields = lowerJoined.contains("exercise") && lowerJoined.contains("weight") && lowerJoined.contains("reps");
-            boolean workoutMutationsPersist = joined.contains("store.putText(\"workouts\"") ||
-                    joined.contains("store.putText(\"workout_history\"");
+            boolean workoutMutationsPersist = joined.contains("store.putText(\"workouts\"") || joined.contains("store.putText(\"workout_history\"");
             boolean xpMutation = joined.contains("store.number(\"workout_xp\",store.number(\"workout_xp\")+");
             boolean statMutation = joined.contains("store.number(\"stat_strength\",store.number(\"stat_strength\")+") &&
                     joined.contains("store.number(\"stat_endurance\",store.number(\"stat_endurance\")+");
@@ -177,6 +173,14 @@ final class GeneratedFidelityValidator {
         for (String term : terms) if (request.contains(term)) return true;
         return false;
     }
+
+    /** Match standalone color words so words such as inferred/required do not imply red. */
+    private static boolean containsWord(String source, String word) {
+        if (source == null || word == null || word.isEmpty()) return false;
+        return Pattern.compile("(?<![a-z0-9])" + Pattern.quote(word.toLowerCase(Locale.US)) + "(?![a-z0-9])")
+                .matcher(source.toLowerCase(Locale.US)).find();
+    }
+
     private static boolean containsAny(String source, String... terms) {
         for (String term : terms) if (source.contains(term)) return true;
         return false;
@@ -244,12 +248,11 @@ final class GeneratedFidelityValidator {
     private static String joinExecutableSource(List<GeneratedProject.FileEntry> files) {
         StringBuilder b = new StringBuilder();
         for (GeneratedProject.FileEntry f : files) {
-            if (f != null && f.path != null && f.path.startsWith("app/src/main/java/") && f.path.endsWith(".java") && f.content != null)
-                b.append('\n').append(f.content);
+            if (f != null && f.path != null && f.path.startsWith("app/src/main/java/") && f.path.endsWith(".java") && f.content != null) b.append('\n').append(f.content);
         }
         return b.toString();
     }
-    private static void failIf(List<String> notes, String joined, String token, String message) {
-        notes.add((joined.contains(token) ? "FAIL " : "PASS ") + message);
+    private static void failIf(List<String> notes, String source, String forbidden, String label) {
+        notes.add((source.contains(forbidden) ? "FAIL " : "PASS ") + label);
     }
 }
