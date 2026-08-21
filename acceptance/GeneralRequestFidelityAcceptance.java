@@ -85,7 +85,7 @@ public final class GeneralRequestFidelityAcceptance {
         String appScreen = content(project, "/AppScreen.java");
         String log = content(project, "/TimelineActivity.java");
         require(appScreen, "root.addView(main,new LinearLayout.LayoutParams(-1,0,1))", "non-sidebar main content receives visible width and weighted height");
-        require(log, "store.putText(\"workouts\"", "completed workout history persistence");
+        require(log, "store.putText(\"workout_history\"", "completed workout history persistence");
         requireAny(log, new String[]{"store.number(\"workout_xp\"", "workout_xp"}, "automatic XP mutation from workout completion");
         requireAny(log, new String[]{"stat_strength", "stat_endurance"}, "automatic RPG stat mutation from workout completion");
         verifyLocalStoreApiCompatibility(project, "workout");
