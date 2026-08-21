@@ -39,18 +39,18 @@ public final class GeneratedMutationPersistenceAcceptance {
         require(editor, "store.putText(\"documents\"", "note index persistence mutation");
         require(library, "store.putText(\"active_note\"", "active-note persistence mutation");
 
-        // Read paths must remain getters after setter normalization. These exact
-        // aliases previously regressed into putText(...) and produced invalid or
-        // semantically broken generated source.
+        // Read paths must remain getters after setter normalization. Avoid binding
+        // the library assertion to an incidental local-variable name: the semantic
+        // contract is that LibraryActivity reads the persisted document index.
         require(home, "String docs=store.text(\"documents\",\"\")", "home document-index read");
         require(editor, "String id=store.text(\"active_note\",\"default\")", "active-note read");
         require(editor, "title.setText(store.text(\"note_title_\"+id,\"\"))", "note-title read");
         require(editor, "content.setText(store.text(\"note_body_\"+id,\"\"))", "note-body read");
         require(editor, "String docs=store.text(\"documents\",\"\")", "editor document-index read");
-        require(library, "String raw=store.text(\"documents\",\"\")", "library document-index read");
+        require(library, "store.text(\"documents\",\"\")", "library document-index read");
         reject(home, "String docs=store.putText(\"documents\",\"\")", "home getter rewritten as setter");
         reject(editor, "String id=store.putText(\"active_note\",\"default\")", "active-note getter rewritten as setter");
-        reject(library, "String raw=store.putText(\"documents\",\"\")", "library getter rewritten as setter");
+        reject(library, "store.putText(\"documents\",\"\")", "library getter rewritten as setter");
     }
 
     private static void verifyWorkoutMutationsPersist() {
