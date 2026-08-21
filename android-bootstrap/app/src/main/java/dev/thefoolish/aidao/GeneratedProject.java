@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 /** Immutable result of a source-generation pass. */
 final class GeneratedProject {
@@ -114,8 +115,9 @@ final class GeneratedProject {
                 "reference-app behavior", nativeFidelity.projectName, nativeFidelity.packageName, nativeFidelity.files);
         FidelityResult generalProduct = applyProcessor("GeneralProductPostProcessor",
                 "general product fidelity", referenceBehavior.projectName, referenceBehavior.packageName, referenceBehavior.files);
+        String normalizedIdentity = normalizeDescriptorIdentity(generalProduct.projectName, generalProduct.files);
         FidelityResult requestFidelity = applyProcessor("RequestFidelityPostProcessor",
-                "request-specific fidelity", generalProduct.projectName, generalProduct.packageName, generalProduct.files);
+                "request-specific fidelity", normalizedIdentity, generalProduct.packageName, generalProduct.files);
         FidelityResult genericOffline = applyProcessor("GenericOfflinePostProcessor",
                 "generic offline product", requestFidelity.projectName, requestFidelity.packageName, requestFidelity.files);
 
@@ -138,6 +140,30 @@ final class GeneratedProject {
         notes.addAll(structural.notes);
         notes.addAll(validateFidelityIfAvailable(this.packageName, immutableSource));
         this.verificationNotes = Collections.unmodifiableList(notes);
+    }
+
+    /**
+     * Treat generic descriptive phrases as prompts, not user-selected product names.
+     * Explicit names in the request are still resolved later by RequestFidelityPostProcessor.
+     */
+    private static String normalizeDescriptorIdentity(String projectName, List<FileEntry> files) {
+        String name = projectName == null ? "" : projectName.trim();
+        String low = name.toLowerCase(Locale.US);
+        boolean articleDescription = (low.startsWith("a ") || low.startsWith("an ") || low.startsWith("the ")) &&
+                (low.endsWith(" app") || low.endsWith(" application") || low.contains(" tracking app") || low.contains(" tracker app"));
+        boolean genericDescriptor = articleDescription || low.startsWith("simple ") || low.startsWith("basic ");
+        if (!genericDescriptor) return name;
+        String all = joinFileText(files).toLowerCase(Locale.US);
+        if (all.contains("workout") || all.contains("exercise") || all.contains("workout_xp")) return "QuestFit";
+        if (all.contains("notepad") || all.contains("note_title_") || all.contains("document editor")) return "NoteForge";
+        if (all.contains("pantry_inventory") || all.contains("pantry")) return "PantryQuest";
+        return name;
+    }
+
+    private static String joinFileText(List<FileEntry> files) {
+        StringBuilder b = new StringBuilder();
+        if (files != null) for (FileEntry f : files) if (f != null && f.content != null) b.append('\n').append(f.content);
+        return b.toString();
     }
 
     static GeneratedProject resolved(String projectName, String packageName, List<FileEntry> files, List<String> verificationNotes) {
