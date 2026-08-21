@@ -68,7 +68,7 @@ final class RequestFidelityPostProcessor {
                     || p.equals(root + "MainActivity.java")
                     || (note && (p.equals(root + "EditorActivity.java") || p.equals(root + "LibraryActivity.java")))
                     || (workout && (p.equals(root + "TimelineActivity.java") || p.equals(root + "ReportsActivity.java")))
-                    || (pantry && (p.equals(root + "ExploreActivity.java") || p.equals(root + "DetailActivity.java")));
+                    || (pantry && (p.equals(root + "ExploreActivity.java") || p.equals(root + "DetailActivity.java") || p.equals(root + "SettingsActivity.java")));
             if (!replace) out.add(f);
         }
 
@@ -90,6 +90,7 @@ final class RequestFidelityPostProcessor {
             out.add(file(root + "MainActivity.java", pantryHome(packageName), "Render restart-safe pantry inventory"));
             out.add(file(root + "ExploreActivity.java", pantryEditor(packageName), "Add and edit pantry quantities"));
             out.add(file(root + "DetailActivity.java", pantrySummary(packageName), "Summarize pantry inventory"));
+            out.add(file(root + "SettingsActivity.java", pantrySettings(packageName), "Provide real pantry data controls without placeholder actions"));
         }
 
         List<String> notes = new ArrayList<>();
@@ -202,6 +203,7 @@ final class RequestFidelityPostProcessor {
     private static String pantryHome(String p) { return "package " + p + ";import android.widget.*;public final class MainActivity extends AppScreen{protected void render(){body.addView(text(\"Inventory\",26,true));String raw=store.text(\"pantry_inventory\",\"\");if(raw.isEmpty()){body.addView(text(\"No pantry items yet.\",14,false));return;}for(String row:raw.split(\"\\n\")){String[] x=row.split(\"[|]\",2);if(x.length<2)continue;body.addView(card(x[0],\"Quantity: \"+x[1]));}}}"; }
     private static String pantryEditor(String p) { return "package " + p + ";import android.text.InputType;import android.widget.*;public final class ExploreActivity extends AppScreen{protected void render(){body.addView(text(\"Add / Edit Item\",26,true));EditText name=field(\"Item name\");EditText quantity=field(\"Quantity\");quantity.setInputType(InputType.TYPE_CLASS_NUMBER);body.addView(name);body.addView(quantity);Button save=button(\"Save quantity\");save.setOnClickListener(v->{String item=name.getText().toString().trim();if(item.isEmpty()){name.setError(\"Enter an item\");return;}int q;try{q=Integer.parseInt(quantity.getText().toString());if(q<0)throw new Exception();}catch(Exception e){quantity.setError(\"Enter a valid quantity\");return;}String raw=store.text(\"pantry_inventory\",\"\");StringBuilder next=new StringBuilder();boolean found=false;for(String row:raw.split(\"\\n\")){if(row.trim().isEmpty())continue;String[] x=row.split(\"[|]\",2);if(x.length<2)continue;if(x[0].equalsIgnoreCase(item)){if(next.length()>0)next.append('\\n');next.append(item).append('|').append(q);found=true;}else{if(next.length()>0)next.append('\\n');next.append(row);}}if(!found){if(next.length()>0)next.append('\\n');next.append(item).append('|').append(q);}store.putText(\"pantry_inventory\",next.toString());save.setText(\"Saved quantity\");});body.addView(save);}}"; }
     private static String pantrySummary(String p) { return "package " + p + ";public final class DetailActivity extends AppScreen{protected void render(){String raw=store.text(\"pantry_inventory\",\"\");int items=0,totalQuantity=0;for(String row:raw.split(\"\\n\")){String[] x=row.split(\"[|]\",2);if(x.length<2)continue;items++;try{totalQuantity+=Integer.parseInt(x[1]);}catch(Exception ignored){}}body.addView(text(\"Pantry Summary\",26,true));body.addView(card(\"Items\",String.valueOf(items)));body.addView(card(\"Total quantity\",String.valueOf(totalQuantity)));}}"; }
+    private static String pantrySettings(String p) { return "package " + p + ";import android.widget.*;public final class SettingsActivity extends AppScreen{private boolean armed=false;protected void render(){body.addView(text(\"Settings\",26,true));body.addView(card(\"Storage\",\"Inventory is stored locally on this device and survives app restart.\"));Button clear=button(\"Clear inventory\");clear.setOnClickListener(v->{if(!armed){armed=true;clear.setText(\"Tap again to clear inventory\");return;}store.putText(\"pantry_inventory\",\"\");armed=false;clear.setText(\"Inventory cleared\");});body.addView(clear);}}"; }
 
     private RequestFidelityPostProcessor() {}
 }
