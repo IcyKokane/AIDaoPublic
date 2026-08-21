@@ -7,6 +7,8 @@ import java.util.Locale;
 /**
  * Converts simple offline list requests that do not map to a richer domain into
  * a real persisted local product instead of leaving the legacy generic sample-state shell.
+ * Also keeps inherited domain screens source-compatible after request-specific AppScreen
+ * replacement, without rendering a second navigation surface.
  */
 final class GenericOfflinePostProcessor {
     static final class Result {
@@ -27,10 +29,17 @@ final class GenericOfflinePostProcessor {
         if (hasSuffix(source, "/MediaProvider.java") || hasSuffix(source, "/AnimeItem.java"))
             return new Result(projectName, packageName, source, new ArrayList<>());
 
+        CompatibilityResult compatibility = ensureRequestScreenCompatibility(source);
+        source = compatibility.files;
+
         String request = requestText(source).toLowerCase(Locale.US);
         boolean offlineList = any(request, "grocery list", "shopping list", "checklist", "to-do list", "todo list")
                 && any(request, "offline", "persist", "restart", "keep the list", "save");
-        if (!offlineList) return new Result(projectName, packageName, source, new ArrayList<>());
+        if (!offlineList) {
+            List<String> notes = new ArrayList<>();
+            if (compatibility.changed) notes.add("PASS inherited domain screens remain source-compatible with request-specific AppScreen navigation");
+            return new Result(projectName, packageName, source, notes);
+        }
 
         String root = "app/src/main/java/" + packageName.replace('.', '/') + "/";
         List<GeneratedProject.FileEntry> out = new ArrayList<>();
@@ -47,9 +56,46 @@ final class GenericOfflinePostProcessor {
         out.add(file(root + "SettingsActivity.java", settings(packageName), "Provide explicit local list data controls"));
 
         List<String> notes = new ArrayList<>();
+        if (compatibility.changed) notes.add("PASS inherited domain screens remain source-compatible with request-specific AppScreen navigation");
         notes.add("PASS generic offline list request replaced sample-state placeholders with persisted add/edit behavior");
         notes.add("PASS generic offline list uses putText mutations and restart-safe text reads");
         return new Result(projectName, packageName, out, notes);
+    }
+
+    private static final class CompatibilityResult {
+        final List<GeneratedProject.FileEntry> files;
+        final boolean changed;
+        CompatibilityResult(List<GeneratedProject.FileEntry> files, boolean changed) {
+            this.files = files;
+            this.changed = changed;
+        }
+    }
+
+    /**
+     * RequestFidelityPostProcessor replaces AppScreen for explicit navigation/theme requests.
+     * Some untouched domain screens still use the older title/subtitle/nav helper surface.
+     * Keep those helpers as compatibility shims: title/subtitle render into the request-specific
+     * body, while nav is intentionally a no-op because the new AppScreen already owns the
+     * requested sidebar/top/bottom navigation globally.
+     */
+    private static CompatibilityResult ensureRequestScreenCompatibility(List<GeneratedProject.FileEntry> source) {
+        List<GeneratedProject.FileEntry> out = new ArrayList<>();
+        boolean changed = false;
+        for (GeneratedProject.FileEntry f : source) {
+            if (f == null) continue;
+            String content = f.content == null ? "" : f.content;
+            if (f.path != null && f.path.endsWith("/AppScreen.java")
+                    && content.contains("protected LinearLayout sideNav()")
+                    && content.contains("protected abstract void render();")
+                    && !content.contains("protected void nav(String[]")) {
+                content = content.replace(
+                        "protected abstract void render();",
+                        "protected abstract void render();protected void title(String s){body.addView(text(s,26,true));}protected void subtitle(String s){body.addView(text(s,14,false));}protected void nav(String[] labels,Class[] screens){}");
+                changed = true;
+            }
+            out.add(new GeneratedProject.FileEntry(f.path, content, f.taskHint));
+        }
+        return new CompatibilityResult(out, changed);
     }
 
     private static GeneratedProject.FileEntry file(String p, String c, String h) {
