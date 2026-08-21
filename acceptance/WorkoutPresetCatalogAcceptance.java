@@ -38,8 +38,8 @@ public final class WorkoutPresetCatalogAcceptance {
                 "manual exercise-name entry when the prompt requests built-in workouts");
         require(log, "Weight", "weight input");
         require(log, "Reps", "reps input");
-        require(log, "store.putText(\"workouts\"", "persisted workout history mutation");
-        require(log, "store.text(\"workouts\"", "persisted workout history readback");
+        require(log, "store.putText(\"workout_history\"", "persisted workout history mutation");
+        require(log, "store.text(\"workout_history\"", "persisted workout history readback");
         requireAny(log, new String[]{"Recent workouts", "Workout history", "Recent sets", "History"},
                 "visible workout history section");
         requireAny(log, new String[]{"split(\"\\n\")", "split(\"\\\\n\")"},
