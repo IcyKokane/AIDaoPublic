@@ -58,7 +58,7 @@ final class LocalSourceGenerator {
         String s = all.toString();
         int media=score(s,"anime","episode","stream","video","media provider","playback");
         int finance=score(s,"expense","budget","transaction","spending","finance","ledger");
-        int tracker=score(s,"tracker","activity tracker","analytics","habit","usage tracker","timeline");
+        int tracker=score(s,"tracker","tracking","activity tracker","workout","exercise","weight and reps","reps","strength","gym","analytics","habit","usage tracker","timeline");
         int social=score(s,"chat","message","friend","dating","social","community","profile","inbox");
         int commerce=score(s,"shop","store","cart","product","checkout","order","marketplace","purchase","catalog");
         int content=score(s,"note","document","article","journal","editor","write","content","draft","library search");
