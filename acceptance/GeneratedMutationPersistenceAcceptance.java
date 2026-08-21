@@ -66,12 +66,12 @@ public final class GeneratedMutationPersistenceAcceptance {
         );
         assertNoFailure(project, "workout");
         String log = content(project, "/TimelineActivity.java");
-        require(log, "store.putText(\"workouts\"", "workout history persistence mutation");
+        require(log, "store.putText(\"workout_history\"", "workout history persistence mutation");
         require(log, "store.number(\"workout_xp\"", "workout XP mutation");
         require(log, "store.number(\"stat_strength\"", "strength-stat mutation");
         require(log, "store.number(\"stat_endurance\"", "endurance-stat mutation");
-        require(log, "String old=store.text(\"workouts\",\"\")", "workout history read before append");
-        reject(log, "String old=store.putText(\"workouts\",\"\")", "workout getter rewritten as setter");
+        require(log, "String old=store.text(\"workout_history\",\"\")", "workout history read before append");
+        reject(log, "String old=store.putText(\"workout_history\",\"\")", "workout getter rewritten as setter");
     }
 
     private static void assertNoFailure(GeneratedProject project, String label) {
