@@ -67,7 +67,9 @@ final class GeneratedProject {
                         "String ex=String.valueOf(exercise.getSelectedItem());if(ex.trim().isEmpty())return;");
             }
 
-            if (path != null && path.endsWith("/MainActivity.java")
+            if (path != null && path.endsWith(".java")
+                    && !path.endsWith("/GeneratedScreen.java")
+                    && !path.endsWith("/AppScreen.java")
                     && out.contains("Button ")
                     && !out.contains("import android.widget.Button;")
                     && !out.contains("import android.widget.*;")) {
