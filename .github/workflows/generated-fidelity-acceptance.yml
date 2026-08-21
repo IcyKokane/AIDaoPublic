@@ -185,6 +185,11 @@ jobs:
             generated-pantry/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
+      - name: Set up Gradle 9.5 for AIDao build
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
       - name: Build AIDao APK containing fidelity generator
         working-directory: android-bootstrap
         run: gradle :app:assembleDebug --stacktrace
