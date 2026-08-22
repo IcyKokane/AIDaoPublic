@@ -5,7 +5,7 @@ import java.util.Arrays;
 /** Guards the real-device failure where incompatible repository metadata looked installable/enabled. */
 public final class MihonExtensionCompatibilityAcceptance {
     public static void main(String[] args) {
-        GeneratedProject project = new LocalSourceGenerator().generate(
+        GeneratedProject base = new LocalSourceGenerator().generate(
                 "Anime Shelf",
                 "Create an anime app like Mihon with repository-based providers, search, favorites, history, playback and resume progress.",
                 Arrays.asList(
@@ -16,11 +16,24 @@ public final class MihonExtensionCompatibilityAcceptance {
                 ),
                 Arrays.asList("Generate media app", "Integrate repositories", "Validate extension capability safety")
         );
+        for (String note : base.verificationNotes) {
+            if (note.startsWith("FAIL ")) throw new IllegalStateException(note);
+        }
+
+        ProviderCapabilityIntegrator.Result integrated = ProviderCapabilityIntegrator.process(
+                base.projectName, base.packageName, base.files);
+        GeneratedProject project = new GeneratedProject(
+                integrated.projectName, integrated.packageName, integrated.files, integrated.notes);
         for (String note : project.verificationNotes) {
             if (note.startsWith("FAIL ")) throw new IllegalStateException(note);
         }
+
         String providers = content(project, "/ProvidersActivity.java");
-        require(providers, "boolean compatible=x.searchable()", "explicit search-contract compatibility check");
+        String extension = content(project, "/ExtensionRecord.java");
+        String repositoryProvider = content(project, "/RepositoryMediaProvider.java");
+
+        require(extension, "public boolean searchable(){return searchUrl.length()>0;}", "declared search-contract compatibility predicate");
+        require(repositoryProvider, "if(!ext.searchable())throw new IllegalStateException", "repository search refuses incompatible metadata");
         require(providers, "Unsupported repository metadata", "visible unsupported-state label");
         require(providers, "toggle.setEnabled(compatible)", "incompatible extension action disabled");
         require(providers, "cannot execute arbitrary extension APKs", "honest executable-extension boundary");
