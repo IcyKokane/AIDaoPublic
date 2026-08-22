@@ -34,16 +34,23 @@ public final class GeneralRequestFidelityAcceptance {
 
         String manifest = content(project, "app/src/main/AndroidManifest.xml");
         String colors = content(project, "app/src/main/res/values/colors.xml");
-        String icon = content(project, "/ic_generated_app.xml");
+        String adaptive = content(project, "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml");
+        String adaptiveRound = content(project, "app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml");
+        String foreground = content(project, "app/src/main/res/drawable/ic_launcher_foreground.xml");
+        String launcherBackground = content(project, "app/src/main/res/values/launcher_background.xml");
         String appScreen = content(project, "/AppScreen.java");
         String home = content(project, "/MainActivity.java");
         String editor = content(project, "/EditorActivity.java");
         String library = content(project, "/LibraryActivity.java");
 
-        require(manifest, "android:icon=\"@drawable/ic_generated_app\"", "launcher icon declaration");
-        require(manifest, "android:roundIcon=\"@drawable/ic_generated_app\"", "round launcher icon declaration");
-        require(icon, "<vector", "generated launcher vector");
-        require(icon, "<path", "non-empty generated launcher artwork");
+        require(manifest, "android:icon=\"@mipmap/ic_launcher\"", "adaptive launcher icon declaration");
+        require(manifest, "android:roundIcon=\"@mipmap/ic_launcher_round\"", "adaptive round launcher icon declaration");
+        require(adaptive, "<adaptive-icon", "adaptive launcher resource");
+        require(adaptive, "@drawable/ic_launcher_foreground", "adaptive launcher foreground wiring");
+        require(adaptiveRound, "<adaptive-icon", "adaptive round launcher resource");
+        require(foreground, "<vector", "generated launcher foreground vector");
+        require(foreground, "<path", "non-empty generated launcher artwork");
+        require(launcherBackground, "launcher_background", "generated app-specific launcher background");
         require(colors.toUpperCase(), "#7C3AED", "explicit purple theme accent");
         require(colors.toUpperCase(), "#EF4444", "explicit red theme accent");
         require(appScreen, "root.setOrientation(LinearLayout.HORIZONTAL)", "sidebar root orientation");
