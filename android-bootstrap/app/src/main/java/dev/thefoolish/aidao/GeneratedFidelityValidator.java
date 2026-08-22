@@ -102,13 +102,20 @@ final class GeneratedFidelityValidator {
         notes.add((conciseName ? "PASS " : "FAIL ") + "generated app identity uses a concise product name rather than prompt text");
 
         if (mentions(request, "app logo", "app icon", "logo", "icon")) {
-            String generatedIcon = contentBySuffix(files, "/ic_generated_app.xml");
-            boolean iconDeclared = manifest.contains("android:icon=\"@drawable/ic_generated_app\"") &&
-                    manifest.contains("android:roundIcon=\"@drawable/ic_generated_app\"");
-            boolean generatedVector = generatedIcon.contains("<vector") && generatedIcon.contains("<path") &&
-                    generatedIcon.contains("android:pathData=");
-            notes.add((iconDeclared && generatedVector ? "PASS " : "FAIL ") +
-                    "explicit app-logo request produces distinct non-empty artwork and wires launcher/round icon resources");
+            String adaptive = content(files, "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml");
+            String adaptiveRound = content(files, "app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml");
+            String foreground = content(files, "app/src/main/res/drawable/ic_launcher_foreground.xml");
+            String background = content(files, "app/src/main/res/values/launcher_background.xml");
+            boolean iconDeclared = manifest.contains("android:icon=\"@mipmap/ic_launcher\"") &&
+                    manifest.contains("android:roundIcon=\"@mipmap/ic_launcher_round\"");
+            boolean adaptiveWiring = adaptive.contains("<adaptive-icon") &&
+                    adaptive.contains("@drawable/ic_launcher_foreground") &&
+                    adaptive.contains("@color/launcher_background") &&
+                    adaptiveRound.contains("<adaptive-icon");
+            boolean generatedArtwork = foreground.contains("<vector") && foreground.contains("<path") &&
+                    foreground.contains("android:pathData=") && background.contains("launcher_background");
+            notes.add((iconDeclared && adaptiveWiring && generatedArtwork ? "PASS " : "FAIL ") +
+                    "explicit app-logo request produces distinct app-specific adaptive artwork and wires launcher/round mipmap resources");
         }
 
         if (mentions(request, "sidebar", "side bar", "navigation drawer", "drawer navigation")) {
@@ -192,11 +199,6 @@ final class GeneratedFidelityValidator {
     private static String content(List<GeneratedProject.FileEntry> files, String path) {
         for (GeneratedProject.FileEntry f : files)
             if (f != null && path.equals(f.path) && f.content != null) return f.content;
-        return "";
-    }
-    private static String contentBySuffix(List<GeneratedProject.FileEntry> files, String suffix) {
-        for (GeneratedProject.FileEntry f : files)
-            if (f != null && f.path != null && f.path.endsWith(suffix) && f.content != null) return f.content;
         return "";
     }
     private static String xmlValue(String xml, String name) {
