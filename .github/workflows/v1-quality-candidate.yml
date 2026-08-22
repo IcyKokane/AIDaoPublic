@@ -61,6 +61,7 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GeneratedProjectValidationAcceptance.java
           java -cp build/v1-candidate dev.thefoolish.aidao.GeneratedProjectValidationAcceptance
@@ -72,6 +73,7 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectOverrideResolver.java \
@@ -101,9 +103,6 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import json, re, urllib.error, urllib.parse, urllib.request
-          # GitHubDeviceAuthClient is the runtime source of truth. AIDaoActivityV6
-          # passes a legacy argument for API compatibility, but begin()/pollOnce()
-          # deliberately use AIDAO_GITHUB_APP_CLIENT_ID internally.
           source = Path('android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GitHubDeviceAuthClient.java').read_text()
           match = re.search(r'AIDAO_GITHUB_APP_CLIENT_ID\s*=\s*"([^"]+)"', source)
           if not match:
