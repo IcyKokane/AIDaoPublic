@@ -26,12 +26,19 @@ public final class MihonExtensionCompatibilityAcceptance {
 
         require(extension, "public boolean searchable(){return searchUrl.length()>0;}", "declared search-contract compatibility predicate");
         require(repositoryProvider, "if(!ext.searchable())throw new IllegalStateException", "repository search refuses incompatible metadata");
-        require(providers, "toggle.setEnabled(compatible)", "incompatible extension action disabled");
+
+        // Final phone UX no longer renders a disabled toggle for incompatible repository entries.
+        // Instead, it renders a Select provider action only inside the compatible/playable branch.
+        require(providers, "boolean ok=enabled&&x.playable()", "repository playback compatibility predicate");
+        require(providers, "if(ok){compatible++;Button choose=button", "provider selection action gated behind compatibility");
+        require(providers, "Select provider", "reachable compatible-provider selection action");
         require(providers, "cannot execute arbitrary extension APKs", "honest executable-extension boundary");
-        if (!providers.contains("Unsupported repository metadata") && !providers.contains("Search: unavailable"))
+        if (!providers.contains("Unsupported/incompatible") && !providers.contains("Search: unavailable"))
             throw new IllegalStateException("Provider screen does not visibly explain incompatible repository metadata");
         if (providers.contains("toggle.setEnabled(true)"))
             throw new IllegalStateException("Provider screen contains an unconditional extension enable path");
+        if (providers.contains("choose.setEnabled(true)"))
+            throw new IllegalStateException("Provider screen contains an unconditional repository provider selection path");
         System.out.println("PASS Mihon repository extension compatibility safety");
     }
 
