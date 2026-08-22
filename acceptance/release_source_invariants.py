@@ -58,15 +58,16 @@ for marker in ["PLACEHOLDER_COMPLETION_MARKERS", "Save local sample state", "Dem
     if marker not in validator:
         raise SystemExit("Generated completion honesty gate missing: " + marker)
 
-# The final processor is the source of truth for the APK tree. Checking only the
-# raw LocalSourceGenerator would miss or falsely reject postprocessed Android output.
+# The final processor is the source of truth for APK-tree hardening. ScrollView
+# reachability itself is asserted by GeneratedProjectValidator against the final
+# screen shell, while this invariant verifies the transform that adds modern insets.
 phone_pass = (ROOT / "GenericOfflinePostProcessor.java").read_text()
 required_phone_markers = {
     "adaptive launcher icon manifest wiring": [
         "android:icon=\\\"@mipmap/ic_launcher", "android:roundIcon=\\\"@mipmap/ic_launcher_round",
         "mipmap-anydpi-v26/ic_launcher.xml", "mipmap-anydpi-v26/ic_launcher_round.xml", "ic_launcher_foreground.xml"
     ],
-    "phone-safe system inset handling": ["WindowInsets.Type.systemBars", "WindowInsets.Type.displayCutout", "WindowInsets.Type.ime", "ScrollView"],
+    "phone-safe system inset handling": ["WindowInsets.Type.systemBars", "WindowInsets.Type.displayCutout", "WindowInsets.Type.ime"],
     "explicit persisted provider/player selection": ["selected_provider", "selected_player"],
     "actionable playback setup UX": ["Select provider", "Select player"],
     "provider compatibility honesty": ["Unsupported", "compatible", "Playback capability incomplete"],
