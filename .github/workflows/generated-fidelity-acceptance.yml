@@ -104,10 +104,18 @@ jobs:
       - name: Generate real-device non-media Android projects
         run: |
           java -cp build/fidelity-generator dev.thefoolish.aidao.GenerateGeneralFidelityProjects "$PWD/generated-notepad" "$PWD/generated-workout" "$PWD/generated-pantry"
-          test -f generated-notepad/app/src/main/AndroidManifest.xml
-          test -f generated-workout/app/src/main/AndroidManifest.xml
-          test -f generated-pantry/app/src/main/AndroidManifest.xml
-          grep -R -q 'android:icon="@drawable/ic_generated_app"' generated-notepad/app/src/main/AndroidManifest.xml
+          for project in generated-notepad generated-workout generated-pantry; do
+            test -f "$project/app/src/main/AndroidManifest.xml"
+            grep -q 'android:icon="@mipmap/ic_launcher"' "$project/app/src/main/AndroidManifest.xml"
+            grep -q 'android:roundIcon="@mipmap/ic_launcher_round"' "$project/app/src/main/AndroidManifest.xml"
+            test -f "$project/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml"
+            test -f "$project/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
+            test -f "$project/app/src/main/res/drawable/ic_launcher_foreground.xml"
+            grep -R -q 'WindowInsets.Type.systemBars' "$project/app/src/main/java"
+            grep -R -q 'WindowInsets.Type.ime' "$project/app/src/main/java"
+            grep -R -q 'WindowInsets.Type.displayCutout' "$project/app/src/main/java"
+            grep -R -q 'ScrollView' "$project/app/src/main/java"
+          done
           grep -R -q 'root.addView(nav,new LinearLayout.LayoutParams(dp(104),-1))' generated-notepad/app/src/main/java
           grep -R -q 'note_lock_' generated-notepad/app/src/main/java
           grep -R -q 'setEnabled(false)' generated-notepad/app/src/main/java
@@ -147,6 +155,11 @@ jobs:
           test -f generated-fidelity/app/src/main/AndroidManifest.xml
           test "$(find generated-fidelity/app/src/main/java -type f | wc -l)" -ge 21
           ! grep -R -q 'Origin Path\|Sky Archive\|sample data only' generated-fidelity/app/src/main || exit 1
+          grep -q 'android:icon="@mipmap/ic_launcher"' generated-fidelity/app/src/main/AndroidManifest.xml
+          grep -q 'android:roundIcon="@mipmap/ic_launcher_round"' generated-fidelity/app/src/main/AndroidManifest.xml
+          test -f generated-fidelity/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          test -f generated-fidelity/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+          test -f generated-fidelity/app/src/main/res/drawable/ic_launcher_foreground.xml
           grep -R -q 'ExtensionRepositoryClient' generated-fidelity/app/src/main/java
           grep -R -q 'RepositoriesActivity' generated-fidelity/app/src/main/java
           grep -R -q 'BuiltInProviderCatalog' generated-fidelity/app/src/main/java
@@ -155,14 +168,21 @@ jobs:
           grep -R -q 'https://api.jikan.moe/v4/anime' generated-fidelity/app/src/main/java
           grep -R -q 'https://graphql.anilist.co' generated-fidelity/app/src/main/java
           grep -R -q 'new ArrayList<>(BuiltInProviderCatalog.providers())' generated-fidelity/app/src/main/java
-          grep -R -q 'setOnApplyWindowInsetsListener' generated-fidelity/app/src/main/java
-          grep -R -q 'new Thread(()->' generated-fidelity/app/src/main/java
+          grep -R -q 'WindowInsets.Type.systemBars' generated-fidelity/app/src/main/java
+          grep -R -q 'WindowInsets.Type.ime' generated-fidelity/app/src/main/java
+          grep -R -q 'WindowInsets.Type.displayCutout' generated-fidelity/app/src/main/java
           grep -R -q 'Some sources could not be reached' generated-fidelity/app/src/main/java
-          grep -R -q 'UpdatesActivity' generated-fidelity/app/src/main/java
-          grep -R -q 'MoreActivity' generated-fidelity/app/src/main/java
-          grep -R -q 'LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class' generated-fidelity/app/src/main/java
-          grep -R -q 'Unsupported repository metadata' generated-fidelity/app/src/main/java
-          grep -R -q 'toggle.setEnabled(compatible)' generated-fidelity/app/src/main/java
+          grep -R -q 'selected_provider' generated-fidelity/app/src/main/java
+          grep -R -q 'selected_player' generated-fidelity/app/src/main/java
+          grep -R -q 'Select provider' generated-fidelity/app/src/main/java
+          grep -R -q 'Select player' generated-fidelity/app/src/main/java
+          grep -R -q 'Playback capability incomplete' generated-fidelity/app/src/main/java
+          grep -R -q 'Unsupported for playback\|incompatible' generated-fidelity/app/src/main/java
+          grep -R -q 'resolveMediaUrl' generated-fidelity/app/src/main/java
+          grep -R -q 'provider returned a non-HTTPS media URL' generated-fidelity/app/src/main/java
+          grep -R -q 'new VideoView(this)' generated-fidelity/app/src/main/java
+          grep -R -q 'setVideoURI' generated-fidelity/app/src/main/java
+          grep -R -q 'getCurrentPosition()' generated-fidelity/app/src/main/java
 
       - name: Build materially improved generated APK
         working-directory: generated-fidelity
