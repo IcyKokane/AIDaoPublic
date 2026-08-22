@@ -23,6 +23,7 @@ public final class MihonExtensionCompatibilityAcceptance {
         String providers = content(project, "/ProvidersActivity.java");
         String extension = content(project, "/ExtensionRecord.java");
         String repositoryProvider = content(project, "/RepositoryMediaProvider.java");
+        String allExecutable = executableSource(project);
 
         require(extension, "public boolean searchable(){return searchUrl.length()>0;}", "declared search-contract compatibility predicate");
         require(repositoryProvider, "if(!ext.searchable())throw new IllegalStateException", "repository search refuses incompatible metadata");
@@ -32,13 +33,22 @@ public final class MihonExtensionCompatibilityAcceptance {
         require(providers, "boolean ok=enabled&&x.playable()", "repository playback compatibility predicate");
         require(providers, "if(ok){compatible++;Button choose=button", "provider selection action gated behind compatibility");
         require(providers, "Select provider", "reachable compatible-provider selection action");
-        require(providers, "cannot execute arbitrary extension APKs", "honest executable-extension boundary");
+        require(providers, "authorized configuration must be verified by the user", "visible authorization/provenance boundary");
         if (!providers.contains("Unsupported/incompatible") && !providers.contains("Search: unavailable"))
             throw new IllegalStateException("Provider screen does not visibly explain incompatible repository metadata");
         if (providers.contains("toggle.setEnabled(true)"))
             throw new IllegalStateException("Provider screen contains an unconditional extension enable path");
         if (providers.contains("choose.setEnabled(true)"))
             throw new IllegalStateException("Provider screen contains an unconditional repository provider selection path");
+
+        // Repository integration is deliberately declarative-only. It may consume reviewed HTTPS
+        // search/playback contracts, but generated code must never load or install arbitrary APK code.
+        forbid(allExecutable, "DexClassLoader", "dynamic APK/class loading");
+        forbid(allExecutable, "PathClassLoader", "dynamic APK/class loading");
+        forbid(allExecutable, "installPackage", "package installation API");
+        forbid(allExecutable, "REQUEST_INSTALL_PACKAGES", "unknown-package installation permission");
+        forbid(allExecutable, "ACTION_INSTALL_PACKAGE", "package installer intent");
+
         System.out.println("PASS Mihon repository extension compatibility safety");
     }
 
@@ -48,8 +58,22 @@ public final class MihonExtensionCompatibilityAcceptance {
         throw new IllegalStateException("Missing generated file " + suffix);
     }
 
+    private static String executableSource(GeneratedProject project) {
+        StringBuilder out = new StringBuilder();
+        for (GeneratedProject.FileEntry f : project.files) {
+            if (f != null && f.path != null && f.path.startsWith("app/src/main/java/") && f.path.endsWith(".java") && f.content != null)
+                out.append('\n').append(f.content);
+        }
+        return out.toString();
+    }
+
     private static void require(String source, String token, String label) {
         if (source == null || !source.contains(token))
             throw new IllegalStateException("Missing " + label + ": " + token);
+    }
+
+    private static void forbid(String source, String token, String label) {
+        if (source != null && source.contains(token))
+            throw new IllegalStateException("Forbidden " + label + " present: " + token);
     }
 }
