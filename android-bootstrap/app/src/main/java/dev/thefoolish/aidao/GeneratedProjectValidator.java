@@ -126,6 +126,48 @@ final class GeneratedProjectValidator {
             if (body.contains("android:debuggable=\"true\"")) { notes.add("FAIL generated manifest hard-codes debuggable=true"); ok=false; }
             for (String permission:UNSUPPORTED_PRIVILEGED_PERMISSIONS) if (body.contains(permission)) { notes.add("FAIL generated manifest requests unsupported privileged permission: " + permission); ok=false; }
             if (!containsUnsupportedPrivilege(body)) notes.add("PASS no unsupported privileged Android permissions");
+            if (!body.contains("android:icon=\"@mipmap/ic_launcher\"")) { notes.add("FAIL generated manifest does not wire an app-specific launcher icon"); ok=false; }
+            else notes.add("PASS manifest launcher icon wiring");
+            if (!body.contains("android:roundIcon=\"@mipmap/ic_launcher_round\"")) { notes.add("FAIL generated manifest does not wire a round launcher icon"); ok=false; }
+            else notes.add("PASS manifest round icon wiring");
+        }
+
+        String[] iconPaths = {
+                "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+                "app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+                "app/src/main/res/drawable/ic_launcher_foreground.xml"
+        };
+        for (String iconPath : iconPaths) {
+            if (!hasPath(files, iconPath)) { notes.add("FAIL missing generated launcher icon resource: " + iconPath); ok=false; }
+            else notes.add("PASS generated launcher icon resource: " + iconPath);
+        }
+
+        GeneratedProject.FileEntry generatedScreen=find(files,packageRoot + "GeneratedScreen.java");
+        if (generatedScreen != null) {
+            String body=generatedScreen.content==null?"":generatedScreen.content;
+            if (!(body.contains("WindowInsets") && body.contains("systemBars") && body.contains("ime"))) {
+                notes.add("FAIL generated screen shell does not handle status/navigation/IME insets"); ok=false;
+            } else notes.add("PASS generated screen shell handles system and IME insets");
+            if (!body.contains("ScrollView")) { notes.add("FAIL generated screen shell is not scroll-safe"); ok=false; }
+            else notes.add("PASS generated screen shell supports scrolling");
+        }
+
+        boolean mediaProject = hasPath(files, packageRoot + "MediaProvider.java") || hasPath(files, packageRoot + "PlayerActivity.java");
+        if (mediaProject) {
+            GeneratedProject.FileEntry providers=find(files,packageRoot + "ProvidersActivity.java");
+            GeneratedProject.FileEntry player=find(files,packageRoot + "PlayerActivity.java");
+            String providersBody=providers==null||providers.content==null?"":providers.content;
+            String playerBody=player==null||player.content==null?"":player.content;
+            String mediaBody=providersBody + "\n" + playerBody;
+            if (!(mediaBody.contains("selected_provider") && mediaBody.contains("selected_player"))) {
+                notes.add("FAIL media app does not persist explicit provider/player selections"); ok=false;
+            } else notes.add("PASS media app persists provider/player selections");
+            if (!(mediaBody.contains("Select provider") && mediaBody.contains("Select player"))) {
+                notes.add("FAIL media playback can dead-end without reachable provider/player setup actions"); ok=false;
+            } else notes.add("PASS media playback exposes setup actions");
+            if (!(mediaBody.contains("Unsupported") || mediaBody.toLowerCase().contains("incompatible"))) {
+                notes.add("FAIL media provider UI does not surface compatibility reasons"); ok=false;
+            } else notes.add("PASS media provider UI surfaces compatibility state");
         }
 
         GeneratedProject.FileEntry workflow=find(files,".github/workflows/android.yml");
