@@ -2,10 +2,6 @@ from pathlib import Path
 
 ROOT = Path("android-bootstrap/app/src/main/java/dev/thefoolish/aidao")
 
-# Repeated-package strings must exist in sanitizers/validators as regression
-# signatures, so never reject the repository merely because those literals are
-# present in code whose job is to detect or repair them. Ordinary production
-# implementation files must still remain free of the corrupted qualifiers.
 intentional_guard_files = {
     "GeneratedProject.java",
     "GeneratedProjectRepairer.java",
@@ -62,23 +58,33 @@ for marker in ["PLACEHOLDER_COMPLETION_MARKERS", "Save local sample state", "Dem
     if marker not in validator:
         raise SystemExit("Generated completion honesty gate missing: " + marker)
 
-# Real-phone hard gate: source generation must no longer be allowed to declare
-# V1-ready output while emitting a generic debug launcher icon, edge-obscured
-# controls, all-unsupported providers, or a dead-end playback placeholder.
-generator = (ROOT / "LocalSourceGenerator.java").read_text()
-required_generator_markers = {
-    "adaptive launcher icon manifest wiring": ["android:icon=", "android:roundIcon=", "@mipmap/ic_launcher", "ic_launcher_foreground"],
-    "phone-safe system inset handling": ["WindowInsets", "systemBars", "ime"],
+# The final processor is the source of truth for the APK tree. Checking only the
+# raw LocalSourceGenerator would miss or falsely reject postprocessed Android output.
+phone_pass = (ROOT / "GenericOfflinePostProcessor.java").read_text()
+required_phone_markers = {
+    "adaptive launcher icon manifest wiring": [
+        "android:icon=\\\"@mipmap/ic_launcher", "android:roundIcon=\\\"@mipmap/ic_launcher_round",
+        "mipmap-anydpi-v26/ic_launcher.xml", "mipmap-anydpi-v26/ic_launcher_round.xml", "ic_launcher_foreground.xml"
+    ],
+    "phone-safe system inset handling": ["WindowInsets.Type.systemBars", "WindowInsets.Type.displayCutout", "WindowInsets.Type.ime", "ScrollView"],
     "explicit persisted provider/player selection": ["selected_provider", "selected_player"],
     "actionable playback setup UX": ["Select provider", "Select player"],
-    "provider compatibility honesty": ["Unsupported", "compatib"],
+    "provider compatibility honesty": ["Unsupported", "compatible", "Playback capability incomplete"],
+    "real playback handoff": ["resolveMediaUrl", "https://", "VideoView", "setVideoURI", "getCurrentPosition"],
 }
-for requirement, markers in required_generator_markers.items():
-    missing = [marker for marker in markers if marker not in generator]
+for requirement, markers in required_phone_markers.items():
+    missing = [marker for marker in markers if marker not in phone_pass]
     if missing:
         raise SystemExit(
-            "Release-blocking generated-app phone acceptance missing "
+            "Release-blocking final generated-app phone acceptance missing "
             + requirement + ": " + ", ".join(missing)
         )
+
+for marker in [
+    "android:icon=\\\"@mipmap/ic_launcher", "android:roundIcon=\\\"@mipmap/ic_launcher_round",
+    "selected_provider", "selected_player", "Select provider", "Select player"
+]:
+    if marker not in validator:
+        raise SystemExit("Generated final-tree validator missing phone acceptance marker: " + marker)
 
 print("Release-blocking source invariants passed")
