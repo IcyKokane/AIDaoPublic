@@ -51,13 +51,14 @@ public final class GenerateFidelitySampleProject {
                 "BuiltInProviderCatalog","JikanCatalogProvider","AniListCatalogProvider","https://api.jikan.moe/v4/anime","https://graphql.anilist.co",
                 "new ArrayList<>(BuiltInProviderCatalog.providers())","WindowInsets.Type.systemBars","WindowInsets.Type.displayCutout","WindowInsets.Type.ime","ScrollView",
                 "Some sources could not be reached","LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class",
-                "store.set(\"favorites\"","Open favorite ","Remove from Library","Add to Library","Sync repository","Remove repository","Enable extension","Disable extension","dp(52)",
+                "store.set(\"favorites\"","Open favorite ","Remove from Library","Add to Library","Sync repository","Remove repository","Disable extension","dp(52)",
                 "selected_provider","selected_player","Select provider","Select player","Unsupported for playback","Playback capability incomplete",
                 "playbackUrl","supportsPlayback()","resolveMediaUrl","Playback: compatible","new VideoView(this)","setVideoURI","getCurrentPosition()","provider returned a non-HTTPS media URL"
         })if(!source.contains(marker))throw new IllegalStateException("Missing AniShelf real-phone fidelity marker: "+marker);
 
         String providers=content(project,root+"ProvidersActivity.java"),player=content(project,root+"PlayerActivity.java");
         if(providers.contains("Select provider")&&!providers.contains("supportsPlayback"))throw new IllegalStateException("provider selection is not compatibility-gated");
+        if(!providers.contains("Unsupported for playback")||!providers.contains("Select provider"))throw new IllegalStateException("provider lifecycle must expose compatibility-aware selection instead of a generic enable action");
         if(!player.contains("AppNavigator.open(this,ProvidersActivity.class)"))throw new IllegalStateException("playback setup cannot navigate to provider selection");
         if(!player.contains("store.putText(\"selected_player\""))throw new IllegalStateException("player selection is not persisted");
         System.out.println("Generated AniShelf phone-fidelity acceptance project: "+project.projectName+" / "+project.packageName+" / "+project.files.size()+" files");
