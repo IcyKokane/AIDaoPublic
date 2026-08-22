@@ -51,7 +51,9 @@ public final class SourceGenerationHandoffAcceptance {
         );
         requireSourceReady(project, "notepad");
         String all = join(project).toLowerCase();
-        require(all, "android:icon=\"@drawable/ic_generated_app\"", "notepad launcher icon before SOURCE READY");
+        require(all, "android:icon=\"@mipmap/ic_launcher\"", "notepad adaptive launcher icon before SOURCE READY");
+        require(all, "android:roundicon=\"@mipmap/ic_launcher_round\"", "notepad round launcher icon before SOURCE READY");
+        require(all, "<adaptive-icon", "notepad adaptive icon resource before SOURCE READY");
         require(all, "root.setorientation(linearlayout.horizontal)", "notepad sidebar layout before SOURCE READY");
         require(all, "note_lock_", "notepad lock state before SOURCE READY");
         require(all, "store.puttext(\"note_title_\"", "persisted note title before SOURCE READY");
