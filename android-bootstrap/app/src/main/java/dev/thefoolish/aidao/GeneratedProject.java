@@ -34,6 +34,13 @@ final class GeneratedProject {
                         "String target=expand(ext.playbackUrl,\"\",itemId,episode);if(target.endsWith(\".mp4\")",
                         "String target=expand(ext.playbackUrl,\"\",itemId,episode);if(!target.startsWith(\"https://\"))throw new IOException(\"Playback contract must resolve to HTTPS\");if(target.endsWith(\".mp4\")");
             }
+            if (path != null && path.endsWith("/PlayerActivity.java")
+                    && out.contains("VideoView video=new VideoView(this);")
+                    && !out.contains("setMediaController")) {
+                out = out.replace(
+                        "video.setContentDescription(\"Episode video player\");body.addView(video,new LinearLayout.LayoutParams(-1,dp(260)));video.setVideoURI(Uri.parse(url));",
+                        "video.setContentDescription(\"Episode video player\");body.addView(video,new LinearLayout.LayoutParams(-1,dp(260)));MediaController controls=new MediaController(this);controls.setAnchorView(video);video.setMediaController(controls);video.setVideoURI(Uri.parse(url));");
+            }
 
             String[] persistedTextKeys = {
                     "last_episode", "last_surface", "documents", "active_note",
