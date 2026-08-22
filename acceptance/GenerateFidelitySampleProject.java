@@ -16,12 +16,12 @@ public final class GenerateFidelitySampleProject {
                 "Search anime through repository-backed providers rather than fabricated sample entries.",
                 "Bundle at least one reviewed real provider when a safe compatible public source is available.",
                 "Allow users to add and remove HTTPS extension repository URLs and sync extension metadata.",
-                "Show extension states including available, installed, enabled, disabled, and failed.",
+                "Show extension states including available, installed, enabled, disabled, failed, and unsupported for playback.",
                 "Provide Browse, Detail, Library, History, Downloads, Extensions, Repositories, and Player surfaces.",
                 "Persist favorites, history, downloads metadata, repository configuration, extension state, resume progress, selected provider, and selected player locally.",
                 "Use Android-native navigation and typography, accessible labels, phone-safe status/navigation/IME insets, and scroll-safe reachable controls.",
                 "A favorited title must render in Library after navigation and process restart, and removal must update Library.",
-                "Repository Sync/Remove and extension Enable/Disable controls must remain visibly labeled at phone density.",
+                "Repository Sync/Remove and provider compatibility/selection controls must remain visibly labeled at phone density.",
                 "Episode playback must use an actual provider-declared HTTPS media resolver when supported and clearly identify metadata-only or otherwise incompatible providers.",
                 "If playback has no compatible authorized provider, show capability incomplete rather than pretending playback is ready.",
                 "If playback needs setup, expose reachable Select provider and Select player actions and persist both choices.",
@@ -51,7 +51,7 @@ public final class GenerateFidelitySampleProject {
                 "BuiltInProviderCatalog","JikanCatalogProvider","AniListCatalogProvider","https://api.jikan.moe/v4/anime","https://graphql.anilist.co",
                 "new ArrayList<>(BuiltInProviderCatalog.providers())","WindowInsets.Type.systemBars","WindowInsets.Type.displayCutout","WindowInsets.Type.ime","ScrollView",
                 "Some sources could not be reached","LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class",
-                "store.set(\"favorites\"","Open favorite ","Remove from Library","Add to Library","Sync repository","Remove repository","Disable extension","dp(52)",
+                "store.set(\"favorites\"","Open favorite ","Remove from Library","Add to Library","Sync repository","Remove repository","dp(52)",
                 "selected_provider","selected_player","Select provider","Select player","Unsupported for playback","Playback capability incomplete",
                 "playbackUrl","supportsPlayback()","resolveMediaUrl","Playback: compatible","new VideoView(this)","setVideoURI","getCurrentPosition()","provider returned a non-HTTPS media URL"
         })if(!source.contains(marker))throw new IllegalStateException("Missing AniShelf real-phone fidelity marker: "+marker);
@@ -59,6 +59,7 @@ public final class GenerateFidelitySampleProject {
         String providers=content(project,root+"ProvidersActivity.java"),player=content(project,root+"PlayerActivity.java");
         if(providers.contains("Select provider")&&!providers.contains("supportsPlayback"))throw new IllegalStateException("provider selection is not compatibility-gated");
         if(!providers.contains("Unsupported for playback")||!providers.contains("Select provider"))throw new IllegalStateException("provider lifecycle must expose compatibility-aware selection instead of a generic enable action");
+        if(providers.contains("Enable extension")||providers.contains("Disable extension"))throw new IllegalStateException("provider lifecycle must not expose misleading generic enable/disable controls for unsupported playback providers");
         if(!player.contains("AppNavigator.open(this,ProvidersActivity.class)"))throw new IllegalStateException("playback setup cannot navigate to provider selection");
         if(!player.contains("store.putText(\"selected_player\""))throw new IllegalStateException("player selection is not persisted");
         System.out.println("Generated AniShelf phone-fidelity acceptance project: "+project.projectName+" / "+project.packageName+" / "+project.files.size()+" files");
