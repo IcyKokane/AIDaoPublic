@@ -43,10 +43,14 @@ required6 = [
     "GeneratedProjectRepairer", "BUILD BLOCKED", "APK READY",
     "GeneratedProjectOverrideResolver",
     "Manual source edits conflict with regenerated source",
+    "capability_incomplete", "capability_incomplete_reason",
+    "APK BUILT · CAPABILITY INCOMPLETE", "Playback capability incomplete",
 ]
 missing6 = [marker for marker in required6 if marker not in activity6]
 if missing6:
-    raise SystemExit("Missing V1 build-handoff/revision marker(s): " + ", ".join(missing6))
+    raise SystemExit("Missing V1 build-handoff/revision/completion-honesty marker(s): " + ", ".join(missing6))
+if "incomplete?TaskExecutionState.VERIFYING:TaskExecutionState.COMPLETE" not in activity6:
+    raise SystemExit("Incomplete media capability could still mark generated implementation tasks complete")
 
 activity5 = (ROOT / "AIDaoActivityV5.java").read_text()
 required5 = ["override-base::", "ProjectRevisionLedger.hash", "GeneratedProjectOverrideResolver", "SOURCE MODIFIED"]
