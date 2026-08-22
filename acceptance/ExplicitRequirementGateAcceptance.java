@@ -13,8 +13,8 @@ public final class ExplicitRequirementGateAcceptance {
                 "root.addView(nav,new LinearLayout.LayoutParams(dp(104),-1))",
                 "root.addView(nav,new LinearLayout.LayoutParams(-1,-2))"),
                 "sidebar", "missing material sidebar layout");
-        assertRejected(withoutSuffix(note, "/ic_generated_app.xml"),
-                "app-logo", "missing requested generated logo artwork");
+        assertRejected(withoutSuffix(note, "/ic_launcher_foreground.xml"),
+                "app-logo", "missing packaged adaptive launcher artwork");
         assertRejected(withoutSuffix(note, "/EditorActivity.java"),
                 "note-lock", "missing requested note lock/editor contract");
         assertRejected(withMutation(note, "app/src/main/res/values/strings.xml", "NoteForge",
