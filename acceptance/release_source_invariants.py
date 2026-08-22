@@ -62,4 +62,23 @@ for marker in ["PLACEHOLDER_COMPLETION_MARKERS", "Save local sample state", "Dem
     if marker not in validator:
         raise SystemExit("Generated completion honesty gate missing: " + marker)
 
+# Real-phone hard gate: source generation must no longer be allowed to declare
+# V1-ready output while emitting a generic debug launcher icon, edge-obscured
+# controls, all-unsupported providers, or a dead-end playback placeholder.
+generator = (ROOT / "LocalSourceGenerator.java").read_text()
+required_generator_markers = {
+    "adaptive launcher icon manifest wiring": ["android:icon=", "android:roundIcon=", "@mipmap/ic_launcher", "ic_launcher_foreground"],
+    "phone-safe system inset handling": ["WindowInsets", "systemBars", "ime"],
+    "explicit persisted provider/player selection": ["selected_provider", "selected_player"],
+    "actionable playback setup UX": ["Select provider", "Select player"],
+    "provider compatibility honesty": ["Unsupported", "compatib"],
+}
+for requirement, markers in required_generator_markers.items():
+    missing = [marker for marker in markers if marker not in generator]
+    if missing:
+        raise SystemExit(
+            "Release-blocking generated-app phone acceptance missing "
+            + requirement + ": " + ", ".join(missing)
+        )
+
 print("Release-blocking source invariants passed")
