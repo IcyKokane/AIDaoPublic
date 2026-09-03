@@ -33,9 +33,11 @@ final class SemanticProductPostProcessor {
 
         String request = requestText(source).toLowerCase(Locale.US);
         String all = allText(source).toLowerCase(Locale.US);
+        String semantic = request + "\n" + all;
         boolean finance = any(request, "expense", "budget", "transaction", "spending", "finance", "ledger");
-        boolean workout = any(request, "workout", "exercise", "weight and reps", "rpg stats");
-        boolean habit = !workout && any(request, "habit", "routine", "streak", "daily tracker", "check in", "check-in");
+        boolean habitRequested = any(semantic, "habit", "routine", "streak", "daily tracker", "check in", "check-in");
+        boolean workout = !habitRequested && any(request, "workout", "exercise", "weight and reps", "rpg stats");
+        boolean habit = habitRequested;
 
         List<String> notes = new ArrayList<>();
         if (finance) {
