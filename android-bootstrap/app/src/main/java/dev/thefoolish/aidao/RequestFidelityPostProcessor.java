@@ -65,7 +65,7 @@ final class RequestFidelityPostProcessor {
                     || "app/src/main/res/values/colors.xml".equals(p)
                     || "app/src/main/AndroidManifest.xml".equals(p)
                     || p.equals(root + "AppScreen.java")
-                    || p.equals(root + "MainActivity.java")
+                    || ((note || workout || pantry) && p.equals(root + "MainActivity.java"))
                     || (note && (p.equals(root + "EditorActivity.java") || p.equals(root + "LibraryActivity.java")))
                     || (workout && (p.equals(root + "TimelineActivity.java") || p.equals(root + "ReportsActivity.java")))
                     || (pantry && (p.equals(root + "ExploreActivity.java") || p.equals(root + "DetailActivity.java") || p.equals(root + "SettingsActivity.java")));
