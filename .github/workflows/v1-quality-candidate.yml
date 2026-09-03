@@ -61,10 +61,25 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GeneratedProjectValidationAcceptance.java
           java -cp build/v1-candidate dev.thefoolish.aidao.GeneratedProjectValidationAcceptance
+
+      - name: Run semantic product acceptance
+        run: |
+          rm -rf build/v1-semantic && mkdir -p build/v1-semantic
+          javac -d build/v1-semantic \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            acceptance/SemanticProductAcceptance.java
+          java -cp build/v1-semantic dev.thefoolish.aidao.SemanticProductAcceptance
 
       - name: Run revision safety acceptance
         run: |
@@ -73,6 +88,7 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProjectRevisionLedger.java \
