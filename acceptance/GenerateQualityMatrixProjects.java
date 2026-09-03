@@ -62,7 +62,7 @@ public final class GenerateQualityMatrixProjects {
                         "grocery", "Pantry Path",
                         "Build a simple offline grocery list that keeps my items after the app restarts. I need to add items, edit an existing item by number, see how many items are saved, and deliberately clear the whole list with confirmation.",
                         Arrays.asList("Persist the grocery list locally", "Add and edit grocery items", "Validate edits target an existing item", "Show a saved-item count", "Require confirmation before clearing the grocery list"),
-                        "Grocery List", "grocery_items", "Save item", "Choose an existing item number", "saved item", "Tap again to clear list"
+                        "Grocery List", "grocery_items", "Save item", "Choose an existing item number", "saved item", "Tap Clear saved list again to confirm."
                 )
         );
 
