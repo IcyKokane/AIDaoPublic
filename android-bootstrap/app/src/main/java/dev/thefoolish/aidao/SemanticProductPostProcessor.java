@@ -70,7 +70,16 @@ final class SemanticProductPostProcessor {
     private static String habitReports(String p){return "package "+p+";\npublic final class ReportsActivity extends AppScreen{protected void render(){title(\"Habit progress\");String habits=store.text(\"habits\",\"\");String done=store.text(\"habit_done_today\",\"\");int total=0,complete=0;for(String h:habits.split(\"\\n\")){if(h.trim().isEmpty())continue;total++;if((\"\\n\"+done+\"\\n\").contains(\"\\n\"+h+\"\\n\"))complete++;}int pct=total==0?0:(complete*100/total);body.addView(card(\"Today\",complete+\" / \"+total+\" complete · \"+pct+\"%\"));body.addView(card(\"All-time check-ins\",String.valueOf(store.number(\"habit_checkins\"))));}}\n";}
     private static String habitControls(String p){return "package "+p+";\npublic final class DataControlsActivity extends AppScreen{protected void render(){title(\"Data controls\");body.addView(card(\"Local ownership\",\"Habits and check-ins are stored on this device.\"));Button clear=button(\"Clear habit data\");clear.setOnClickListener(v->{store.putText(\"habits\",\"\");store.putText(\"habit_done_today\",\"\");store.number(\"habit_checkins\",0);clear.setText(\"Habit data cleared\");});body.addView(clear);}}\n";}
 
-    private static void requireCapability(List<String> notes,String request,String post,String[] triggers,String[] markers,String label){if(!any(request,triggers))return;if(any(post,markers))notes.add("PASS requested "+label+" is represented by generated executable source");else notes.add("FAIL requested "+label+" has no generated executable implementation");}
+    private static void requireCapability(List<String> notes,String request,String post,String[] triggers,String[] markers,String label){
+        if(!any(request,triggers))return;
+        if(explicitlyUnavailable(request,label)){notes.add("PASS requested "+label+" is explicitly scoped as unavailable rather than falsely implemented");return;}
+        if(any(post,markers))notes.add("PASS requested "+label+" is represented by generated executable source");
+        else notes.add("FAIL requested "+label+" has no generated executable implementation");
+    }
+    private static boolean explicitlyUnavailable(String request,String label){
+        if("network/backend data".equals(label))return any(request,"no remote messaging backend","no remote delivery backend","no backend is configured","no backend configured","without a backend","without backend");
+        return false;
+    }
     private static boolean containsPlaceholder(String s){return s.contains("todo: implement")||s.contains("coming soon")||s.contains("placeholder data")||s.contains("sample only");}
     private static boolean hasSuffix(List<GeneratedProject.FileEntry> files,String suffix){for(GeneratedProject.FileEntry f:files)if(f!=null&&f.path!=null&&f.path.endsWith(suffix))return true;return false;}
     private static boolean any(String source,String... terms){if(source==null)return false;for(String term:terms)if(source.contains(term))return true;return false;}
