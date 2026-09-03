@@ -20,9 +20,9 @@ final class SemanticProductPostProcessor {
         List<GeneratedProject.FileEntry> source=incoming==null?new ArrayList<>():new ArrayList<>(incoming);
         if(hasSuffix(source,"/MediaProvider.java")||hasSuffix(source,"/AnimeItem.java"))return new Result(projectName,packageName,source,new ArrayList<>());
         String request=requestText(source).toLowerCase(Locale.US);
-        // Classify from the user's identity + request contract only. Generated source can
-        // contain generic navigation/help vocabulary from other domains; using that text
-        // for classification lets our own templates override the user's actual intent.
+        // Classify from the user's identity + request contract only. Generated source and
+        // README boilerplate contain generic safety/navigation vocabulary (for example
+        // "spending") that must never override the user's actual product intent.
         String semantic=((projectName==null?"":projectName)+"\n"+request).toLowerCase(Locale.US);
         boolean finance=any(semantic,"expense","budget","transaction","spending","finance","ledger");
         boolean habit=any(semantic,"habit","routine","streak","daily tracker","check in","check-in","check them off","completion percentage");
@@ -74,7 +74,23 @@ final class SemanticProductPostProcessor {
     private static boolean containsPlaceholder(String s){return s.contains("todo: implement")||s.contains("coming soon")||s.contains("placeholder data")||s.contains("sample only");}
     private static boolean hasSuffix(List<GeneratedProject.FileEntry> files,String suffix){for(GeneratedProject.FileEntry f:files)if(f!=null&&f.path!=null&&f.path.endsWith(suffix))return true;return false;}
     private static boolean any(String source,String... terms){if(source==null)return false;for(String term:terms)if(source.contains(term))return true;return false;}
-    private static String requestText(List<GeneratedProject.FileEntry> files){for(GeneratedProject.FileEntry f:files)if(f!=null&&"README.md".equals(f.path)&&f.content!=null)return f.content;return allText(files);}
+    private static String requestText(List<GeneratedProject.FileEntry> files){
+        for(GeneratedProject.FileEntry f:files){
+            if(f==null||!"README.md".equals(f.path)||f.content==null)continue;
+            String readme=f.content;
+            int architecture=readme.indexOf("\n## Generated architecture");
+            StringBuilder user=new StringBuilder(architecture>=0?readme.substring(0,architecture):readme);
+            int requirements=readme.indexOf("\n## Requirements");
+            if(requirements>=0){
+                int start=requirements+"\n## Requirements".length();
+                int end=readme.indexOf("\n## Implementation tasks",start);
+                if(end<0)end=readme.length();
+                user.append('\n').append(readme, start, end);
+            }
+            return user.toString();
+        }
+        return allText(files);
+    }
     private static String allText(List<GeneratedProject.FileEntry> files){StringBuilder b=new StringBuilder();if(files!=null)for(GeneratedProject.FileEntry f:files)if(f!=null&&f.content!=null)b.append('\n').append(f.content);return b.toString();}
     private static GeneratedProject.FileEntry file(String path,String content,String hint){return new GeneratedProject.FileEntry(path,content,hint);}
     private SemanticProductPostProcessor(){}
