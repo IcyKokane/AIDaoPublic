@@ -24,10 +24,12 @@ jobs:
           metadata = json.loads(pathlib.Path('updates/latest.json').read_text())
           name = re.search(r'versionName\s*=\s*"([^"]+)"', gradle)
           code = re.search(r'versionCode\s*=\s*(\d+)', gradle)
-          if not name or not code: raise SystemExit('Unable to read Android version')
+          if not name or not code:
+              raise SystemExit('Unable to read Android version')
           if metadata.get('version') != name.group(1) or metadata.get('versionCode') != int(code.group(1)):
               raise SystemExit('Update metadata does not match Android version')
-          if metadata.get('channel') != 'alpha': raise SystemExit('Update metadata channel must remain alpha')
+          if metadata.get('channel') != 'alpha':
+              raise SystemExit('Update metadata channel must remain alpha')
           if not metadata.get('downloadUrl','').startswith('https://github.com/IcyKokane/AIDaoPublic/'):
               raise SystemExit('downloadUrl must stay inside AIDaoPublic')
 
@@ -106,7 +108,8 @@ jobs:
           combined_auth=auth+'\n'+device+'\n'+manifest
           for forbidden in ['BEGIN RSA PRIVATE KEY','BEGIN PRIVATE KEY','github_pat_','client_secret=']:
               if forbidden in combined_auth: missing.append('bundled secret '+forbidden)
-          if missing: raise SystemExit('Integrated V1 product regression: '+', '.join(missing))
+          if missing:
+              raise SystemExit('Integrated V1 product regression: '+', '.join(missing))
           print(f'Validated integrated AIDao {name.group(1)} ({code.group(1)}): preserved workspace/safety surface plus GitHub App V1 transport/auth invariants')
           PY
 
@@ -199,17 +202,25 @@ jobs:
             -f ref="refs/heads/${branch}" -f sha="${parent_sha}" >/dev/null
 
           uploaded=0
+          payload_file=$(mktemp)
+          trap 'rm -f "$payload_file"' EXIT
           while IFS= read -r -d '' file; do
             rel="${file#generated-acceptance/}"
             case "$rel" in
               .github/workflows/*) continue ;;
             esac
-            encoded=$(base64 -w0 "$file")
             api_path="repos/${GITHUB_REPOSITORY}/contents/${project_root}/${rel}"
-            jq -n --arg message "AIDao acceptance generated: ${rel}" \
-                  --arg content "$encoded" --arg branch "$branch" \
-                  '{message:$message,content:$content,branch:$branch}' \
-              | gh api --method PUT "$api_path" --input - >/dev/null
+            python3 - "$file" "$rel" "$branch" "$payload_file" <<'PY'
+          import base64, json, pathlib, sys
+          source, rel, branch, output = sys.argv[1:]
+          payload = {
+              'message': f'AIDao acceptance generated: {rel}',
+              'content': base64.b64encode(pathlib.Path(source).read_bytes()).decode('ascii'),
+              'branch': branch,
+          }
+          pathlib.Path(output).write_text(json.dumps(payload), encoding='utf-8')
+          PY
+            gh api --method PUT "$api_path" --input "$payload_file" >/dev/null
             uploaded=$((uploaded+1))
           done < <(find generated-acceptance -type f -not -path '*/build/*' -print0)
           [[ "$uploaded" -ge 12 ]] || { echo "Expected a nontrivial Contents API upload, got $uploaded files"; exit 1; }
