@@ -1,0 +1,42 @@
+name: Varied Prompt Quality Acceptance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'acceptance/VariedPromptQualityAcceptance.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  varied-prompt-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile varied prompt quality acceptance
+        run: |
+          rm -rf build/varied-prompt && mkdir -p build/varied-prompt
+          javac -d build/varied-prompt \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            acceptance/VariedPromptQualityAcceptance.java
+      - name: Run varied prompt quality acceptance
+        run: java -cp build/varied-prompt dev.thefoolish.aidao.VariedPromptQualityAcceptance
