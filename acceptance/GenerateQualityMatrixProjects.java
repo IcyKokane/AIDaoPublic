@@ -44,7 +44,11 @@ public final class GenerateQualityMatrixProjects {
         GeneratedProject project = new LocalSourceGenerator().generate(sample.name, sample.brief, sample.requirements, Arrays.asList("Generate real domain behavior", "Persist user state", "Apply Android-native product layout", "Validate generated source", "Build debug APK"));
         for (String note : project.verificationNotes) {
             System.out.println(sample.dir + ": " + note);
-            if (note.startsWith("FAIL ")) throw new IllegalStateException(sample.dir + " verification failed: " + note);
+            if (note.startsWith("FAIL ")) {
+                System.out.println(sample.dir + ": final generated paths for diagnosis:");
+                for (GeneratedProject.FileEntry entry : project.files) if (entry != null) System.out.println(sample.dir + ": PATH " + entry.path);
+                throw new IllegalStateException(sample.dir + " verification failed: " + note);
+            }
         }
 
         StringBuilder source = new StringBuilder();
