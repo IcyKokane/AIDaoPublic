@@ -21,6 +21,18 @@ public final class VariedPromptQualityAcceptance {
                 "Build a private offline reading log with saved book entries, notes, local search, and state that survives Android process restart.",
                 Arrays.asList("Persist reading entries", "Persist notes", "Search saved entries", "Recover state after restart"));
 
+        requireSemanticProduct(
+                "Pocket Ledger",
+                "Build an offline personal budget app where I can enter categorized transactions, set a monthly budget, and view computed spending reports after restart.",
+                Arrays.asList("Persist categorized transactions", "Set and persist a monthly budget", "Compute spending reports from saved transactions", "Keep state after restart"),
+                new String[]{"Save transaction", "monthly_budget", "Reports", "By category"});
+
+        requireSemanticProduct(
+                "Daily Forge",
+                "Build an offline habit tracker where I can create habits, check them off each day, view completion percentage and all-time check-ins, and clear my local habit data.",
+                Arrays.asList("Create and persist habits", "Record daily check-ins", "Show completion percentage", "Show all-time check-ins", "Provide explicit local data controls"),
+                new String[]{"Add habit", "Complete today", "habit_checkins", "%", "Clear habit data"});
+
         requireUnsupportedCapabilityRejected(
                 "Scan Shelf",
                 "Build an offline inventory app that scans item barcodes with the Android camera and saves results locally.",
@@ -33,12 +45,32 @@ public final class VariedPromptQualityAcceptance {
                 Arrays.asList("Capture GPS location", "Persist field entries locally"),
                 "location");
 
-        System.out.println("Varied prompt quality acceptance passed: coherent offline products remain durable/native and unsupported capabilities cannot fake completion.");
+        requireUnsupportedCapabilityRejected(
+                "Reminder Garden",
+                "Build an offline plant-care tracker that sends Android reminder notifications for watering schedules.",
+                Arrays.asList("Persist plants locally", "Send Android watering reminders"),
+                "Android notifications");
+
+        System.out.println("Varied prompt quality acceptance passed: coherent offline products remain durable/native, semantic products implement requested behavior, and unsupported capabilities cannot fake completion.");
     }
 
     private static void requireCoherentOfflineProduct(String name, String brief, List<String> requirements) {
         GeneratedProject project = new LocalSourceGenerator().generate(name, brief, requirements,
                 Arrays.asList("Generate real product behavior", "Persist state", "Validate source", "Build Android APK"));
+        assertNativeProduct(name, project);
+    }
+
+    private static void requireSemanticProduct(String name, String brief, List<String> requirements, String[] executableMarkers) {
+        GeneratedProject project = new LocalSourceGenerator().generate(name, brief, requirements,
+                Arrays.asList("Generate requested product behavior", "Persist state", "Validate semantics", "Build Android APK"));
+        assertNativeProduct(name, project);
+        String all = allText(project);
+        for (String marker : executableMarkers) {
+            require(all.contains(marker), name + " is missing semantic executable marker: " + marker);
+        }
+    }
+
+    private static void assertNativeProduct(String name, GeneratedProject project) {
         String all = allText(project);
         require(!hasFail(project), name + " produced a verification failure: " + firstFail(project));
         require(all.contains("SharedPreferences") || all.contains("LocalStore"), name + " has no durable local persistence implementation");
