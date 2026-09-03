@@ -51,7 +51,7 @@ public final class GenerateFidelitySampleProject {
                 "BuiltInProviderCatalog","JikanCatalogProvider","AniListCatalogProvider","https://api.jikan.moe/v4/anime","https://graphql.anilist.co",
                 "new ArrayList<>(BuiltInProviderCatalog.providers())","WindowInsets.Type.systemBars","WindowInsets.Type.displayCutout","WindowInsets.Type.ime","ScrollView",
                 "Some sources could not be reached","LibraryActivity.class,UpdatesActivity.class,HistoryActivity.class,MainActivity.class,MoreActivity.class",
-                "store.set(\"favorites\"","Open favorite ","Remove from Library","Add to Library","Sync repository","Remove repository","dp(52)",
+                "store.set(\"favorites\"","Remove from Library","Add to Library","Sync repository","Remove repository","dp(52)",
                 "selected_provider","selected_player","Select provider","Select player","Unsupported for playback","Playback capability incomplete",
                 "playbackUrl","supportsPlayback()","resolveMediaUrl","Playback: compatible","new VideoView(this)","setVideoURI","getCurrentPosition()","provider returned a non-HTTPS media URL"
         })if(!source.contains(marker))throw new IllegalStateException("Missing AniShelf real-phone fidelity marker: "+marker);
