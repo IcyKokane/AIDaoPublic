@@ -1,0 +1,28 @@
+name: Live Built-in Provider Acceptance
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'acceptance/live_provider_probe.py'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/BuiltInProviderCatalog.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/JikanCatalogProvider.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/AniListCatalogProvider.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java'
+      - '.github/workflows/live-provider-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-provider-discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify bundled authorized catalog discovery returns usable data
+        run: python acceptance/live_provider_probe.py
