@@ -59,7 +59,8 @@ public final class ProjectRevisionAcceptance {
 
         // Product post-processing must not run again after an override is resolved.
         // Otherwise an edit to a real generated screen can be silently replaced by
-        // the deterministic product transformer before CI sees it.
+        // the deterministic product transformer before CI sees it. Use a harmless
+        // user-owned Java comment so this regression does not depend on UI copy.
         GeneratedProject finance = new LocalSourceGenerator().generate(
                 "Revision Product Acceptance",
                 "Build an offline expense and budget app with transactions and reports.",
@@ -68,8 +69,8 @@ public final class ProjectRevisionAcceptance {
         String financePath = "app/src/main/java/dev/thefoolish/generated/revisionproductacceptance/MainActivity.java";
         GeneratedProject.FileEntry financeMain = finance.find(financePath);
         require(financeMain != null, "missing post-processed finance main screen");
-        String productEdit = financeMain.content.replace("Finance dashboard", "Personal Finance dashboard");
-        require(!productEdit.equals(financeMain.content), "finance edit marker was not found");
+        String productEdit = financeMain.content + "\n// user-owned finance customization\n";
+        require(!productEdit.equals(financeMain.content), "finance edit marker was not created");
         Map<String,String> productOverrides = new HashMap<>();
         Map<String,String> productBases = new HashMap<>();
         productOverrides.put(financePath, productEdit);
