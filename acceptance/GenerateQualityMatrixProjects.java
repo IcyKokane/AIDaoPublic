@@ -57,6 +57,12 @@ public final class GenerateQualityMatrixProjects {
                         "Build an offline product catalog and cart for planning purchases. Let me add products with positive prices, add them to a cart, and explicitly confirm a local test order. Do not claim payment or spending when no payment provider is connected.",
                         Arrays.asList("Persist products locally", "Validate positive prices", "Persist cart state", "Require explicit order confirmation", "Do not claim payment or spending without a provider"),
                         "Add product", "catalog_items", "Add to cart", "cart_items", "Place local test order", "No payment provider is connected", "OrdersActivity.class"
+                ),
+                new Sample(
+                        "grocery", "Pantry Path",
+                        "Build a simple offline grocery list that keeps my items after the app restarts. I need to add items, edit an existing item by number, see how many items are saved, and deliberately clear the whole list with confirmation.",
+                        Arrays.asList("Persist the grocery list locally", "Add and edit grocery items", "Validate edits target an existing item", "Show a saved-item count", "Require confirmation before clearing the grocery list"),
+                        "Grocery List", "grocery_items", "Save item", "Choose an existing item number", "saved item", "Tap again to clear list"
                 )
         );
 
