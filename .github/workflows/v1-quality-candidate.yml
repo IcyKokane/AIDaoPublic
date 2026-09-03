@@ -81,6 +81,20 @@ jobs:
             acceptance/SemanticProductAcceptance.java
           java -cp build/v1-semantic dev.thefoolish.aidao.SemanticProductAcceptance
 
+      - name: Run varied prompt quality acceptance
+        run: |
+          rm -rf build/v1-varied && mkdir -p build/v1-varied
+          javac -d build/v1-varied \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            acceptance/VariedPromptQualityAcceptance.java
+          java -cp build/v1-varied dev.thefoolish.aidao.VariedPromptQualityAcceptance
+
       - name: Run revision safety acceptance
         run: |
           rm -rf build/v1-candidate && mkdir -p build/v1-candidate
