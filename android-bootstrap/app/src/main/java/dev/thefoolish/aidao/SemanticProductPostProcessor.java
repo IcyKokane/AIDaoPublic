@@ -53,7 +53,7 @@ final class SemanticProductPostProcessor {
                 new String[]{"notificationmanager", "notificationchannel", "post_notifications"}, "Android notifications");
         requireCapability(notes, request, post, new String[]{"location", "gps", "geofence", "map"},
                 new String[]{"access_fine_location", "locationmanager", "fusedlocation", "geofenc"}, "location");
-        requireCapability(notes, request, post, new String[]{"bluetooth", "ble", "wearable"},
+        requireCapability(notes, request, post, new String[]{"bluetooth", "ble device", "ble sensor", "ble tracker", "wearable"},
                 new String[]{"bluetooth_connect", "bluetooth_scan", "bluetoothadapter"}, "Bluetooth/Nearby Devices");
         requireCapability(notes, request, post, new String[]{"background sync", "periodic sync", "scheduled sync", "workmanager"},
                 new String[]{"workmanager", "periodicworkrequest", "jobservice"}, "scheduled/background work");
