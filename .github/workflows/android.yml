@@ -146,18 +146,31 @@ jobs:
           javac -d build/source-generator \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
-            acceptance/GenerateSampleProject.java
-          java -cp build/source-generator dev.thefoolish.aidao.GenerateSampleProject "$PWD/generated-acceptance"
+            acceptance/GenerateFidelitySampleProject.java
+          java -cp build/source-generator dev.thefoolish.aidao.GenerateFidelitySampleProject "$PWD/generated-acceptance"
           test -f generated-acceptance/app/src/main/AndroidManifest.xml
           test -f generated-acceptance/app/src/main/res/values/styles.xml
           test -f generated-acceptance/app/src/main/res/values/colors.xml
           test -f generated-acceptance/app/src/main/res/values/strings.xml
+          test -f generated-acceptance/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          test -f generated-acceptance/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
           test -f generated-acceptance/.github/workflows/android.yml
-          test "$(find generated-acceptance/app/src/main/java -type f | wc -l)" -ge 10
-          grep -q 'DetailActivity' generated-acceptance/app/src/main/AndroidManifest.xml
+          test "$(find generated-acceptance/app/src/main/java -type f | wc -l)" -ge 20
+          grep -q 'RepositoriesActivity' generated-acceptance/app/src/main/AndroidManifest.xml
           grep -q 'PlayerActivity' generated-acceptance/app/src/main/AndroidManifest.xml
-          grep -q 'MediaProvider' generated-acceptance/README.md
+          grep -R -q 'RepositoryMediaProvider' generated-acceptance/app/src/main/java
+          ! grep -R -q 'DemoProvider\|sample data only\|Playback surface placeholder' generated-acceptance/app/src/main/java
 
       - name: Build AIDao-generated V1 acceptance APK
         working-directory: generated-acceptance
