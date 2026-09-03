@@ -82,15 +82,15 @@ final class GeneratedProject {
         FidelityResult generalProduct=applyProcessor("GeneralProductPostProcessor","general product fidelity",referenceBehavior.projectName,referenceBehavior.packageName,referenceBehavior.files);
         String normalizedIdentity=normalizeDescriptorIdentity(generalProduct.projectName,generalProduct.files);
         FidelityResult requestFidelity=applyProcessor("RequestFidelityPostProcessor","request-specific fidelity",normalizedIdentity,generalProduct.packageName,generalProduct.files);
-        FidelityResult semanticProduct=applyProcessor("SemanticProductPostProcessor","semantic product fidelity",requestFidelity.projectName,requestFidelity.packageName,requestFidelity.files);
-        FidelityResult genericOffline=applyProcessor("GenericOfflinePostProcessor","generic offline product",semanticProduct.projectName,semanticProduct.packageName,semanticProduct.files);
+        FidelityResult genericOffline=applyProcessor("GenericOfflinePostProcessor","generic offline product",requestFidelity.projectName,requestFidelity.packageName,requestFidelity.files);
+        FidelityResult semanticProduct=applyProcessor("SemanticProductPostProcessor","semantic product fidelity",genericOffline.projectName,genericOffline.packageName,genericOffline.files);
 
-        this.projectName=genericOffline.projectName;
-        this.packageName=genericOffline.packageName;
-        List<FileEntry> immutableSource=new ArrayList<>(genericOffline.files==null?Collections.emptyList():genericOffline.files);
+        this.projectName=semanticProduct.projectName;
+        this.packageName=semanticProduct.packageName;
+        List<FileEntry> immutableSource=new ArrayList<>(semanticProduct.files==null?Collections.emptyList():semanticProduct.files);
         this.files=Collections.unmodifiableList(immutableSource);
         List<String> notes=new ArrayList<>(); if(verificationNotes!=null)notes.addAll(verificationNotes);
-        append(notes,fidelity.notes);append(notes,capability.notes);append(notes,nativeFidelity.notes);append(notes,referenceBehavior.notes);append(notes,generalProduct.notes);append(notes,requestFidelity.notes);append(notes,semanticProduct.notes);append(notes,genericOffline.notes);
+        append(notes,fidelity.notes);append(notes,capability.notes);append(notes,nativeFidelity.notes);append(notes,referenceBehavior.notes);append(notes,generalProduct.notes);append(notes,requestFidelity.notes);append(notes,genericOffline.notes);append(notes,semanticProduct.notes);
         GeneratedProjectValidator.Result structural=GeneratedProjectValidator.validateRaw(this.packageName,immutableSource);notes.addAll(structural.notes);notes.addAll(validateFidelityIfAvailable(this.packageName,immutableSource));
         this.verificationNotes=Collections.unmodifiableList(notes);
     }
