@@ -55,7 +55,7 @@ jobs:
             acceptance/GenerateQualityMatrixProjects.java
           java -cp build/quality-generator dev.thefoolish.aidao.GenerateQualityMatrixProjects "$PWD/generated-quality"
           ! grep -R -q 'Save local sample state\|sample state\|placeholder data\|android\.widget\.android\.widget\.' generated-quality 2>/dev/null || exit 1
-          for project in finance tracker content social commerce; do
+          for project in finance tracker content social commerce grocery; do
             grep -q 'android:icon="@mipmap/ic_launcher"' "generated-quality/${project}/app/src/main/AndroidManifest.xml"
             grep -q 'android:roundIcon="@mipmap/ic_launcher_round"' "generated-quality/${project}/app/src/main/AndroidManifest.xml"
             test -f "generated-quality/${project}/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml"
@@ -80,8 +80,11 @@ jobs:
       - name: Build commerce product APK
         working-directory: generated-quality/commerce
         run: gradle :app:assembleDebug --stacktrace
+      - name: Build grocery product APK
+        working-directory: generated-quality/grocery
+        run: gradle :app:assembleDebug --stacktrace
 
-      - name: Exercise five products through trusted repository_dispatch CI
+      - name: Exercise six products through trusted repository_dispatch CI
         id: trusted
         env:
           GH_TOKEN: ${{ github.token }}
@@ -93,7 +96,7 @@ jobs:
           parent_sha=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${default_branch}" --jq '.object.sha')
           cleanup_file="$RUNNER_TEMP/aidao-quality-branches.txt"
           : > "$cleanup_file"
-          for sample in finance tracker content social commerce; do
+          for sample in finance tracker content social commerce grocery; do
             branch="aidao-generated-quality-${sample}-${GITHUB_RUN_ID}"
             echo "$branch" >> "$cleanup_file"
             echo "Creating isolated quality branch: $branch"
@@ -149,7 +152,7 @@ jobs:
           if [[ -n "$CLEANUP_FILE" && -f "$CLEANUP_FILE" ]]; then
             while IFS= read -r branch; do [[ -n "$branch" ]] && gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}" >/dev/null 2>&1 || true; done < "$CLEANUP_FILE"
           else
-            for sample in finance tracker content social commerce; do branch="aidao-generated-quality-${sample}-${GITHUB_RUN_ID}"; gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}" >/dev/null 2>&1 || true; done
+            for sample in finance tracker content social commerce grocery; do branch="aidao-generated-quality-${sample}-${GITHUB_RUN_ID}"; gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}" >/dev/null 2>&1 || true; done
           fi
 
       - name: Upload quality matrix APKs
@@ -162,4 +165,5 @@ jobs:
             generated-quality/content/app/build/outputs/apk/debug/app-debug.apk
             generated-quality/social/app/build/outputs/apk/debug/app-debug.apk
             generated-quality/commerce/app/build/outputs/apk/debug/app-debug.apk
+            generated-quality/grocery/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
