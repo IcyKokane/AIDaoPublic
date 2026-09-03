@@ -61,8 +61,14 @@ final class GeneratedFidelityValidator {
         notes.add((honestBoundary ? "PASS " : "FAIL ") + "provider capability limitation is explicit");
 
         boolean nativeChrome = joined.contains("setOnApplyWindowInsetsListener") && joined.contains("ScrollView") &&
-                joined.contains("WindowInsets.Type.systemBars") && joined.contains("WindowInsets.Type.ime");
+                joined.contains("WindowInsets.Type.systemBars") && joined.contains("WindowInsets.Type.ime") &&
+                joined.contains("WindowInsets.Type.displayCutout") && joined.contains("bottomNav");
         notes.add((nativeChrome ? "PASS " : "FAIL ") + "phone-native system/navigation/IME inset gate");
+
+        boolean responsiveHierarchy = joined.contains("card(String heading,String supporting)") &&
+                joined.contains("GridLayout grid()") && joined.contains("screenWidthDp") &&
+                joined.contains("setMinimumHeight(dp(60))") && joined.contains("chip(String label,boolean active)");
+        notes.add((responsiveHierarchy ? "PASS " : "FAIL ") + "responsive mobile card/grid/touch-target hierarchy gate");
 
         boolean selectionFlow = joined.contains("selected_provider") && joined.contains("selected_player") &&
                 joined.contains("Select provider") && joined.contains("Select player") &&
@@ -82,10 +88,19 @@ final class GeneratedFidelityValidator {
                 joined.contains("ProgressBar") && joined.contains("Some sources could not be reached");
         notes.add((asynchronousProviderSearch ? "PASS " : "FAIL ") + "non-blocking provider search and actionable error-state gate");
 
+        boolean discoveryFirst = joined.contains("loadDiscoverAsync()") && joined.contains("p.search(\"Frieren\")") &&
+                joined.contains("Retry discovery") && joined.contains("Check source health") && joined.contains("p.search(\"Naruto\")");
+        notes.add((discoveryFirst ? "PASS " : "FAIL ") + "built-in providers supply automatic discovery plus live source-health diagnostics");
+
         boolean emptyState = joined.contains("No matches found for");
-        boolean failedState = joined.contains("one or more sources failed") &&
-                (joined.contains("No results are shown because") || joined.contains("No results were returned because"));
+        boolean failedState = joined.contains("Some sources could not be reached") &&
+                joined.contains("source errors occurred") && joined.contains("No results are shown because");
         notes.add((emptyState && failedState ? "PASS " : "FAIL ") + "provider failure is distinct from genuine zero-result state");
+
+        boolean mihonBehavior = joined.contains("Refresh library updates") && joined.contains("p.search(title)") &&
+                joined.contains("Update available") && joined.contains("Continue watching") &&
+                joined.contains("store.text(\"last_episode\"") && joined.contains("GridLayout g=grid()");
+        if (request.contains("mihon")) notes.add((mihonBehavior ? "PASS " : "FAIL ") + "Mihon reference intent produces substantive Library/Updates/History behavior");
         return notes;
     }
 
