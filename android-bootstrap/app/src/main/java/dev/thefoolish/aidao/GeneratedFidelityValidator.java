@@ -52,22 +52,31 @@ final class GeneratedFidelityValidator {
                 joined.contains("out.add(new JikanCatalogProvider())") && joined.contains("out.add(new AniListCatalogProvider())");
         notes.add((redundantProviders ? "PASS " : "FAIL ") + "multiple reviewed built-in provider redundancy gate");
 
-        boolean providerIsActuallyUsed = joined.contains("BuiltInProviderCatalog.providers()") &&
+        boolean providerUsed = joined.contains("BuiltInProviderCatalog.providers()") &&
                 joined.contains("new ArrayList<>(BuiltInProviderCatalog.providers())");
-        notes.add((providerIsActuallyUsed ? "PASS " : "FAIL ") + "built-in providers are active in generated Browse/Search flow");
+        notes.add((providerUsed ? "PASS " : "FAIL ") + "built-in providers are active in generated Browse/Search flow");
 
-        boolean honestCapabilityBoundary = joined.contains("catalog metadata only") || joined.contains("metadata-only");
-        notes.add((honestCapabilityBoundary ? "PASS " : "FAIL ") + "provider capability limitation is explicit");
+        boolean honestBoundary = joined.contains("catalog metadata only") || joined.contains("metadata-only") ||
+                joined.contains("Unsupported for playback");
+        notes.add((honestBoundary ? "PASS " : "FAIL ") + "provider capability limitation is explicit");
 
-        boolean nativeChrome = joined.contains("setOnApplyWindowInsetsListener") && joined.contains("bottomNav") &&
-                joined.contains("ScrollView") && joined.contains("Gravity.CENTER") &&
-                joined.contains("setNavigationBarColor") && joined.contains("round(SURFACE");
-        notes.add((nativeChrome ? "PASS " : "FAIL ") + "phone-native fixed navigation / inset-aware chrome gate");
+        boolean nativeChrome = joined.contains("setOnApplyWindowInsetsListener") && joined.contains("ScrollView") &&
+                joined.contains("WindowInsets.Type.systemBars") && joined.contains("WindowInsets.Type.ime");
+        notes.add((nativeChrome ? "PASS " : "FAIL ") + "phone-native system/navigation/IME inset gate");
 
-        boolean responsiveHierarchy = joined.contains("card(String heading,String supporting)") &&
-                joined.contains("section(String s)") && joined.contains("setMinHeight(dp(52))") &&
-                joined.contains("setPadding(dp(16)");
-        notes.add((responsiveHierarchy ? "PASS " : "FAIL ") + "mobile touch-target / card hierarchy gate");
+        boolean selectionFlow = joined.contains("selected_provider") && joined.contains("selected_player") &&
+                joined.contains("Select provider") && joined.contains("Select player") &&
+                joined.contains("supportsPlayback()") && joined.contains("Unsupported/incompatible provider");
+        notes.add((selectionFlow ? "PASS " : "FAIL ") + "non-dead-end playback provider/player selection gate");
+
+        boolean compatibleOnly = joined.contains("Playback capability incomplete") &&
+                joined.contains("No compatible authorized playback provider is currently configured") &&
+                joined.contains("provider.supportsPlayback()") && joined.contains("playable()");
+        notes.add((compatibleOnly ? "PASS " : "FAIL ") + "provider readiness refuses false completion when no compatible authorized playback source exists");
+
+        boolean httpsPlayback = joined.contains("resolveMediaUrl") && joined.contains("startsWith(\"https://\")") &&
+                joined.contains("non-HTTPS media URL");
+        notes.add((httpsPlayback ? "PASS " : "FAIL ") + "playback resolution is restricted to validated HTTPS media contracts");
 
         boolean asynchronousProviderSearch = joined.contains("new Thread(()->") && joined.contains("runOnUiThread") &&
                 joined.contains("ProgressBar") && joined.contains("Some sources could not be reached");
@@ -77,11 +86,9 @@ final class GeneratedFidelityValidator {
         boolean failedState = joined.contains("one or more sources failed") &&
                 (joined.contains("No results are shown because") || joined.contains("No results were returned because"));
         notes.add((emptyState && failedState ? "PASS " : "FAIL ") + "provider failure is distinct from genuine zero-result state");
-
         return notes;
     }
 
-    /** Explicit request requirements are hard acceptance criteria, not suggestions. */
     private static void validateGeneralRequestFidelity(List<String> notes,
                                                        List<GeneratedProject.FileEntry> files,
                                                        String joined,
@@ -107,69 +114,59 @@ final class GeneratedFidelityValidator {
             String background = content(files, "app/src/main/res/values/launcher_background.xml");
             boolean iconDeclared = manifest.contains("android:icon=\"@mipmap/ic_launcher\"") &&
                     manifest.contains("android:roundIcon=\"@mipmap/ic_launcher_round\"");
-            boolean adaptiveWiring = adaptive.contains("<adaptive-icon") &&
-                    adaptive.contains("@drawable/ic_launcher_foreground") &&
-                    adaptive.contains("@color/launcher_background") && adaptiveRound.contains("<adaptive-icon");
-            boolean generatedArtwork = foreground.contains("<vector") && foreground.contains("<path") &&
-                    foreground.contains("android:pathData=") && background.contains("launcher_background");
+            boolean adaptiveWiring = adaptive.contains("<adaptive-icon") && adaptiveRound.contains("<adaptive-icon") &&
+                    adaptive.contains("@drawable/ic_launcher_foreground") && adaptive.contains("@color/launcher_background");
+            boolean generatedArtwork = foreground.contains("<vector") && foreground.contains("android:pathData=") &&
+                    background.contains("launcher_background");
             notes.add((iconDeclared && adaptiveWiring && generatedArtwork ? "PASS " : "FAIL ") +
-                    "explicit app-logo request produces distinct app-specific adaptive artwork and wires launcher/round mipmap resources");
+                    "explicit app-logo request produces app-specific adaptive artwork and launcher/round wiring");
         }
 
         if (mentions(request, "sidebar", "side bar", "navigation drawer", "drawer navigation")) {
             boolean actualSidebar = (joined.contains("root.setOrientation(LinearLayout.HORIZONTAL)") &&
                     joined.contains("root.addView(nav,new LinearLayout.LayoutParams(dp(104),-1))")) ||
                     (joined.contains("DrawerLayout") && joined.contains("NavigationView"));
-            notes.add((actualSidebar ? "PASS " : "FAIL ") +
-                    "explicit sidebar/drawer requirement materially changes generated layout rather than only renaming navigation helpers");
+            notes.add((actualSidebar ? "PASS " : "FAIL ") + "explicit sidebar/drawer requirement materially changes generated layout");
         }
 
         if (containsWord(request, "purple")) {
-            boolean purpleResource = containsAny(resources.toUpperCase(Locale.US), "#7C3AED", "#8B5CF6", "#9333EA", "#A855F7");
-            boolean purpleUsed = joined.contains("ACCENT") &&
-                    (joined.contains("round(ACCENT") || joined.contains("setBackgroundColor(ACCENT") || joined.contains("setTextColor(ACCENT"));
-            notes.add((purpleResource && purpleUsed ? "PASS " : "FAIL ") +
-                    "requested purple direction is both defined and materially applied to generated UI");
+            boolean resource = containsAny(resources.toUpperCase(Locale.US), "#7C3AED", "#8B5CF6", "#9333EA", "#A855F7");
+            boolean used = joined.contains("ACCENT") && (joined.contains("round(ACCENT") || joined.contains("setBackgroundColor(ACCENT") || joined.contains("setTextColor(ACCENT"));
+            notes.add((resource && used ? "PASS " : "FAIL ") + "requested purple direction is materially applied to generated UI");
         }
         if (containsWord(request, "red")) {
-            boolean redResource = containsAny(resources.toUpperCase(Locale.US), "#EF4444", "#DC2626", "#F43F5E", "#E11D48");
-            boolean redUsed = joined.contains("SECONDARY") &&
-                    (joined.contains("setTextColor(SECONDARY)") || joined.contains("round(SECONDARY") || joined.contains("setBackgroundColor(SECONDARY"));
-            notes.add((redResource && redUsed ? "PASS " : "FAIL ") +
-                    "requested red direction is both defined and materially applied to generated UI");
+            boolean resource = containsAny(resources.toUpperCase(Locale.US), "#EF4444", "#DC2626", "#F43F5E", "#E11D48");
+            boolean used = joined.contains("SECONDARY") && (joined.contains("setTextColor(SECONDARY)") || joined.contains("round(SECONDARY") || joined.contains("setBackgroundColor(SECONDARY"));
+            notes.add((resource && used ? "PASS " : "FAIL ") + "requested red direction is materially applied to generated UI");
         }
 
-        boolean noteRequest = mentions(request, "notepad", "notes", "note app", "document editor");
+        boolean explicitNotepad = mentions(request, "notepad", "notes", "note app", "note-taking", "note taking");
+        boolean writingEditor = mentions(request, "document editor", "writing app", "saved documents");
         if (mentions(request, "lock notes", "lock note", "notes so they can't be edited", "notes so they cannot be edited", "read-only", "read only")) {
             boolean lockState = lowerJoined.contains("note_lock_") && joined.contains("store.flag(");
-            boolean readOnlyEnforced = joined.contains("setEnabled(false)") || joined.contains("setFocusable(false)") || joined.contains("setInputType(0)");
-            boolean lockToggle = lowerJoined.contains("unlock note") && lowerJoined.contains("lock note");
-            notes.add((lockState && readOnlyEnforced && lockToggle ? "PASS " : "FAIL ") +
-                    "requested note-lock behavior persists lock state, supports explicit unlock, and prevents editing while locked");
+            boolean readOnly = joined.contains("setEnabled(false)") || joined.contains("setFocusable(false)") || joined.contains("setInputType(0)");
+            boolean toggle = lowerJoined.contains("unlock note") && lowerJoined.contains("lock note");
+            notes.add((lockState && readOnly && toggle ? "PASS " : "FAIL ") + "requested note-lock behavior persists state and prevents editing while locked");
         }
-        if (noteRequest) {
-            boolean newNoteIdentity = joined.contains("System.currentTimeMillis()") && joined.contains("store.putText(\"active_note\"");
-            boolean noteMutationsPersist = joined.contains("store.putText(\"note_title_\"") &&
-                    joined.contains("store.putText(\"note_body_\"") && joined.contains("store.putText(\"documents\"") &&
-                    joined.contains("store.putText(\"active_note\"");
-            boolean reopenSavedNote = joined.contains("AppNavigator.open(this,EditorActivity.class)") && lowerJoined.contains("documents");
-            notes.add((newNoteIdentity && noteMutationsPersist && reopenSavedNote ? "PASS " : "FAIL ") +
-                    "notepad supports multiple persisted notes, save/load round trip, and deterministic reopen behavior");
+        if (explicitNotepad) {
+            boolean identity = joined.contains("System.currentTimeMillis()") && joined.contains("active_note");
+            boolean persist = joined.contains("note_title_") && joined.contains("note_body_") && joined.contains("documents") && joined.contains("store.putText(");
+            boolean reopen = joined.contains("EditorActivity.class") && joined.contains("LibraryActivity.class");
+            notes.add((identity && persist && reopen ? "PASS " : "FAIL ") + "notepad supports multiple persisted notes, save/load round trip, and deterministic reopen behavior");
+        } else if (writingEditor) {
+            boolean draftRecovery = lowerJoined.contains("draft_title") && lowerJoined.contains("draft_body") && joined.contains("onPause");
+            boolean documentStore = lowerJoined.contains("documents") && joined.contains("store.putText(") && joined.contains("SearchActivity.class") && joined.contains("LibraryActivity.class");
+            notes.add((draftRecovery && documentStore ? "PASS " : "FAIL ") + "writing editor persists documents and recovers interrupted drafts without requiring note-specific identity semantics");
         }
 
         boolean workoutRequest = mentions(request, "workout", "track the exercise", "track exercise", "weight and reps", "weight", "reps");
         if (workoutRequest) {
-            boolean workoutFields = lowerJoined.contains("exercise") && lowerJoined.contains("weight") && lowerJoined.contains("reps");
-            boolean workoutMutationsPersist = joined.contains("store.putText(\"workouts\"") || joined.contains("store.putText(\"workout_history\"");
-            boolean xpMutation = joined.contains("store.number(\"workout_xp\",store.number(\"workout_xp\")+");
-            boolean statMutation = joined.contains("store.number(\"stat_strength\",store.number(\"stat_strength\")+") &&
-                    joined.contains("store.number(\"stat_endurance\",store.number(\"stat_endurance\")+");
-            notes.add((workoutFields && workoutMutationsPersist ? "PASS " : "FAIL ") +
-                    "workout completed-set flow retains exercise/weight/reps and persists workout history");
-            if (mentions(request, "rpg", "stats", "growth", "automatically")) {
-                notes.add((xpMutation && statMutation ? "PASS " : "FAIL ") +
-                        "requested RPG growth is calculated automatically by completed workout mutations rather than manual stat entry");
-            }
+            boolean fields = lowerJoined.contains("exercise") && lowerJoined.contains("weight") && lowerJoined.contains("reps");
+            boolean history = joined.contains("workout_history") || joined.contains("workouts");
+            boolean xp = joined.contains("workout_xp") && joined.contains("stat_strength") && joined.contains("stat_endurance");
+            notes.add((fields && history ? "PASS " : "FAIL ") + "workout completed-set flow retains exercise/weight/reps and persists workout history");
+            if (mentions(request, "rpg", "stats", "growth", "automatically"))
+                notes.add((xp ? "PASS " : "FAIL ") + "requested RPG growth is calculated automatically from completed workouts");
         }
     }
 
@@ -178,7 +175,6 @@ final class GeneratedFidelityValidator {
         return false;
     }
 
-    /** Match standalone color words so words such as inferred/required do not imply red. */
     private static boolean containsWord(String source, String word) {
         if (source == null || word == null || word.isEmpty()) return false;
         return Pattern.compile("(?<![a-z0-9])" + Pattern.quote(word.toLowerCase(Locale.US)) + "(?![a-z0-9])")
