@@ -97,8 +97,12 @@ public final class GenerateQualityMatrixProjects {
                 "android.graphics.android.graphics.", "android.content.android.content.", "android.app.android.app."
         }) if (joined.contains(forbidden)) throw new IllegalStateException(sample.dir + " retained placeholder/corrupted source: " + forbidden);
 
+        // Domain-specialized products use AppScreen; generic offline products retain
+        // GeneratedScreen. Both are validated inset-aware, scroll-safe generated shells.
+        if (!joined.contains("class AppScreen") && !joined.contains("class GeneratedScreen"))
+            throw new IllegalStateException(sample.dir + " missing validated generated screen shell");
         for (String common : new String[]{
-                "class AppScreen", "setOnApplyWindowInsetsListener", "setContentDescription", "setMinHeight(dp(48))",
+                "setOnApplyWindowInsetsListener", "setContentDescription", "setMinHeight(dp(48))",
                 "SharedPreferences", "AppNavigator.open"
         }) if (!joined.contains(common)) throw new IllegalStateException(sample.dir + " missing common quality marker: " + common);
 
