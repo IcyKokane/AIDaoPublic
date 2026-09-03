@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/varied-prompt-quality-acceptance.yml'
       - 'acceptance/VariedPromptQualityAcceptance.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java'
