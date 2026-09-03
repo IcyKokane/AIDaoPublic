@@ -28,16 +28,16 @@ final class RequestFidelityPostProcessor {
 
         String rawRequest = requestText(source);
         String request = rawRequest.toLowerCase(Locale.US);
-        boolean note = any(request, "notepad", "note app", "notes", "document editor");
+        boolean note = any(request, "notepad", "note app", "notes", "note-taking", "note taking");
         boolean workout = any(request, "workout", "exercise", "weight and reps", "rpg stats");
         boolean pantry = any(request, "pantry", "inventory") && any(request, "quantity", "stock", "items");
         boolean logo = any(request, "app logo", "app icon", " logo", " icon");
         boolean sidebar = any(request, "sidebar", "side bar", "navigation drawer", "drawer navigation");
         boolean topTabs = any(request, "top tab", "top tabs", "top-tab", "tab navigation");
-        boolean purple = request.contains("purple");
-        boolean red = request.contains("red");
-        boolean teal = request.contains("teal");
-        boolean orange = request.contains("orange");
+        boolean purple = word(request, "purple");
+        boolean red = word(request, "red");
+        boolean teal = word(request, "teal");
+        boolean orange = word(request, "orange");
         boolean lock = any(request, "lock notes", "lock note", "can't be edited", "cannot be edited", "read-only", "read only");
 
         String name = inferName(projectName, rawRequest, note, workout, pantry);
@@ -112,6 +112,7 @@ final class RequestFidelityPostProcessor {
     private static GeneratedProject.FileEntry file(String p, String c, String h) { return new GeneratedProject.FileEntry(p, c, h); }
     private static boolean hasSuffix(List<GeneratedProject.FileEntry> f, String s) { for (GeneratedProject.FileEntry x : f) if (x != null && x.path != null && x.path.endsWith(s)) return true; return false; }
     private static boolean any(String s, String... terms) { for (String x : terms) if (s.contains(x)) return true; return false; }
+    private static boolean word(String s, String term) { return s != null && term != null && s.matches("(?s).*\\b" + java.util.regex.Pattern.quote(term) + "\\b.*"); }
     private static String requestText(List<GeneratedProject.FileEntry> f) { for (GeneratedProject.FileEntry x : f) if (x != null && "README.md".equals(x.path) && x.content != null) return x.content; StringBuilder b = new StringBuilder(); for (GeneratedProject.FileEntry x : f) if (x != null && x.content != null) b.append('\n').append(x.content); return b.toString(); }
 
     private static String inferName(String p, String request, boolean note, boolean workout, boolean pantry) {
