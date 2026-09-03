@@ -34,6 +34,27 @@ final class GeneratedProject {
                         "video.setContentDescription(\"Episode video player\");body.addView(video,new LinearLayout.LayoutParams(-1,dp(260)));MediaController controls=new MediaController(this);controls.setAnchorView(video);video.setMediaController(controls);video.setVideoURI(Uri.parse(url));");
             }
 
+            // ViewGroup exposes setMinimumHeight(), not TextView.setMinHeight().
+            // Keep this normalization idempotent because several product passes generate
+            // clickable LinearLayout cards/tabs and older templates used the TextView API.
+            out = out.replace("tab.setMinHeight(", "tab.setMinimumHeight(")
+                    .replace("source.setMinHeight(", "source.setMinimumHeight(")
+                    .replace("c.setMinHeight(", "c.setMinimumHeight(");
+
+            // The generic shell's historical 52 literal was pixels, which makes touch
+            // targets too small on dense phones. Preserve the simple shell while making
+            // its minimum target a true 48dp requirement.
+            if (path != null && path.endsWith("/GeneratedScreen.java")) {
+                out = out.replace("b.setMinHeight(52);", "b.setMinHeight((int)(48*getResources().getDisplayMetrics().density+.5f));");
+            }
+
+            // Money-entry contracts that request positive amounts must reject zero too.
+            // This is intentionally narrow to the generated transaction surface.
+            if (path != null && path.endsWith("/TransactionsActivity.java") && out.contains("Save transaction")) {
+                out = out.replace("if(value<0)throw new Exception();", "if(value<=0)throw new Exception();")
+                        .replace("Enter a valid non-negative amount", "Amount must be greater than zero");
+            }
+
             String[] persistedTextKeys={"last_episode","last_surface","documents","active_note","note_title_","note_body_","workout_history","workouts"};
             for(String key:persistedTextKeys) out=out.replace("store.text(\""+key+"\"","store.putText(\""+key+"\"");
             out=out.replace("String last=store.putText(\"last_episode\",\"\")","String last=store.text(\"last_episode\",\"\")")
