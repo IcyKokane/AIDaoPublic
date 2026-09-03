@@ -68,7 +68,7 @@ public final class ProjectRevisionAcceptance {
         String financePath = "app/src/main/java/dev/thefoolish/generated/revisionproductacceptance/MainActivity.java";
         GeneratedProject.FileEntry financeMain = finance.find(financePath);
         require(financeMain != null, "missing post-processed finance main screen");
-        String productEdit = financeMain.content.replace("Overview", "Personal Overview");
+        String productEdit = financeMain.content.replace("Finance dashboard", "Personal Finance dashboard");
         require(!productEdit.equals(financeMain.content), "finance edit marker was not found");
         Map<String,String> productOverrides = new HashMap<>();
         Map<String,String> productBases = new HashMap<>();
