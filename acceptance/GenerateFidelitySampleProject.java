@@ -47,7 +47,7 @@ public final class GenerateFidelitySampleProject {
         StringBuilder executable=new StringBuilder();
         for(GeneratedProject.FileEntry entry:project.files){if(entry.path.startsWith("app/src/main/java/")&&entry.path.endsWith(".java"))executable.append('\n').append(entry.content);Path target=output.resolve(entry.path).normalize();if(!target.startsWith(output))throw new SecurityException("Generated path escaped output root: "+entry.path);if(target.getParent()!=null)Files.createDirectories(target.getParent());Files.write(target,entry.content.getBytes(StandardCharsets.UTF_8));}
         String source=executable.toString();
-        for(String forbidden:new String[]{"DemoProvider","Origin Path","Sky Archive","sample data only","android.widget.android.widget.","android.graphics.android.graphics.","android.content.android.content.","android.app.android.app.","Save +60s test progress","Playback surface placeholder","No matches found"})if(source.contains(forbidden))throw new IllegalStateException("Forbidden/corrupted/generated-fidelity content survived final pass: "+forbidden);
+        for(String forbidden:new String[]{"DemoProvider","Origin Path","Sky Archive","sample data only","android.widget.android.widget.","android.graphics.android.graphics.","android.content.android.content.","android.app.android.app.","Save +60s test progress","Playback surface placeholder"})if(source.contains(forbidden))throw new IllegalStateException("Forbidden/corrupted/generated-fidelity content survived final pass: "+forbidden);
 
         for(String marker:new String[]{
                 "ExtensionRepositoryClient","RepositoryStore","RepositoriesActivity","ExtensionRecord.State.ENABLED",
@@ -74,6 +74,7 @@ public final class GenerateFidelitySampleProject {
         if(!appScreen.contains("Library\",\"Updates\",\"History\",\"Browse\",\"More"))throw new IllegalStateException("Mihon intent did not alter primary information architecture");
         if(appScreen.contains("Browse\",\"Library\",\"History\",\"Downloads\",\"Extensions"))throw new IllegalStateException("Generic media nav survived Mihon semantic pass");
         if(!browse.contains("HorizontalScrollView")||!browse.contains("GridLayout")||!browse.contains("discover"))throw new IllegalStateException("Browse is still a generic vertical form rather than discovery-oriented mobile layout");
+        if(!browse.contains("Some sources could not be reached")||!browse.contains("No matches"))throw new IllegalStateException("Browse does not distinguish provider failure from a genuine zero-result state");
         if(!library.contains("grid()")||!library.contains("card("))throw new IllegalStateException("Library lacks responsive saved-title card/grid composition");
         if(!updates.contains("Refresh library updates")||!updates.contains("new Thread"))throw new IllegalStateException("Updates is a placeholder rather than provider-backed refresh behavior");
         if(!more.contains("Downloads")||!more.contains("Sources")||!more.contains("Repositories"))throw new IllegalStateException("More does not group secondary Mihon management surfaces");
