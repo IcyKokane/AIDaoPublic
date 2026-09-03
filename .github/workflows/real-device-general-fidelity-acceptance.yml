@@ -13,6 +13,8 @@ on:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
       - 'acceptance/RealDeviceGeneralFidelityAcceptance.java'
       - '.github/workflows/real-device-general-fidelity-acceptance.yml'
@@ -45,6 +47,8 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/RealDeviceGeneralFidelityAcceptance.java
       - name: Run real-device general-fidelity regression
