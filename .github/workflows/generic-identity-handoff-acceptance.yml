@@ -10,6 +10,8 @@ on:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
       - 'acceptance/GenericIdentityHandoffAcceptance.java'
       - '.github/workflows/generic-identity-handoff-acceptance.yml'
@@ -39,6 +41,8 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
             acceptance/GenericIdentityHandoffAcceptance.java
       - name: Run generic identity/source-handoff regression
