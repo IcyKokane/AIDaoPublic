@@ -74,7 +74,7 @@ public class AIDaoActivityV6 extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);content=col();content.setPadding(dp(18),dp(18),dp(18),dp(32));scroll.addView(content);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);applyInsets(header);
 
         String project=prefs.getString("project_name",null);boolean generated=prefs.getBoolean("generated",false);String stage=prefs.getString("stage",project==null?"READY":"BRIEF READY");
-        card("GitHub App authorization","AIDao uses GitHub Device Flow for the normal build path. The APK contains only the public Client ID. Your GitHub App private key and client secret are not used by the phone app.",GREEN);
+        card("GitHub App authorization","AIDao uses GitHub Device Flow for the normal build path. No fine-grained token is required. The APK contains only the public Client ID. Your GitHub App private key and client secret are not used by the phone app.",GREEN);
         card("Repository boundary",prefs.getString("repo",DEFAULT_REPO)+" · access remains limited by the GitHub App installation and your GitHub account permissions.",BLUE);
         card("Current project",project==null?"No project yet":project+" · "+stage,project==null?YELLOW:(generated?GREEN:BLUE));
         String ci=prefs.getString("ci_state","No GitHub App build started");card("Build status",friendlyStatus(ci),colorFor(ci));
