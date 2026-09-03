@@ -51,7 +51,9 @@ public final class VariedPromptQualityAcceptance {
                 Arrays.asList("Persist plants locally", "Send Android watering reminders"),
                 "Android notifications");
 
-        System.out.println("Varied prompt quality acceptance passed: coherent offline products remain durable/native, semantic products implement requested behavior, and unsupported capabilities cannot fake completion.");
+        requireNoFakeMediaCompletion();
+
+        System.out.println("Varied prompt quality acceptance passed: coherent offline products remain durable/native, semantic products implement requested behavior, unsupported capabilities cannot fake completion, and media requests cannot ship placeholder playback/provider behavior.");
     }
 
     private static void requireCoherentOfflineProduct(String name, String brief, List<String> requirements) {
@@ -77,9 +79,43 @@ public final class VariedPromptQualityAcceptance {
         require(all.contains("setOnApplyWindowInsetsListener"), name + " has no system-bar inset handling");
         require(all.contains("AppNavigator.open"), name + " has no real screen navigation path");
         require(all.contains("setContentDescription"), name + " has no accessibility content descriptions");
+        require(hasAdaptiveLauncherIdentity(project), name + " has no generated adaptive launcher identity wired through the manifest");
         require(!containsPlaceholder(all), name + " retained placeholder/fake-completion language");
         require(project.projectName != null && project.projectName.length() >= 2 && project.projectName.length() <= 40,
                 name + " generated an invalid app identity");
+    }
+
+    private static boolean hasAdaptiveLauncherIdentity(GeneratedProject project) {
+        String manifest = fileText(project, "app/src/main/AndroidManifest.xml");
+        boolean manifestWired = manifest.contains("android:icon=\"@mipmap/ic_launcher\"")
+                && manifest.contains("android:roundIcon=\"@mipmap/ic_launcher_round\"");
+        boolean adaptiveIcon = hasPath(project, "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml")
+                || hasPath(project, "app/src/main/res/mipmap-anydpi-v33/ic_launcher.xml");
+        boolean foreground = hasPath(project, "app/src/main/res/drawable/ic_launcher_foreground.xml")
+                || hasPath(project, "app/src/main/res/drawable/ic_generated_foreground.xml")
+                || hasPath(project, "app/src/main/res/drawable/ic_app_foreground.xml");
+        return manifestWired && adaptiveIcon && foreground;
+    }
+
+    private static void requireNoFakeMediaCompletion() {
+        GeneratedProject project = new LocalSourceGenerator().generate(
+                "AniShelf",
+                "Build an Android anime library with provider discovery, search, details, favorites, episode history, and playable episodes only when an authorized compatible provider can resolve playback.",
+                Arrays.asList(
+                        "Discover useful authorized compatible providers",
+                        "Show actionable provider/network errors",
+                        "Persist favorites and history",
+                        "Provide explicit playback provider/player selection",
+                        "Never claim playback is complete without a compatible resolver"),
+                Arrays.asList("Generate real provider behavior", "Validate provider compatibility", "Build Android APK"));
+        String all = allText(project);
+        if (!hasFail(project)) {
+            require(!all.toLowerCase().contains("playback surface placeholder"), "AniShelf falsely passed with placeholder playback");
+            require(!all.toLowerCase().contains("sample data only"), "AniShelf falsely passed with sample-only provider data");
+            require(!all.toLowerCase().contains("demo provider"), "AniShelf falsely passed with demo provider as completion");
+            require(all.contains("setOnApplyWindowInsetsListener"), "AniShelf passed without phone-safe insets");
+            require(hasAdaptiveLauncherIdentity(project), "AniShelf passed without a generated adaptive launcher identity");
+        }
     }
 
     private static void requireUnsupportedCapabilityRejected(String name, String brief, List<String> requirements, String capabilityLabel) {
@@ -103,6 +139,18 @@ public final class VariedPromptQualityAcceptance {
         return b.toString();
     }
 
+    private static String fileText(GeneratedProject project, String path) {
+        for (GeneratedProject.FileEntry file : project.files) {
+            if (file != null && path.equals(file.path)) return file.content == null ? "" : file.content;
+        }
+        return "";
+    }
+
+    private static boolean hasPath(GeneratedProject project, String path) {
+        for (GeneratedProject.FileEntry file : project.files) if (file != null && path.equals(file.path)) return true;
+        return false;
+    }
+
     private static boolean hasFail(GeneratedProject project) {
         for (String note : project.verificationNotes) if (note != null && note.startsWith("FAIL ")) return true;
         return false;
@@ -115,7 +163,8 @@ public final class VariedPromptQualityAcceptance {
 
     private static boolean containsPlaceholder(String source) {
         String lower = source.toLowerCase();
-        return lower.contains("todo: implement") || lower.contains("coming soon") || lower.contains("placeholder data") || lower.contains("sample only");
+        return lower.contains("todo: implement") || lower.contains("coming soon") || lower.contains("placeholder data")
+                || lower.contains("sample only") || lower.contains("playback surface placeholder");
     }
 
     private static void require(boolean condition, String message) {
