@@ -8,6 +8,11 @@ on:
       - 'acceptance/VariedPromptQualityAcceptance.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java'
@@ -33,6 +38,11 @@ jobs:
           javac -d build/varied-prompt \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
