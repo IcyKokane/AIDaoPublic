@@ -43,15 +43,13 @@ final class GeneratedFidelityValidator {
         notes.add((repoBehavior ? "PASS " : "FAIL ") + "semantic repository/extension lifecycle gate");
 
         boolean builtInProvider = joined.contains("BuiltInProviderCatalog") &&
-                joined.contains("JikanCatalogProvider") &&
-                joined.contains("https://api.jikan.moe/v4/anime") &&
+                joined.contains("JikanCatalogProvider") && joined.contains("https://api.jikan.moe/v4/anime") &&
                 joined.contains("builtin.jikan.catalog") && joined.contains("metadata only");
         notes.add((builtInProvider ? "PASS " : "FAIL ") + "pre-generation capability research / built-in Jikan provider gate");
 
         boolean redundantProviders = joined.contains("AniListCatalogProvider") &&
                 joined.contains("https://graphql.anilist.co") && joined.contains("builtin.anilist.catalog") &&
-                joined.contains("out.add(new JikanCatalogProvider())") &&
-                joined.contains("out.add(new AniListCatalogProvider())");
+                joined.contains("out.add(new JikanCatalogProvider())") && joined.contains("out.add(new AniListCatalogProvider())");
         notes.add((redundantProviders ? "PASS " : "FAIL ") + "multiple reviewed built-in provider redundancy gate");
 
         boolean providerIsActuallyUsed = joined.contains("BuiltInProviderCatalog.providers()") &&
@@ -75,9 +73,10 @@ final class GeneratedFidelityValidator {
                 joined.contains("ProgressBar") && joined.contains("Some sources could not be reached");
         notes.add((asynchronousProviderSearch ? "PASS " : "FAIL ") + "non-blocking provider search and actionable error-state gate");
 
-        boolean distinguishesFailureFromEmpty = joined.contains("No matches found for") &&
-                joined.contains("No results were returned because one or more sources failed");
-        notes.add((distinguishesFailureFromEmpty ? "PASS " : "FAIL ") + "provider failure is distinct from genuine zero-result state");
+        boolean emptyState = joined.contains("No matches found for");
+        boolean failedState = joined.contains("one or more sources failed") &&
+                (joined.contains("No results are shown because") || joined.contains("No results were returned because"));
+        notes.add((emptyState && failedState ? "PASS " : "FAIL ") + "provider failure is distinct from genuine zero-result state");
 
         return notes;
     }
@@ -110,8 +109,7 @@ final class GeneratedFidelityValidator {
                     manifest.contains("android:roundIcon=\"@mipmap/ic_launcher_round\"");
             boolean adaptiveWiring = adaptive.contains("<adaptive-icon") &&
                     adaptive.contains("@drawable/ic_launcher_foreground") &&
-                    adaptive.contains("@color/launcher_background") &&
-                    adaptiveRound.contains("<adaptive-icon");
+                    adaptive.contains("@color/launcher_background") && adaptiveRound.contains("<adaptive-icon");
             boolean generatedArtwork = foreground.contains("<vector") && foreground.contains("<path") &&
                     foreground.contains("android:pathData=") && background.contains("launcher_background");
             notes.add((iconDeclared && adaptiveWiring && generatedArtwork ? "PASS " : "FAIL ") +
@@ -191,16 +189,18 @@ final class GeneratedFidelityValidator {
         for (String term : terms) if (source.contains(term)) return true;
         return false;
     }
+
     private static String requestText(List<GeneratedProject.FileEntry> files) {
         String readme = content(files, "README.md");
-        if (!readme.isEmpty()) return readme;
-        return joinAllText(files);
+        return !readme.isEmpty() ? readme : joinAllText(files);
     }
+
     private static String content(List<GeneratedProject.FileEntry> files, String path) {
         for (GeneratedProject.FileEntry f : files)
             if (f != null && path.equals(f.path) && f.content != null) return f.content;
         return "";
     }
+
     private static String xmlValue(String xml, String name) {
         String open = "<string name=\"" + name + "\">";
         int a = xml.indexOf(open);
@@ -208,6 +208,7 @@ final class GeneratedFidelityValidator {
         int b = xml.indexOf("</string>", a + open.length());
         return b < 0 ? "" : xml.substring(a + open.length(), b).trim();
     }
+
     private static String joinResources(List<GeneratedProject.FileEntry> files) {
         StringBuilder b = new StringBuilder();
         for (GeneratedProject.FileEntry f : files) {
@@ -216,31 +217,40 @@ final class GeneratedFidelityValidator {
         }
         return b.toString();
     }
+
     private static String joinAllText(List<GeneratedProject.FileEntry> files) {
         StringBuilder b = new StringBuilder();
         for (GeneratedProject.FileEntry f : files) if (f != null && f.content != null) b.append('\n').append(f.content);
         return b.toString();
     }
+
     private static void require(List<String> notes, List<GeneratedProject.FileEntry> files, String pkg, String file, String label) {
         String path = "app/src/main/java/" + pkg.replace('.', '/') + "/" + file;
         notes.add((has(files, path) ? "PASS " : "FAIL ") + label + " (" + file + ")");
     }
+
     private static boolean has(List<GeneratedProject.FileEntry> files, String path) {
         for (GeneratedProject.FileEntry f : files) if (f != null && path.equals(f.path)) return true;
         return false;
     }
+
     private static boolean hasSuffix(List<GeneratedProject.FileEntry> files, String suffix) {
         for (GeneratedProject.FileEntry f : files) if (f != null && f.path != null && f.path.endsWith(suffix)) return true;
         return false;
     }
+
     private static String joinExecutableSource(List<GeneratedProject.FileEntry> files) {
         StringBuilder b = new StringBuilder();
         for (GeneratedProject.FileEntry f : files) {
-            if (f != null && f.path != null && f.path.startsWith("app/src/main/java/") && f.path.endsWith(".java") && f.content != null) b.append('\n').append(f.content);
+            if (f != null && f.path != null && f.path.startsWith("app/src/main/java/") && f.path.endsWith(".java") && f.content != null)
+                b.append('\n').append(f.content);
         }
         return b.toString();
     }
+
     private static void failIf(List<String> notes, String source, String forbidden, String label) {
         notes.add((source.contains(forbidden) ? "FAIL " : "PASS ") + label);
     }
+
+    private GeneratedFidelityValidator() {}
 }
