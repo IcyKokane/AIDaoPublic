@@ -178,7 +178,8 @@ final class GeneratedFidelityValidator {
         if (workoutRequest) {
             boolean fields = lowerJoined.contains("exercise") && lowerJoined.contains("weight") && lowerJoined.contains("reps");
             boolean history = joined.contains("workout_history") || joined.contains("workouts");
-            boolean xp = joined.contains("workout_xp") && joined.contains("stat_strength") && joined.contains("stat_endurance");
+            boolean xp = joined.contains("store.number(\"workout_xp\",store.number(\"workout_xp\")+gain)") &&
+                    joined.contains("stat_strength") && joined.contains("stat_endurance");
             notes.add((fields && history ? "PASS " : "FAIL ") + "workout completed-set flow retains exercise/weight/reps and persists workout history");
             if (mentions(request, "rpg", "stats", "growth", "automatically"))
                 notes.add((xp ? "PASS " : "FAIL ") + "requested RPG growth is calculated automatically from completed workouts");
