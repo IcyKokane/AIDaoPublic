@@ -20,7 +20,10 @@ final class SemanticProductPostProcessor {
         List<GeneratedProject.FileEntry> source=incoming==null?new ArrayList<>():new ArrayList<>(incoming);
         if(hasSuffix(source,"/MediaProvider.java")||hasSuffix(source,"/AnimeItem.java"))return new Result(projectName,packageName,source,new ArrayList<>());
         String request=requestText(source).toLowerCase(Locale.US);
-        String semantic=((projectName==null?"":projectName)+"\n"+request+"\n"+allText(source)).toLowerCase(Locale.US);
+        // Classify from the user's identity + request contract only. Generated source can
+        // contain generic navigation/help vocabulary from other domains; using that text
+        // for classification lets our own templates override the user's actual intent.
+        String semantic=((projectName==null?"":projectName)+"\n"+request).toLowerCase(Locale.US);
         boolean finance=any(semantic,"expense","budget","transaction","spending","finance","ledger");
         boolean habit=any(semantic,"habit","routine","streak","daily tracker","check in","check-in","check them off","completion percentage");
         List<String> notes=new ArrayList<>();
