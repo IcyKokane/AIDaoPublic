@@ -51,6 +51,30 @@ public final class VariedPromptQualityAcceptance {
                 Arrays.asList("Persist plants locally", "Send Android watering reminders"),
                 "Android notifications");
 
+        requireUnsupportedCapabilityRejected(
+                "Export Vault",
+                "Build an offline journal that can export entries to CSV and import a backup file later.",
+                Arrays.asList("Persist journal entries locally", "Export entries to CSV", "Import a backup file"),
+                "document import/export");
+
+        requireUnsupportedCapabilityRejected(
+                "Bio Lock",
+                "Build a private offline notes app that unlocks with fingerprint or device biometrics before showing saved notes.",
+                Arrays.asList("Persist notes locally", "Require biometric unlock before displaying notes"),
+                "biometric/device authentication");
+
+        requireUnsupportedCapabilityRejected(
+                "Calendar Bridge",
+                "Build an offline event planner that can add selected plans to the Android calendar.",
+                Arrays.asList("Persist plans locally", "Add selected plans to calendar events"),
+                "calendar integration");
+
+        requireUnsupportedCapabilityRejected(
+                "Share Clip",
+                "Build an offline snippets app that can open the Android share sheet to share a selected snippet to another app.",
+                Arrays.asList("Persist snippets locally", "Share selected snippets with another app using the Android share sheet"),
+                "Android sharing");
+
         requireNoFakeMediaCompletion();
 
         System.out.println("Varied prompt quality acceptance passed: coherent offline products remain durable/native, semantic products implement requested behavior, unsupported capabilities cannot fake completion, and media requests cannot ship placeholder playback/provider behavior.");
