@@ -52,6 +52,28 @@ if missing6:
 if "incomplete?TaskExecutionState.VERIFYING:TaskExecutionState.COMPLETE" not in activity6:
     raise SystemExit("Incomplete media capability could still mark generated implementation tasks complete")
 
+# Release handoff must identify the exact generated source snapshot and the exact
+# APK artifact. A successful run URL alone is not sufficient because stale or
+# neighboring generated runs can otherwise be mistaken for the requested app.
+build_client = (ROOT / "GitHubGeneratedBuildClient.java").read_text()
+required_build_identity = [
+    "repoFullName", "projectName", "sourceSha", "artifactId",
+    "source_sha", "archive_download_url", "aidao-generated-apk-",
+]
+missing_build_identity = [marker for marker in required_build_identity if marker not in build_client]
+if missing_build_identity:
+    raise SystemExit(
+        "Release-blocking generated APK identity/handoff markers missing: "
+        + ", ".join(missing_build_identity)
+    )
+required_activity_identity = ["artifact_id", "source_sha", "build_repo", "build_project"]
+missing_activity_identity = [marker for marker in required_activity_identity if marker not in activity6]
+if missing_activity_identity:
+    raise SystemExit(
+        "Release-blocking persisted install-handoff identity missing: "
+        + ", ".join(missing_activity_identity)
+    )
+
 activity5 = (ROOT / "AIDaoActivityV5.java").read_text()
 required5 = ["override-base::", "ProjectRevisionLedger.hash", "GeneratedProjectOverrideResolver", "SOURCE MODIFIED"]
 missing5 = [marker for marker in required5 if marker not in activity5]
