@@ -30,7 +30,7 @@ final class MealPlannerPostProcessor {
         if(!(recipes&&planning&&ingredients)) return new Result(projectName,packageName,source,new ArrayList<>());
 
         String root="app/src/main/java/"+packageName.replace('.','/')+"/";
-        source=retainExcept(source,root,"MainActivity.java","EditorActivity.java","SearchActivity.java","LibraryActivity.java");
+        source=retainExcept(source,root,"MainActivity.java","EditorActivity.java","SearchActivity.java","LibraryActivity.java","ExploreActivity.java","DetailActivity.java","SettingsActivity.java");
         source.add(file(root+"MainActivity.java",weeklyPlan(packageName),"Render and mutate persisted weekly meal plan"));
         source.add(file(root+"EditorActivity.java",recipeEditor(packageName),"Create recipes with persisted ingredient lists"));
         source.add(file(root+"SearchActivity.java",shoppingList(packageName),"Derive deduplicated shopping list from scheduled meals"));
@@ -40,6 +40,7 @@ final class MealPlannerPostProcessor {
         notes.add("PASS meal-planning intent generates recipe, weekly schedule, favorite, and derived shopping-list behavior");
         notes.add("PASS meal-planning state uses restart-safe LocalStore persistence");
         notes.add("PASS shopping list is computed from scheduled recipe ingredients rather than placeholder data");
+        notes.add("PASS stale generic activities are removed before emitting the specialized meal-planning product");
         String name=projectName;
         String low=name==null?"":name.trim().toLowerCase(Locale.US);
         if(low.isEmpty()||low.startsWith("a ")||low.startsWith("an ")||low.startsWith("simple ")||low.contains("meal planning app")) name="MealMap";
