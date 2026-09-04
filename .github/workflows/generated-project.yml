@@ -31,8 +31,12 @@ jobs:
             exit 1
           fi
           if [[ ! "$REQUESTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Missing or invalid generated source SHA"
-            exit 1
+            if [[ "$GITHUB_ACTOR" == "github-actions[bot]" && "$TARGET_BRANCH" =~ ^aidao-generated-v1-acceptance-[0-9]+$ && -z "$REQUESTED_SOURCE_SHA" ]]; then
+              echo "Trusted self-test dispatch will pin the checked-out branch SHA before build"
+            else
+              echo "Missing or invalid generated source SHA"
+              exit 1
+            fi
           fi
           if [[ -n "$REQUESTED_REPOSITORY" && "$REQUESTED_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
             echo "Repository identity mismatch: requested $REQUESTED_REPOSITORY, actual $GITHUB_REPOSITORY"
@@ -50,6 +54,11 @@ jobs:
         run: |
           set -euo pipefail
           ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [[ -z "$REQUESTED_SOURCE_SHA" && "$GITHUB_ACTOR" == "github-actions[bot]" && "$TARGET_BRANCH" =~ ^aidao-generated-v1-acceptance-[0-9]+$ ]]; then
+            REQUESTED_SOURCE_SHA="$ACTUAL_SHA"
+            echo "REQUESTED_SOURCE_SHA=$REQUESTED_SOURCE_SHA" >> "$GITHUB_ENV"
+            echo "Trusted self-test source pinned to $ACTUAL_SHA"
+          fi
           if [[ "$ACTUAL_SHA" != "$REQUESTED_SOURCE_SHA" ]]; then
             echo "Generated source identity mismatch"
             echo "Requested: $REQUESTED_SOURCE_SHA"
@@ -66,7 +75,6 @@ jobs:
           if [[ -f ".aidao-generated-project/settings.gradle.kts" || -f ".aidao-generated-project/settings.gradle" ]]; then
             root=".aidao-generated-project"
           elif [[ -f "settings.gradle.kts" || -f "settings.gradle" ]]; then
-            # Backward-compatible with v0.5 acceptance branches while v1 transport rolls out.
             root="."
           else
             echo "No generated Android project root found"
@@ -98,8 +106,6 @@ jobs:
           src="$PROJECT_ROOT/app/src/main/java"
           if [[ -d "$src" ]]; then
             while IFS= read -r -d '' file; do
-              # Defense in depth: collapse package qualifiers that a source-rewrite pass
-              # may have accidentally applied more than once.
               while grep -qE 'android\.widget\.android\.widget\.|android\.graphics\.android\.graphics\.|android\.content\.android\.content\.|android\.app\.android\.app\.' "$file"; do
                 sed -Ei \
                   -e 's/android\.widget\.android\.widget\./android.widget./g' \
@@ -128,7 +134,6 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re, os, sys
-
           root = Path(os.environ["PROJECT_ROOT"])
           readme = (root / "README.md").read_text(errors="ignore") if (root / "README.md").exists() else ""
           request = readme.lower()
@@ -142,54 +147,35 @@ jobs:
           resources = "\n".join(p.read_text(errors="ignore") for p in res_root.rglob("*.xml")) if res_root.exists() else ""
           all_text = (java + "\n" + resources).lower()
           failures = []
-
           m = re.search(r'<string\s+name="app_name">\s*([^<]+?)\s*</string>', strings, re.I)
           app_name = m.group(1).strip() if m else ""
           lower_name = app_name.lower()
           if not (2 <= len(app_name) <= 40) or lower_name.startswith(("create ", "make ", "build ")) or " should " in lower_name:
               failures.append(f"generated app identity is not concise: {app_name!r}")
-
-          def mentions(*terms):
-              return any(t in request for t in terms)
-
+          def mentions(*terms): return any(t in request for t in terms)
           if mentions("app logo", "app icon", " logo", " icon"):
               declared = "android:icon=" in manifest or "android:roundicon=" in manifest.lower()
               icon_files = [p.name.lower() for p in res_root.rglob("*") if p.is_file()] if res_root.exists() else []
               resource = any(("ic_launcher" in n or "ic_generated_app" in n or "ic_app" in n) and n.endswith((".xml", ".png", ".webp")) for n in icon_files)
-              if not (declared and resource):
-                  failures.append("explicit app logo/icon request is not generated and wired")
-
+              if not (declared and resource): failures.append("explicit app logo/icon request is not generated and wired")
           if mentions("sidebar", "side bar", "navigation drawer", "drawer navigation"):
               sidebar = any(t in java for t in ("DrawerLayout", "NavigationView", "sideNav", "sidebarNav", "SIDE_NAV"))
               visible_rail = "LinearLayout.HORIZONTAL" in java and any(t in java for t in ("dp(104)", "dp(96)", "dp(112)", "DrawerLayout"))
-              if not (sidebar and visible_rail):
-                  failures.append("explicit sidebar/drawer navigation request is not represented by a visible side navigation surface")
-
-          if "purple" in request and not any(t in all_text for t in ("#6", "#7", "#8", "purple", "violet", "0xff7c3aed", "0xffa855f7")):
-              failures.append("requested purple visual direction is missing")
-          if "red" in request and not any(t in all_text for t in ("#e", "#f", "red", "crimson", "0xffef4444")):
-              failures.append("requested red visual direction is missing")
-
+              if not (sidebar and visible_rail): failures.append("explicit sidebar/drawer navigation request is not represented by a visible side navigation surface")
+          if "purple" in request and not any(t in all_text for t in ("#6", "#7", "#8", "purple", "violet", "0xff7c3aed", "0xffa855f7")): failures.append("requested purple visual direction is missing")
+          if "red" in request and not any(t in all_text for t in ("#e", "#f", "red", "crimson", "0xffef4444")): failures.append("requested red visual direction is missing")
           if mentions("lock notes", "lock note", "can't be edited", "cannot be edited", "read-only", "read only"):
               lock_state = any(t in all_text for t in ("note_lock", "islocked", "locked"))
               enforcement = any(t in java for t in ("setEnabled(false)", "setFocusable(false)", "setInputType(0)")) or "read-only" in all_text or "read only" in all_text
               persistence = any(t in java for t in ("store.flag(", "SharedPreferences"))
-              if not (lock_state and enforcement and persistence):
-                  failures.append("requested note lock/read-only behavior is not both persisted and enforced")
-
-          if mentions("workout", "exercise") and mentions("weight", "reps"):
-              if not all(t in all_text for t in ("exercise", "weight", "reps")):
-                  failures.append("workout request lost exercise/weight/reps fields")
+              if not (lock_state and enforcement and persistence): failures.append("requested note lock/read-only behavior is not both persisted and enforced")
+          if mentions("workout", "exercise") and mentions("weight", "reps") and not all(t in all_text for t in ("exercise", "weight", "reps")): failures.append("workout request lost exercise/weight/reps fields")
           if mentions("rpg", "growth", "stats") and mentions("workout", "exercise"):
-              if not any(t in all_text for t in ("workout_xp", "level", "stat_strength", "stat_endurance", "growth")):
-                  failures.append("requested automatic RPG/stat progression is missing")
-              if "workout_xp" in all_text and not any(t in java for t in ("putNumber(\"workout_xp\"", "number(\"workout_xp\",")):
-                  failures.append("workout XP exists only as display state and is not mutated/persisted")
-
+              if not any(t in all_text for t in ("workout_xp", "level", "stat_strength", "stat_endurance", "growth")): failures.append("requested automatic RPG/stat progression is missing")
+              if "workout_xp" in all_text and not any(t in java for t in ("putNumber(\"workout_xp\"", "number(\"workout_xp\",")): failures.append("workout XP exists only as display state and is not mutated/persisted")
           if failures:
               print("Generated request-fidelity gate failed:")
-              for failure in failures:
-                  print(f" - {failure}")
+              for failure in failures: print(f" - {failure}")
               sys.exit(1)
           print(f"PASS generated request-fidelity gate · app_name={app_name!r}")
           PY
