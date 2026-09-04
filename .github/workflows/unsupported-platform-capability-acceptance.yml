@@ -1,0 +1,55 @@
+name: Unsupported Platform Capability Acceptance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/unsupported-platform-capability-acceptance.yml'
+      - 'acceptance/UnsupportedPlatformCapabilityAcceptance.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unsupported-platform-capabilities:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile platform capability acceptance
+        run: |
+          rm -rf build/platform-capability && mkdir -p build/platform-capability
+          javac -d build/platform-capability \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            acceptance/UnsupportedPlatformCapabilityAcceptance.java
+      - name: Run platform capability acceptance
+        run: java -cp build/platform-capability dev.thefoolish.aidao.UnsupportedPlatformCapabilityAcceptance
