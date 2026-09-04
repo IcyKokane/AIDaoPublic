@@ -44,8 +44,13 @@ final class GitHubGeneratedBuildClient {
         final String artifactUrl;
         final String conclusion;
         final String failureSummary;
+        final String repoFullName;
+        final String projectName;
+        final String sourceSha;
+        final long artifactId;
 
-        BuildReceipt(String branch,long runId,String runUrl,String artifactName,String artifactUrl,String conclusion,String failureSummary){
+        BuildReceipt(String branch,long runId,String runUrl,String artifactName,String artifactUrl,String conclusion,String failureSummary,
+                     String repoFullName,String projectName,String sourceSha,long artifactId){
             this.branch=branch;
             this.runId=runId;
             this.runUrl=runUrl;
@@ -53,9 +58,19 @@ final class GitHubGeneratedBuildClient {
             this.artifactUrl=artifactUrl;
             this.conclusion=conclusion;
             this.failureSummary=failureSummary;
+            this.repoFullName=repoFullName;
+            this.projectName=projectName;
+            this.sourceSha=sourceSha;
+            this.artifactId=artifactId;
         }
 
-        boolean success(){return "success".equalsIgnoreCase(conclusion)&&artifactName!=null;}
+        boolean success(){
+            return "success".equalsIgnoreCase(conclusion)
+                && artifactName!=null
+                && artifactId>0
+                && sourceSha!=null
+                && !sourceSha.trim().isEmpty();
+        }
     }
 
     static final class PreflightReceipt {
@@ -74,6 +89,12 @@ final class GitHubGeneratedBuildClient {
         String url;
         String status;
         String conclusion;
+    }
+
+    private static final class ArtifactMatch {
+        long id;
+        String name;
+        String archiveUrl;
     }
 
     interface Progress { void onProgress(String stage,String detail); }
@@ -115,8 +136,21 @@ final class GitHubGeneratedBuildClient {
             }
         }
 
+        String generatedRef=request("GET","https://api.github.com/repos/"+owner+"/"+repo+"/git/ref/heads/"+url(branch),token,null,false,"generated source revision");
+        String sourceSha=nestedSha(generatedRef);
+        if(sourceSha==null||sourceSha.trim().isEmpty()) {
+            throw new IllegalStateException("SOURCE IDENTITY ERROR: Generated branch source SHA is unavailable; build handoff was not started.");
+        }
+        String exactRepo=owner+"/"+repo;
+        progress.onProgress("Source identity","Pinned generated source "+shortSha(sourceSha)+" on "+branch+".");
+
         progress.onProgress("Starting Android CI","Generated source uploaded. Triggering trusted workflow from "+preflight.defaultBranch+".");
-        String dispatch="{\"event_type\":\"aidao-generated-build\",\"client_payload\":{\"target_branch\":\""+json(branch)+"\",\"project_name\":\""+json(project.projectName)+"\",\"project_root\":\""+GENERATED_PROJECT_ROOT+"\"}}";
+        String dispatch="{\"event_type\":\"aidao-generated-build\",\"client_payload\":{"
+            +"\"target_branch\":\""+json(branch)+"\","
+            +"\"project_name\":\""+json(project.projectName)+"\","
+            +"\"project_root\":\""+GENERATED_PROJECT_ROOT+"\","
+            +"\"source_sha\":\""+json(sourceSha)+"\","
+            +"\"repository\":\""+json(exactRepo)+"\"}}";
         request("POST","https://api.github.com/repos/"+owner+"/"+repo+"/dispatches",token,dispatch,true,"repository_dispatch");
 
         long runId=0;
@@ -124,8 +158,8 @@ final class GitHubGeneratedBuildClient {
         long deadline=System.currentTimeMillis()+12*60*1000L;
         while(System.currentTimeMillis()<deadline){
             Thread.sleep(6000);
-            String runs=request("GET","https://api.github.com/repos/"+owner+"/"+repo+"/actions/workflows/generated-project.yml/runs?event=repository_dispatch&per_page=10",token,null,false,"generated workflow runs");
-            RunMatch match=findRunForBranch(runs,branch);
+            String runs=request("GET","https://api.github.com/repos/"+owner+"/"+repo+"/actions/workflows/generated-project.yml/runs?event=repository_dispatch&per_page=20",token,null,false,"generated workflow runs");
+            RunMatch match=findRunForBranch(runs,branch,sourceSha);
             if(match==null) continue;
             runId=match.id;
             runUrl=match.url;
@@ -134,19 +168,19 @@ final class GitHubGeneratedBuildClient {
             if(runId>0&&"completed".equalsIgnoreCase(match.status)) break;
         }
 
-        if(runId==0) throw new IllegalStateException("WORKFLOW ERROR: repository_dispatch was accepted, but no matching Generated Project CI run appeared for branch "+branch+" within 12 minutes. Confirm Actions are enabled and generated-project.yml is active on "+preflight.defaultBranch+".");
+        if(runId==0) throw new IllegalStateException("WORKFLOW ERROR: repository_dispatch was accepted, but no run matching both branch "+branch+" and source "+shortSha(sourceSha)+" appeared within 12 minutes. Confirm Actions are enabled and generated-project.yml is active on "+preflight.defaultBranch+".");
         if(!"success".equalsIgnoreCase(conclusion)){
             String failure=fetchFailureSummary(owner,repo,token,runId);
-            return new BuildReceipt(branch,runId,runUrl,null,null,conclusion,failure);
+            return new BuildReceipt(branch,runId,runUrl,null,null,conclusion,failure,exactRepo,project.projectName,sourceSha,0L);
         }
 
         String artifacts=request("GET","https://api.github.com/repos/"+owner+"/"+repo+"/actions/runs/"+runId+"/artifacts?per_page=20",token,null,false,"generated APK artifacts");
-        String artifactName=firstValue(artifacts,"name");
-        String artifactApi=firstValue(artifacts,"archive_download_url");
-        if(artifactName==null) throw new IllegalStateException("ARTIFACT ERROR: CI succeeded, but no generated APK artifact was uploaded for run "+runId+".");
+        String expectedArtifact="aidao-generated-apk-"+runId;
+        ArtifactMatch artifact=findArtifact(artifacts,expectedArtifact);
+        if(artifact==null) throw new IllegalStateException("ARTIFACT ERROR: CI succeeded, but exact artifact "+expectedArtifact+" was not uploaded for run "+runId+".");
 
-        progress.onProgress("APK ready","CI succeeded and uploaded "+artifactName+".");
-        return new BuildReceipt(branch,runId,runUrl,artifactName,artifactApi,"success",null);
+        progress.onProgress("APK ready","CI built source "+shortSha(sourceSha)+" and uploaded exact artifact "+artifact.name+" (#"+artifact.id+").");
+        return new BuildReceipt(branch,runId,runUrl,artifact.name,artifact.archiveUrl,"success",null,exactRepo,project.projectName,sourceSha,artifact.id);
     }
 
     private PreflightReceipt preflight(String owner,String repo,String token,Progress progress) throws Exception {
@@ -193,20 +227,46 @@ final class GitHubGeneratedBuildClient {
         return "Bounded repair: regenerate the deterministic source tree and retry once; preserve the plan and user-controlled GitHub boundary.";
     }
 
-    private RunMatch findRunForBranch(String json,String branch){
-        int at=json.indexOf(branch);
+    private RunMatch findRunForBranch(String json,String branch,String sourceSha){
+        if(json==null||branch==null||sourceSha==null) return null;
+        int searchFrom=0;
+        while(searchFrom<json.length()){
+            int at=json.indexOf(branch,searchFrom);
+            if(at<0) return null;
+            int start=json.lastIndexOf("{\"id\"",at);
+            if(start<0) start=Math.max(0,at-4000);
+            int end=json.indexOf("},{\"id\"",at);
+            if(end<0) end=Math.min(json.length(),at+7000);
+            String slice=json.substring(start,Math.min(json.length(),end));
+            if(slice.contains(sourceSha)){
+                RunMatch r=new RunMatch();
+                r.id=firstLong(slice,"id");
+                r.url=value(slice,"html_url");
+                r.status=value(slice,"status");
+                r.conclusion=value(slice,"conclusion");
+                if(r.id>0) return r;
+            }
+            searchFrom=at+branch.length();
+        }
+        return null;
+    }
+
+    private ArtifactMatch findArtifact(String json,String expectedName){
+        if(json==null||expectedName==null) return null;
+        int at=json.indexOf("\"name\":\""+expectedName+"\"");
         if(at<0) return null;
-        int start=json.lastIndexOf("{\"id\"",at);
-        if(start<0) start=Math.max(0,at-3000);
-        int end=json.indexOf("},{\"id\"",at);
-        if(end<0) end=Math.min(json.length(),at+5000);
-        String slice=json.substring(start,Math.min(json.length(),end));
-        RunMatch r=new RunMatch();
-        r.id=firstLong(slice,"id");
-        r.url=value(slice,"html_url");
-        r.status=value(slice,"status");
-        r.conclusion=value(slice,"conclusion");
-        return r.id>0?r:null;
+        int start=json.lastIndexOf('{',at);
+        if(start<0) return null;
+        int end=json.indexOf('}',at);
+        if(end<0) end=Math.min(json.length(),at+3000);
+        String slice=json.substring(start,Math.min(json.length(),end+1));
+        if(slice.contains("\"expired\":true")) return null;
+        ArtifactMatch a=new ArtifactMatch();
+        a.id=firstLong(slice,"id");
+        a.name=value(slice,"name");
+        a.archiveUrl=value(slice,"archive_download_url");
+        if(a.id<=0||!expectedName.equals(a.name)||a.archiveUrl==null||a.archiveUrl.trim().isEmpty()) return null;
+        return a;
     }
 
     private void requireRepo(String v){
@@ -267,4 +327,5 @@ final class GitHubGeneratedBuildClient {
     private String url(String s){return s.replace(" ","%20");}
     private String contentPath(String path)throws Exception{String[] parts=path.split("/");StringBuilder b=new StringBuilder();for(String p:parts){if(p.isEmpty())continue;if(b.length()>0)b.append('/');b.append(URLEncoder.encode(p,"UTF-8").replace("+","%20"));}return b.toString();}
     private String trim(String s,int n){return s==null?"":s.substring(0,Math.min(s.length(),n));}
+    private String shortSha(String sha){return sha==null?"unknown":sha.substring(0,Math.min(12,sha.length()));}
 }
