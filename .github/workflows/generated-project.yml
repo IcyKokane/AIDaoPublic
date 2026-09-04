@@ -1,5 +1,5 @@
 name: Generated Project CI
-run-name: AIDao generated ${{ github.event.client_payload.target_branch }}
+run-name: AIDao generated ${{ github.event.client_payload.target_branch }} · ${{ github.event.client_payload.source_sha }}
 
 on:
   repository_dispatch:
@@ -11,12 +11,14 @@ permissions:
 env:
   TARGET_BRANCH: ${{ github.event.client_payload.target_branch }}
   REQUESTED_PROJECT_ROOT: ${{ github.event.client_payload.project_root }}
+  REQUESTED_SOURCE_SHA: ${{ github.event.client_payload.source_sha }}
+  REQUESTED_REPOSITORY: ${{ github.event.client_payload.repository }}
 
 jobs:
   build-generated-project:
     runs-on: ubuntu-latest
     steps:
-      - name: Validate requested branch
+      - name: Validate requested branch and source identity
         shell: bash
         run: |
           set -euo pipefail
@@ -28,11 +30,33 @@ jobs:
             echo "Invalid generated project root: $REQUESTED_PROJECT_ROOT"
             exit 1
           fi
+          if [[ ! "$REQUESTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Missing or invalid generated source SHA"
+            exit 1
+          fi
+          if [[ -n "$REQUESTED_REPOSITORY" && "$REQUESTED_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
+            echo "Repository identity mismatch: requested $REQUESTED_REPOSITORY, actual $GITHUB_REPOSITORY"
+            exit 1
+          fi
 
       - name: Checkout generated project branch
         uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 1
+
+      - name: Verify checked-out generated source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [[ "$ACTUAL_SHA" != "$REQUESTED_SOURCE_SHA" ]]; then
+            echo "Generated source identity mismatch"
+            echo "Requested: $REQUESTED_SOURCE_SHA"
+            echo "Checked out: $ACTUAL_SHA"
+            exit 1
+          fi
+          echo "Verified generated source: $ACTUAL_SHA"
 
       - name: Resolve generated project root
         id: root
