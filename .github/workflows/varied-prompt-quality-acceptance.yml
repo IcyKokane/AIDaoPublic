@@ -11,6 +11,7 @@ on:
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java'
       - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java'
@@ -41,6 +42,7 @@ jobs:
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedFidelityValidator.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectFidelityPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityIntegrator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/ProviderCapabilityResearch.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/NativeFidelityPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MihonBehaviorPostProcessor.java \
             android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
