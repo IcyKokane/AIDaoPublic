@@ -29,16 +29,16 @@ final class SemanticProductPostProcessor {
         List<String> notes=new ArrayList<>();
         if(finance){source=financeProduct(packageName,source);notes.add("PASS finance requests generate restart-safe transaction entry, budget mutation, and computed reports");}
         else if(habit){source=habitProduct(packageName,source);notes.add("PASS habit requests generate restart-safe habit creation, check-ins, streak/progress summaries, and clear controls");}
-        String post=allText(source).toLowerCase(Locale.US);
-        requireCapability(notes,request,post,new String[]{"camera","scan","photo"},new String[]{"camera","requestpermissions","activityresultcontracts","mediastore"},"camera/media capture");
+        // Capability evidence must come from executable Android source/manifest, never the
+        // README, workflow, or user request text. Otherwise a sentence such as "use camera"
+        // can falsely prove its own implementation.
+        String post=executableText(source).toLowerCase(Locale.US);
+        requireCapability(notes,request,post,new String[]{"camera","scan","photo"},new String[]{"android.permission.camera","requestpermissions","activityresultcontracts","mediastore.action_image_capture","take_picture"},"camera/media capture");
         requireCapability(notes,request,post,new String[]{"notification","reminder","notify"},new String[]{"notificationmanager","notificationchannel","post_notifications"},"Android notifications");
-        // Require concrete executable location APIs. A broad "geofenc" marker is unsafe
-        // because the user's README requirement (for example "geofenced locations") can
-        // otherwise be mistaken for an implementation and falsely pass completion.
         requireCapability(notes,request,post,new String[]{"location","gps","geofence","map"},new String[]{"access_fine_location","locationmanager","fusedlocation","geofencingclient","geofencingrequest"},"location");
         requireCapability(notes,request,post,new String[]{"bluetooth","ble device","ble sensor","ble tracker","wearable"},new String[]{"bluetooth_connect","bluetooth_scan","bluetoothadapter"},"Bluetooth/Nearby Devices");
         requireCapability(notes,request,post,new String[]{"background sync","periodic sync","scheduled sync","workmanager","works in the background"},new String[]{"workmanager","periodicworkrequest","jobservice"},"scheduled/background work");
-        requireCapability(notes,request,post,new String[]{"login","sign in","oauth"},new String[]{"auth","oauth","credentialmanager","device flow"},"authentication");
+        requireCapability(notes,request,post,new String[]{"login","sign in","oauth"},new String[]{"oauth","credentialmanager","authorization_endpoint","device_authorization"},"authentication");
         requireCapability(notes,request,post,new String[]{"api","server","backend","cloud sync","remote data","uploads"},new String[]{"httpurlconnection","httpsurlconnection","okhttp","retrofit","network gateway","repository_dispatch"},"network/backend data");
         if(any(request,"offline","persist","restart","save locally","local storage")){
             if(post.contains("sharedpreferences")||post.contains("localstore"))notes.add("PASS offline/restart persistence contract is backed by generated local storage");
@@ -102,6 +102,15 @@ final class SemanticProductPostProcessor {
             return user.toString();
         }
         return allText(files);
+    }
+    private static String executableText(List<GeneratedProject.FileEntry> files){
+        StringBuilder b=new StringBuilder();
+        if(files!=null)for(GeneratedProject.FileEntry f:files){
+            if(f==null||f.content==null||f.path==null)continue;
+            String p=f.path;
+            if(p.endsWith(".java")||"app/src/main/AndroidManifest.xml".equals(p))b.append('\n').append(f.content);
+        }
+        return b.toString();
     }
     private static String allText(List<GeneratedProject.FileEntry> files){StringBuilder b=new StringBuilder();if(files!=null)for(GeneratedProject.FileEntry f:files)if(f!=null&&f.content!=null)b.append('\n').append(f.content);return b.toString();}
     private static GeneratedProject.FileEntry file(String path,String content,String hint){return new GeneratedProject.FileEntry(path,content,hint);}
