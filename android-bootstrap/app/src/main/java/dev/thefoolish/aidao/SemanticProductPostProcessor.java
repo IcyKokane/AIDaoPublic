@@ -40,6 +40,10 @@ final class SemanticProductPostProcessor {
         requireCapability(notes,request,post,new String[]{"background sync","periodic sync","scheduled sync","workmanager","works in the background"},new String[]{"workmanager","periodicworkrequest","jobservice"},"scheduled/background work");
         requireCapability(notes,request,post,new String[]{"login","sign in","oauth"},new String[]{"oauth","credentialmanager","authorization_endpoint","device_authorization"},"authentication");
         requireCapability(notes,request,post,new String[]{"api","server","backend","cloud sync","remote data","uploads"},new String[]{"httpurlconnection","httpsurlconnection","okhttp","retrofit","network gateway","repository_dispatch"},"network/backend data");
+        requireCapability(notes,request,post,new String[]{"export","import","backup file","restore file","csv","pdf"},new String[]{"action_create_document","action_open_document","create_document","open_document","openoutputstream","openinputstream"},"document import/export");
+        requireCapability(notes,request,post,new String[]{"fingerprint","biometric","face unlock","device credential"},new String[]{"biometricprompt","biometricmanager","use_biometric"},"biometric/device authentication");
+        requireCapability(notes,request,post,new String[]{"calendar event","add to calendar","calendar integration","sync calendar"},new String[]{"calendarcontract","android.intent.action.insert","read_calendar","write_calendar"},"calendar integration");
+        requireCapability(notes,request,post,new String[]{"share to another app","share with another app","android share sheet","share sheet"},new String[]{"intent.action_send","android.intent.action.send"},"Android sharing");
         if(any(request,"offline","persist","restart","save locally","local storage")){
             if(post.contains("sharedpreferences")||post.contains("localstore"))notes.add("PASS offline/restart persistence contract is backed by generated local storage");
             else notes.add("FAIL requested offline/restart persistence has no durable generated storage implementation");
