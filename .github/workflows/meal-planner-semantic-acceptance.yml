@@ -1,0 +1,76 @@
+name: Meal Planner Semantic Acceptance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MealPlannerPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java'
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java'
+      - 'acceptance/MealPlannerSemanticAcceptance.java'
+      - 'acceptance/GenerateMealPlannerProject.java'
+      - '.github/workflows/meal-planner-semantic-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-and-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compile generator semantic harness
+        run: |
+          rm -rf build/meal-semantic && mkdir -p build/meal-semantic
+          javac -d build/meal-semantic \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProject.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneratedProjectValidator.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GeneralProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/RequestFidelityPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/SemanticProductPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/GenericOfflinePostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/MealPlannerPostProcessor.java \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/LocalSourceGenerator.java \
+            acceptance/MealPlannerSemanticAcceptance.java \
+            acceptance/GenerateMealPlannerProject.java
+
+      - name: Run meal planner semantic acceptance
+        run: java -cp build/meal-semantic dev.thefoolish.aidao.MealPlannerSemanticAcceptance
+
+      - name: Generate standalone meal planner project
+        run: java -cp build/meal-semantic dev.thefoolish.aidao.GenerateMealPlannerProject build/generated-meal-planner
+
+      - name: Verify source invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/generated-meal-planner/app/src/main/AndroidManifest.xml
+          ! grep -R -F 'android.widget.android.widget.' build/generated-meal-planner/app/src/main/java
+          ! grep -R -E 'TODO: implement|coming soon|placeholder feature' build/generated-meal-planner/app/src/main/java
+          grep -R -F 'meal_recipes' build/generated-meal-planner/app/src/main/java >/dev/null
+          grep -R -F 'meal_day_' build/generated-meal-planner/app/src/main/java >/dev/null
+          grep -R -F 'meal_favorites' build/generated-meal-planner/app/src/main/java >/dev/null
+          grep -R -F 'LinkedHashMap<String,Integer>' build/generated-meal-planner/app/src/main/java >/dev/null
+
+      - name: Build generated meal planner APK
+        working-directory: build/generated-meal-planner
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload generated APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-meal-planner-apk
+          path: build/generated-meal-planner/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
