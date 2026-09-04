@@ -38,6 +38,7 @@ public class AIDaoActivityV6 extends Activity {
     private static final Typeface UI=Typeface.create("sans-serif",Typeface.NORMAL),BOLD=Typeface.create("sans-serif",Typeface.BOLD),BRAND=Typeface.create("cursive",Typeface.BOLD);
     private static final String GITHUB_APP_CLIENT_ID="Iv23ltCpkWHmKdijzsLC";
     private static final String DEFAULT_REPO="IcyKokane/AIDaoPublic";
+    private static final String KEY_ARTIFACT_ID="artifact_id",KEY_SOURCE_SHA="source_sha",KEY_BUILD_REPO="build_repo",KEY_BUILD_PROJECT="build_project";
 
     private SharedPreferences prefs;
     private LinearLayout root,content;
@@ -80,19 +81,28 @@ public class AIDaoActivityV6 extends Activity {
         String ci=prefs.getString("ci_state","No GitHub App build started");card("Build status",friendlyStatus(ci),colorFor(ci));
         String incomplete=prefs.getString("capability_incomplete_reason","");
         if(!incomplete.isEmpty())card("Capability incomplete",incomplete,YELLOW);
-        String artifact=prefs.getString("artifact_name","");if(!artifact.isEmpty())card("Latest APK artifact",artifact+" · produced by trusted generated-project CI",GREEN);
+        renderBuildHandoff();
         Button workspace=secondary(project==null?"Create Project in AIDao":"Open AIDao Workspace");workspace.setOnClickListener(v->startActivity(new Intent(this,AIDaoActivityV5.class)));content.addView(workspace,lp(-1,dp(50),0,dp(12),0,dp(8)));
         if(project!=null&&generated){
             Button connect=primary(busy?"GitHub authorization / build in progress…":"Connect GitHub App & Build");connect.setEnabled(!busy);connect.setOnClickListener(v->beginGitHubAppBuild());content.addView(connect,lp(-1,dp(52),0,dp(6),0,dp(8)));
             content.addView(text("You will receive a short GitHub code, approve AIDao in your browser, then AIDao continues automatically. A successful compile may still be marked capability incomplete until required runtime integrations are genuinely usable.",12,MUTED,false));
         }else if(project!=null)card("Source generation required","Open the workspace, finish planning, and generate/locally verify the Android source before connecting GitHub.",YELLOW);
-        String run=prefs.getString("run_url",null);if(run!=null&&!run.isEmpty()){Button open=secondary("Open Latest CI Run / APK Artifact");open.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(run))));content.addView(open,lp(-1,dp(50),0,dp(12),0,0));}
+        String run=prefs.getString("run_url",null);if(run!=null&&!run.isEmpty()){Button open=secondary("Open Exact CI Run / APK Artifact");open.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(run))));content.addView(open,lp(-1,dp(50),0,dp(12),0,0));}
+    }
+
+    private void renderBuildHandoff(){
+        String artifact=prefs.getString("artifact_name","");if(artifact.isEmpty())return;
+        long artifactId=prefs.getLong(KEY_ARTIFACT_ID,0L);String sourceSha=prefs.getString(KEY_SOURCE_SHA,"");String buildRepo=prefs.getString(KEY_BUILD_REPO,"");String buildProject=prefs.getString(KEY_BUILD_PROJECT,"");
+        if(artifactId<=0||sourceSha.isEmpty()||buildRepo.isEmpty()||buildProject.isEmpty()){
+            card("Previous APK handoff incomplete","This build predates exact source/artifact identity tracking. Rebuild before installing; AIDao will not treat this legacy artifact as APK READY.",YELLOW);return;
+        }
+        card("Latest APK artifact",artifact+" · artifact #"+artifactId+" · source "+shortSha(sourceSha)+" · "+buildRepo+" · "+buildProject,GREEN);
     }
 
     private void beginGitHubAppBuild(){
         if(busy)return;final String repo=prefs.getString("repo",DEFAULT_REPO);
         if(!repo.matches("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")){showError("Repository needs attention","The configured repository must use owner/name format.");return;}
-        busy=true;cancelAuth=false;sessionToken="";setCi("Waiting for GitHub authorization");render();
+        clearBuildHandoff();busy=true;cancelAuth=false;sessionToken="";setCi("Waiting for GitHub authorization");render();
         new Thread(()->{
             try{
                 GitHubDeviceAuthClient auth=new GitHubDeviceAuthClient();activeCode=auth.begin(GITHUB_APP_CLIENT_ID);runOnUiThread(()->showDeviceCode(activeCode));int interval=activeCode.intervalSeconds;
@@ -127,16 +137,24 @@ public class AIDaoActivityV6 extends Activity {
 
     private void finishReceipt(GitHubGeneratedBuildClient.BuildReceipt r){
         if(r.success()){
+            if(r.artifactId<=0||r.sourceSha==null||r.sourceSha.isEmpty()||r.repoFullName==null||r.repoFullName.isEmpty()||r.projectName==null||r.projectName.isEmpty()){
+                setBlocked("Build completed but exact source/artifact identity is incomplete. Rebuild required; APK READY was withheld.");return;
+            }
             boolean incomplete=prefs.getBoolean("capability_incomplete",false);String reason=prefs.getString("capability_incomplete_reason","Required runtime capability has not been verified.");
-            SharedPreferences.Editor state=prefs.edit().putString("artifact_name",r.artifactName).putString("run_url",r.runUrl==null?"":r.runUrl).putString("branch",r.branch).remove("repair");
+            SharedPreferences.Editor state=prefs.edit().putString("artifact_name",r.artifactName).putString("run_url",r.runUrl==null?"":r.runUrl).putString("branch",r.branch)
+                    .putLong(KEY_ARTIFACT_ID,r.artifactId).putString(KEY_SOURCE_SHA,r.sourceSha).putString(KEY_BUILD_REPO,r.repoFullName).putString(KEY_BUILD_PROJECT,r.projectName).remove("repair");
             if(incomplete)state.putString("ci_state","Build successful · capability incomplete · "+reason).putString("stage","APK BUILT · CAPABILITY INCOMPLETE");
-            else state.putString("ci_state","Successful · APK artifact: "+r.artifactName).putString("stage","APK READY");
+            else state.putString("ci_state","Successful · exact APK artifact: "+r.artifactName+" · source "+shortSha(r.sourceSha)).putString("stage","APK READY");
             state.apply();
             List<String> tasks=decode(prefs.getString("tasks",""));SharedPreferences.Editor e=prefs.edit();
             for(int i=0;i<tasks.size();i++)e.putString("task_"+i,(incomplete?TaskExecutionState.VERIFYING:TaskExecutionState.COMPLETE).name());e.apply();
         }else{
             String summary=friendlyFailure(r.failureSummary);prefs.edit().putString("ci_state","Build blocked after bounded repair · "+summary).putString("run_url",r.runUrl==null?"":r.runUrl).putString("stage","BUILD BLOCKED").apply();
         }
+    }
+
+    private void clearBuildHandoff(){
+        prefs.edit().remove("artifact_name").remove("run_url").remove("branch").remove(KEY_ARTIFACT_ID).remove(KEY_SOURCE_SHA).remove(KEY_BUILD_REPO).remove(KEY_BUILD_PROJECT).apply();
     }
 
     private GeneratedProject regenerateWithOverrides(){
@@ -180,4 +198,5 @@ public class AIDaoActivityV6 extends Activity {
     private LinearLayout.LayoutParams lp(int w,int h,int l,int t,int r,int b){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(w,h);p.setMargins(dp(l),dp(t),dp(r),dp(b));return p;}
     private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
     private int colorFor(String s){String v=s==null?"":s.toLowerCase(Locale.US);if(v.contains("successful")||v.contains("ready")||v.contains("authorized"))return GREEN;if(v.contains("incomplete")||v.contains("waiting")||v.contains("pending")||v.contains("not started"))return YELLOW;if(v.contains("blocked")||v.contains("fail")||v.contains("denied")||v.contains("expired"))return RED;return PURPLE;}
+    private String shortSha(String sha){return sha==null?"unknown":sha.substring(0,Math.min(12,sha.length()));}
 }
