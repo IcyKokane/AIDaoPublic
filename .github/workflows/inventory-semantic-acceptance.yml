@@ -1,0 +1,28 @@
+name: Inventory Semantic Acceptance
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'android-bootstrap/app/src/main/java/dev/thefoolish/aidao/**'
+      - 'acceptance/InventorySemanticAcceptance.java'
+      - '.github/workflows/inventory-semantic-acceptance.yml'
+  workflow_dispatch:
+
+jobs:
+  inventory-semantic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile generator and acceptance harness
+        run: |
+          mkdir -p out
+          javac -d out \
+            android-bootstrap/app/src/main/java/dev/thefoolish/aidao/*.java \
+            acceptance/InventorySemanticAcceptance.java
+      - name: Run inventory semantic acceptance
+        run: java -cp out dev.thefoolish.aidao.InventorySemanticAcceptance
