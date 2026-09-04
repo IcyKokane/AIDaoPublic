@@ -129,7 +129,9 @@ jobs:
             [[ "$uploaded" -ge 10 ]] || { echo "$sample upload was unexpectedly small: $uploaded files"; exit 1; }
             gh api "repos/${GITHUB_REPOSITORY}/contents/${project_root}/settings.gradle.kts?ref=${branch}" --jq '.sha' >/dev/null
             if gh api "repos/${GITHUB_REPOSITORY}/contents/${project_root}/.github/workflows/android.yml?ref=${branch}" >/dev/null 2>&1; then echo "Generated workflows must not cross the trusted build boundary"; exit 1; fi
-            payload=$(printf '{"event_type":"aidao-generated-build","client_payload":{"target_branch":"%s","project_name":"AIDao Quality %s","project_root":"%s"}}' "$branch" "$sample" "$project_root")
+            source_sha=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${branch}" --jq '.object.sha')
+            [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "$sample branch did not resolve to a valid source SHA"; exit 1; }
+            payload=$(jq -nc --arg branch "$branch" --arg sample "$sample" --arg root "$project_root" --arg sha "$source_sha" --arg repository "$GITHUB_REPOSITORY" '{event_type:"aidao-generated-build",client_payload:{target_branch:$branch,project_name:("AIDao Quality "+$sample),project_root:$root,source_sha:$sha,repository:$repository}}')
             gh api --method POST "repos/${GITHUB_REPOSITORY}/dispatches" --input - <<< "$payload"
             run_id=''
             for attempt in $(seq 1 60); do
