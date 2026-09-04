@@ -32,7 +32,10 @@ final class SemanticProductPostProcessor {
         String post=allText(source).toLowerCase(Locale.US);
         requireCapability(notes,request,post,new String[]{"camera","scan","photo"},new String[]{"camera","requestpermissions","activityresultcontracts","mediastore"},"camera/media capture");
         requireCapability(notes,request,post,new String[]{"notification","reminder","notify"},new String[]{"notificationmanager","notificationchannel","post_notifications"},"Android notifications");
-        requireCapability(notes,request,post,new String[]{"location","gps","geofence","map"},new String[]{"access_fine_location","locationmanager","fusedlocation","geofenc"},"location");
+        // Require concrete executable location APIs. A broad "geofenc" marker is unsafe
+        // because the user's README requirement (for example "geofenced locations") can
+        // otherwise be mistaken for an implementation and falsely pass completion.
+        requireCapability(notes,request,post,new String[]{"location","gps","geofence","map"},new String[]{"access_fine_location","locationmanager","fusedlocation","geofencingclient","geofencingrequest"},"location");
         requireCapability(notes,request,post,new String[]{"bluetooth","ble device","ble sensor","ble tracker","wearable"},new String[]{"bluetooth_connect","bluetooth_scan","bluetoothadapter"},"Bluetooth/Nearby Devices");
         requireCapability(notes,request,post,new String[]{"background sync","periodic sync","scheduled sync","workmanager","works in the background"},new String[]{"workmanager","periodicworkrequest","jobservice"},"scheduled/background work");
         requireCapability(notes,request,post,new String[]{"login","sign in","oauth"},new String[]{"auth","oauth","credentialmanager","device flow"},"authentication");
