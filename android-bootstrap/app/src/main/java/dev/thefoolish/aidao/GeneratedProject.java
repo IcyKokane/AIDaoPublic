@@ -34,22 +34,14 @@ final class GeneratedProject {
                         "video.setContentDescription(\"Episode video player\");body.addView(video,new LinearLayout.LayoutParams(-1,dp(260)));MediaController controls=new MediaController(this);controls.setAnchorView(video);video.setMediaController(controls);video.setVideoURI(Uri.parse(url));");
             }
 
-            // ViewGroup exposes setMinimumHeight(), not TextView.setMinHeight().
-            // Keep this normalization idempotent because several product passes generate
-            // clickable LinearLayout cards/tabs and older templates used the TextView API.
             out = out.replace("tab.setMinHeight(", "tab.setMinimumHeight(")
                     .replace("source.setMinHeight(", "source.setMinimumHeight(")
                     .replace("c.setMinHeight(", "c.setMinimumHeight(");
 
-            // The generic shell's historical 52 literal was pixels, which makes touch
-            // targets too small on dense phones. Preserve the simple shell while making
-            // its minimum target a true 48dp requirement.
             if (path != null && path.endsWith("/GeneratedScreen.java")) {
                 out = out.replace("b.setMinHeight(52);", "b.setMinHeight((int)(48*getResources().getDisplayMetrics().density+.5f));");
             }
 
-            // Money-entry contracts that request positive amounts must reject zero too.
-            // This is intentionally narrow to the generated transaction surface.
             if (path != null && path.endsWith("/TransactionsActivity.java") && out.contains("Save transaction")) {
                 out = out.replace("if(value<0)throw new Exception();", "if(value<=0)throw new Exception();")
                         .replace("Enter a valid non-negative amount", "Amount must be greater than zero");
@@ -105,13 +97,14 @@ final class GeneratedProject {
         FidelityResult requestFidelity=applyProcessor("RequestFidelityPostProcessor","request-specific fidelity",normalizedIdentity,generalProduct.packageName,generalProduct.files);
         FidelityResult genericOffline=applyProcessor("GenericOfflinePostProcessor","generic offline product",requestFidelity.projectName,requestFidelity.packageName,requestFidelity.files);
         FidelityResult semanticProduct=applyProcessor("SemanticProductPostProcessor","semantic product fidelity",genericOffline.projectName,genericOffline.packageName,genericOffline.files);
+        FidelityResult mealPlanner=applyProcessor("MealPlannerPostProcessor","meal-planning semantic fidelity",semanticProduct.projectName,semanticProduct.packageName,semanticProduct.files);
 
-        this.projectName=semanticProduct.projectName;
-        this.packageName=semanticProduct.packageName;
-        List<FileEntry> immutableSource=new ArrayList<>(semanticProduct.files==null?Collections.emptyList():semanticProduct.files);
+        this.projectName=mealPlanner.projectName;
+        this.packageName=mealPlanner.packageName;
+        List<FileEntry> immutableSource=new ArrayList<>(mealPlanner.files==null?Collections.emptyList():mealPlanner.files);
         this.files=Collections.unmodifiableList(immutableSource);
         List<String> notes=new ArrayList<>(); if(verificationNotes!=null)notes.addAll(verificationNotes);
-        append(notes,fidelity.notes);append(notes,capability.notes);append(notes,nativeFidelity.notes);append(notes,referenceBehavior.notes);append(notes,generalProduct.notes);append(notes,requestFidelity.notes);append(notes,genericOffline.notes);append(notes,semanticProduct.notes);
+        append(notes,fidelity.notes);append(notes,capability.notes);append(notes,nativeFidelity.notes);append(notes,referenceBehavior.notes);append(notes,generalProduct.notes);append(notes,requestFidelity.notes);append(notes,genericOffline.notes);append(notes,semanticProduct.notes);append(notes,mealPlanner.notes);
         GeneratedProjectValidator.Result structural=GeneratedProjectValidator.validateRaw(this.packageName,immutableSource);notes.addAll(structural.notes);notes.addAll(validateFidelityIfAvailable(this.packageName,immutableSource));
         this.verificationNotes=Collections.unmodifiableList(notes);
     }
